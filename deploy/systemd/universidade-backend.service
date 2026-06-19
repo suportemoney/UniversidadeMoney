@@ -1,0 +1,17 @@
+[Unit]
+Description=UniversidadeMoney - Django API (Gunicorn)
+After=network.target postgresql.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/universidade/repo/backend
+EnvironmentFile=/var/www/universidade/.env
+ExecStart=/var/www/universidade/venv/bin/gunicorn config.wsgi:application \
+    --bind 127.0.0.1:7101 \
+    --workers 3
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
