@@ -45,6 +45,11 @@ sudo cp -r dist/* "$BASE/frontend-dist/"
 sudo chown -R www-data:www-data "$BASE/frontend-dist"
 
 echo "==> nginx..."
+NGINX_SITE="/etc/nginx/sites-available/universidade"
+if [ -f "$REPO/deploy/nginx/universidade.conf" ]; then
+  sudo cp "$REPO/deploy/nginx/universidade.conf" "$NGINX_SITE"
+  sudo ln -sf "$NGINX_SITE" /etc/nginx/sites-enabled/universidade 2>/dev/null || true
+fi
 sudo nginx -t
 sudo systemctl reload nginx
 
