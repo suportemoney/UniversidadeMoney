@@ -42,10 +42,15 @@ class UserSerializer(serializers.ModelSerializer):
     cpf = serializers.SerializerMethodField()
     cargo = serializers.SerializerMethodField()
     setor = serializers.SerializerMethodField()
+    is_membro_equipe = serializers.SerializerMethodField()
+    pode_gestao = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "cpf", "cargo", "setor"]
+        fields = [
+            "id", "email", "first_name", "cpf", "cargo", "setor",
+            "is_superuser", "is_membro_equipe", "pode_gestao",
+        ]
 
     def get_cpf(self, obj):
         if hasattr(obj, "profile"):
@@ -61,3 +66,12 @@ class UserSerializer(serializers.ModelSerializer):
         if hasattr(obj, "profile") and obj.profile.setor:
             return obj.profile.setor.nome
         return None
+
+    def get_is_membro_equipe(self, obj):
+        if hasattr(obj, "profile"):
+            return obj.profile.is_membro_equipe
+        return False
+
+    def get_pode_gestao(self, obj):
+        from apps.cursos.permissions import usuario_pode_gestao
+        return usuario_pode_gestao(obj)

@@ -1,12 +1,23 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthLayout from "./components/AuthLayout";
 import DashboardLayout from "./components/DashboardLayout";
+import GestaoLayout from "./components/GestaoLayout";
+import GestaoRoute from "./components/GestaoRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
+import CursoPlayerPage from "./pages/CursoPlayerPage";
 import DashboardPage from "./pages/DashboardPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import MeusCursosPage from "./pages/MeusCursosPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import RegisterPage from "./pages/RegisterPage";
+import GestaoCursoEditorPage from "./pages/gestao/GestaoCursoEditorPage";
+import GestaoCursoNovoPage from "./pages/gestao/GestaoCursoNovoPage";
+import GestaoCursosPage from "./pages/gestao/GestaoCursosPage";
+import GestaoEquipePage from "./pages/gestao/GestaoEquipePage";
+import GestaoHomePage from "./pages/gestao/GestaoHomePage";
+import GestaoTrilhaEditorPage from "./pages/gestao/GestaoTrilhaEditorPage";
+import GestaoTrilhasPage from "./pages/gestao/GestaoTrilhasPage";
 import "./App.css";
 
 function App() {
@@ -28,15 +39,8 @@ function App() {
           }
         >
           <Route index element={<DashboardPage />} />
-          <Route
-            path="meus-cursos"
-            element={
-              <PlaceholderPage
-                titulo="Meus cursos"
-                descricao="Acompanhe todos os cursos em que você está matriculado."
-              />
-            }
-          />
+          <Route path="meus-cursos" element={<MeusCursosPage />} />
+          <Route path="cursos/:cursoId" element={<CursoPlayerPage />} />
           <Route
             path="trilhas"
             element={
@@ -109,6 +113,23 @@ function App() {
               />
             }
           />
+        </Route>
+
+        <Route
+          path="/gestao"
+          element={
+            <GestaoRoute>
+              <GestaoLayout />
+            </GestaoRoute>
+          }
+        >
+          <Route index element={<GestaoHomePage />} />
+          <Route path="equipe" element={<GestaoEquipePage />} />
+          <Route path="cursos" element={<GestaoCursosPage />} />
+          <Route path="cursos/novo" element={<GestaoCursoNovoPage />} />
+          <Route path="cursos/:id" element={<GestaoCursoEditorPage />} />
+          <Route path="trilhas" element={<GestaoTrilhasPage />} />
+          <Route path="trilhas/:id" element={<GestaoTrilhaEditorPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

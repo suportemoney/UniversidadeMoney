@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getDashboard, matricularCurso } from "../services/api";
 
@@ -21,6 +21,7 @@ function tempoRelativo(iso) {
 const ICON_COMUNICADO = { info: "ℹ️", trofeu: "🏆", megafone: "📣" };
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,7 +41,7 @@ export default function DashboardPage() {
   const handleContinuar = async (cursoId) => {
     try {
       await matricularCurso(cursoId);
-      carregar();
+      navigate(`/dashboard/cursos/${cursoId}`);
     } catch (e) {
       setErro(e.message);
     }

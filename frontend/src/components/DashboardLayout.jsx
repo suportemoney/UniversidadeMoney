@@ -62,6 +62,11 @@ export default function DashboardLayout() {
             <input type="search" placeholder="Buscar cursos, trilhas, temas..." />
           </div>
           <div className="dash-header-actions">
+            {user?.pode_gestao && (
+              <NavLink to="/gestao" className="btn btn-outline btn-sm">
+                Gestão
+              </NavLink>
+            )}
             <button type="button" className="dash-notif" aria-label="Notificações">
               🔔
               <span className="dash-notif-badge">3</span>

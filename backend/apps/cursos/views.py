@@ -34,9 +34,9 @@ class DashboardView(APIView):
         for m in matriculas:
             horas += float(m.curso.duracao_horas) * (m.progresso / 100)
 
-        total_cursos = Curso.objects.filter(publicado=True).count()
+        total_cursos = Curso.objects.filter(status=Curso.STATUS_PUBLICADO).count()
         novos_semana = Curso.objects.filter(
-            publicado=True,
+            status=Curso.STATUS_PUBLICADO,
             criado_em__gte=timezone.now() - timedelta(days=7),
         ).count()
 
@@ -51,7 +51,7 @@ class DashboardView(APIView):
         ]
 
         if not continue_aprendendo:
-            for curso in Curso.objects.filter(publicado=True).select_related("setor")[:4]:
+            for curso in Curso.objects.filter(status=Curso.STATUS_PUBLICADO).select_related("setor")[:4]:
                 continue_aprendendo.append(
                     {
                         "id": curso.id,
@@ -63,7 +63,7 @@ class DashboardView(APIView):
 
         trilhas_setor = []
         for setor in Setor.objects.all():
-            total = Curso.objects.filter(setor=setor, publicado=True).count()
+            total = Curso.objects.filter(setor=setor, status=Curso.STATUS_PUBLICADO).count()
             concluidos = Matricula.objects.filter(
                 usuario=user, curso__setor=setor, progresso=100
             ).count()
@@ -86,7 +86,7 @@ class DashboardView(APIView):
                 "duracao_horas": float(c.duracao_horas),
                 "is_novo": c.is_novo,
             }
-            for c in Curso.objects.filter(publicado=True, is_novo=True)[:4]
+            for c in Curso.objects.filter(status=Curso.STATUS_PUBLICADO, is_novo=True)[:4]
         ]
 
         ao_vivo = [
@@ -165,7 +165,7 @@ class MatricularView(APIView):
 
     def post(self, request, curso_id):
         try:
-            curso = Curso.objects.get(pk=curso_id, publicado=True)
+            curso = Curso.objects.get(pk=curso_id, status=Curso.STATUS_PUBLICADO)
         except Curso.DoesNotExist:
             return Response({"detail": "Curso não encontrado."}, status=404)
 

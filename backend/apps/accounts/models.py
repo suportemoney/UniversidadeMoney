@@ -19,6 +19,10 @@ class Profile(models.Model):
         related_name="colaboradores",
         verbose_name="Setor",
     )
+    is_membro_equipe = models.BooleanField(
+        default=False,
+        verbose_name="Membro da equipe",
+    )
 
     class Meta:
         verbose_name = "Perfil"

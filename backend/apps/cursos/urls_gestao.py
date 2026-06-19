@@ -1,0 +1,51 @@
+from django.urls import path
+
+from . import views_gestao
+
+urlpatterns = [
+    path("gestao/resumo/", views_gestao.GestaoResumoView.as_view(), name="gestao-resumo"),
+    path("gestao/setores/", views_gestao.GestaoSetoresView.as_view(), name="gestao-setores"),
+    path("gestao/usuarios/", views_gestao.GestaoUsuariosView.as_view(), name="gestao-usuarios"),
+    path(
+        "gestao/usuarios/<int:user_id>/equipe/",
+        views_gestao.GestaoUsuarioEquipeView.as_view(),
+        name="gestao-usuario-equipe",
+    ),
+    path("gestao/cursos/", views_gestao.GestaoCursosListCreateView.as_view(), name="gestao-cursos"),
+    path("gestao/cursos/disponiveis/", views_gestao.GestaoCursosDisponiveisView.as_view(), name="gestao-cursos-disponiveis"),
+    path("gestao/cursos/<int:pk>/", views_gestao.GestaoCursoDetailView.as_view(), name="gestao-curso-detail"),
+    path("gestao/cursos/<int:pk>/publicar/", views_gestao.GestaoCursoPublicarView.as_view(), name="gestao-curso-publicar"),
+    path("gestao/cursos/<int:pk>/arquivar/", views_gestao.GestaoCursoArquivarView.as_view(), name="gestao-curso-arquivar"),
+    path("gestao/cursos/<int:curso_id>/modulos/", views_gestao.GestaoModulosListCreateView.as_view(), name="gestao-modulos"),
+    path(
+        "gestao/cursos/<int:curso_id>/modulos/reordenar/",
+        views_gestao.GestaoModulosReordenarView.as_view(),
+        name="gestao-modulos-reordenar",
+    ),
+    path("gestao/modulos/<int:pk>/", views_gestao.GestaoModuloDetailView.as_view(), name="gestao-modulo-detail"),
+    path("gestao/modulos/<int:modulo_id>/aulas/", views_gestao.GestaoAulasListCreateView.as_view(), name="gestao-aulas"),
+    path("gestao/aulas/<int:pk>/", views_gestao.GestaoAulaDetailView.as_view(), name="gestao-aula-detail"),
+    path("gestao/aulas/<int:pk>/upload-video/", views_gestao.GestaoAulaUploadVideoView.as_view(), name="gestao-aula-upload"),
+    path("gestao/aulas/<int:pk>/video/", views_gestao.GestaoAulaRemoverVideoView.as_view(), name="gestao-aula-remover-video"),
+    path(
+        "gestao/modulos/<int:modulo_id>/atividades/",
+        views_gestao.GestaoAtividadesListCreateView.as_view(),
+        name="gestao-atividades",
+    ),
+    path("gestao/atividades/<int:pk>/", views_gestao.GestaoAtividadeDetailView.as_view(), name="gestao-atividade-detail"),
+    path(
+        "gestao/atividades/<int:atividade_id>/questoes/",
+        views_gestao.GestaoAtividadeQuestoesView.as_view(),
+        name="gestao-atividade-questoes",
+    ),
+    path("gestao/questoes/<int:pk>/", views_gestao.GestaoQuestaoDetailView.as_view(), name="gestao-questao-detail"),
+    path("gestao/cursos/<int:curso_id>/prova/", views_gestao.GestaoProvaView.as_view(), name="gestao-prova"),
+    path(
+        "gestao/provas/<int:prova_id>/questoes/",
+        views_gestao.GestaoProvaQuestoesView.as_view(),
+        name="gestao-prova-questoes",
+    ),
+    path("gestao/trilhas/", views_gestao.GestaoTrilhasListCreateView.as_view(), name="gestao-trilhas"),
+    path("gestao/trilhas/<int:pk>/", views_gestao.GestaoTrilhaDetailView.as_view(), name="gestao-trilha-detail"),
+    path("gestao/trilhas/<int:pk>/cursos/", views_gestao.GestaoTrilhaCursosView.as_view(), name="gestao-trilha-cursos"),
+]
