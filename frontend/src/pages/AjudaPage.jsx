@@ -64,8 +64,17 @@ export default function AjudaPage() {
       <div className="dash-grid-2">
         <section className="dash-panel dash-help-contact">
           <h2>Precisa de ajuda?</h2>
-          <p>Nossa equipe de TI está pronta para auxiliar você.</p>
-          <p>E-mail: <a href="mailto:ti@moneypromotora.com.br">ti@moneypromotora.com.br</a></p>
+          <p>Nossa equipe de suporte está pronta para auxiliar você.</p>
+          <p>
+            E-mail:{" "}
+            <a href="mailto:suporte@moneypromotora.com.br">suporte@moneypromotora.com.br</a>
+          </p>
+          <p>
+            WhatsApp:{" "}
+            <a href="https://wa.me/5551981051377" target="_blank" rel="noopener noreferrer">
+              (51) 9 8105-1377
+            </a>
+          </p>
           <p>Universidade Money — Money Promotora</p>
         </section>
 
