@@ -171,5 +171,6 @@ Depois corrigir na `main` e fazer novo deploy.
 | Erro de banco | [postgresql-vps.md](postgresql-vps.md) |
 | Front desatualizado | Rebuild + copiar para `frontend-dist/` |
 | Admin não abre | `CSRF_TRUSTED_ORIGINS`, SSL, logs do gunicorn |
+| `$'\r': command not found` no deploy.sh | CRLF no script — `sed -i 's/\r$//' deploy/scripts/deploy.sh` |
 
 Visão geral: [ARCHITECTURE.md](../ARCHITECTURE.md)

@@ -1,0 +1,6 @@
+# Scripts shell sempre com LF (Linux/VPS)
+*.sh text eol=lf
+
+# Evita CRLF em arquivos de configuração comuns no deploy
+*.env.example text eol=lf
+deploy/** text eol=lf
