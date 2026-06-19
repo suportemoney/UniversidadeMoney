@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { buscar } from "../../services/api";
 
+const ICONES = { curso: "📚", trilha: "🛤️", biblioteca: "📄" };
+
 export default function SearchOverlay({ query, onClose }) {
   const navigate = useNavigate();
   const [resultados, setResultados] = useState(null);
@@ -26,57 +28,49 @@ export default function SearchOverlay({ query, onClose }) {
 
   const ir = (tipo, id, url) => {
     onClose();
-    if (tipo === "curso") navigate(`/dashboard/explorar`);
+    if (tipo === "curso") navigate("/dashboard/explorar");
     else if (tipo === "trilha") navigate(`/dashboard/trilhas/${id}`);
     else if (url) window.open(url, "_blank");
   };
 
+  const grupos = resultados ? [
+    { key: "cursos", label: "Cursos", tipo: "curso" },
+    { key: "trilhas", label: "Trilhas", tipo: "trilha" },
+    { key: "biblioteca", label: "Biblioteca", tipo: "biblioteca" },
+  ] : [];
+
   return (
     <div className="search-overlay" onClick={onClose} role="presentation">
       <div className="search-overlay-box" onClick={(e) => e.stopPropagation()}>
-        {loading && <p>Buscando...</p>}
-        {resultados && (
-          <>
-            {resultados.cursos?.length > 0 && (
-              <section>
-                <h3>Cursos</h3>
-                <ul>
-                  {resultados.cursos.map((c) => (
-                    <li key={c.id}>
-                      <button type="button" onClick={() => ir("curso", c.id)}>{c.titulo}</button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {resultados.trilhas?.length > 0 && (
-              <section>
-                <h3>Trilhas</h3>
-                <ul>
-                  {resultados.trilhas.map((t) => (
-                    <li key={t.id}>
-                      <button type="button" onClick={() => ir("trilha", t.id)}>{t.titulo}</button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {resultados.biblioteca?.length > 0 && (
-              <section>
-                <h3>Biblioteca</h3>
-                <ul>
-                  {resultados.biblioteca.map((b) => (
-                    <li key={b.id}>
-                      <button type="button" onClick={() => ir("biblioteca", b.id, b.url)}>{b.titulo}</button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {!resultados.cursos?.length && !resultados.trilhas?.length && !resultados.biblioteca?.length && (
-              <p>Nenhum resultado para &quot;{query}&quot;</p>
-            )}
-          </>
+        <p className="dash-card-meta" style={{ margin: "0 0 0.5rem" }}>
+          Resultados para <strong>&quot;{query}&quot;</strong>
+        </p>
+
+        {loading && (
+          <div className="dash-skeleton" style={{ height: 120 }} />
+        )}
+
+        {!loading && resultados && grupos.map(({ key, label, tipo }) => {
+          const itens = resultados[key];
+          if (!itens?.length) return null;
+          return (
+            <section key={key}>
+              <h3>{label}</h3>
+              <ul>
+                {itens.map((item) => (
+                  <li key={item.id}>
+                    <button type="button" onClick={() => ir(tipo, item.id, item.url)}>
+                      <span>{ICONES[tipo]}</span> {item.titulo}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+
+        {!loading && resultados && !resultados.cursos?.length && !resultados.trilhas?.length && !resultados.biblioteca?.length && (
+          <p className="dash-card-meta">Nenhum resultado encontrado.</p>
         )}
       </div>
     </div>
