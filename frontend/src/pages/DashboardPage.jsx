@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getDashboard, matricularCurso } from "../services/api";
+import Modal from "../components/ui/Modal";
+import { getDashboard, inscreverAoVivo, matricularCurso } from "../services/api";
 
 function formatData(iso) {
   if (!iso) return "";
@@ -25,6 +26,8 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
+  const [inscricao, setInscricao] = useState(null);
+  const [msg, setMsg] = useState("");
 
   const carregar = () => {
     setLoading(true);
@@ -68,7 +71,7 @@ export default function DashboardPage() {
           <div>
             <h1>Bem-vindo(a), {usuario.nome || "Colaborador"}!</h1>
             <p>Sua plataforma de aprendizado corporativo da Money Promotora.</p>
-            <button type="button" className="btn btn-success">Explorar cursos</button>
+            <Link to="/dashboard/explorar" className="btn btn-success">Explorar cursos</Link>
           </div>
           <div className="dash-welcome-art" aria-hidden="true">🎓</div>
         </div>
@@ -129,14 +132,14 @@ export default function DashboardPage() {
         <h2>Trilhas por setor</h2>
         <div className="dash-scroll-row dash-trilhas">
           {data.trilhas_setor.map((t) => (
-            <article key={t.slug} className="dash-trilha-card">
+            <Link key={t.slug} to="/dashboard/trilhas" className="dash-trilha-card dash-trilha-card--link">
               <span className="dash-trilha-icon">{t.icone}</span>
               <strong>{t.nome}</strong>
               <small>{t.total_cursos} cursos</small>
               <div className="dash-progress">
                 <div className="dash-progress-bar" style={{ width: `${t.progresso}%` }} />
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       </section>
@@ -170,7 +173,7 @@ export default function DashboardPage() {
                   <strong>{t.titulo}</strong>
                   <small>{t.setor}</small>
                 </div>
-                <button type="button" className="btn btn-outline btn-sm">Inscrever-se</button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => setInscricao(t)}>Inscrever-se</button>
               </li>
             ))}
           </ul>
@@ -228,6 +231,30 @@ export default function DashboardPage() {
           <Link to="/dashboard/certificados">Ver todos os certificados</Link>
         </div>
       </section>
+
+      <Modal open={!!inscricao} onClose={() => setInscricao(null)} title="Confirmar inscrição">
+        <p>Deseja se inscrever em <strong>{inscricao?.titulo}</strong>?</p>
+        {msg && <div className="alert alert-success">{msg}</div>}
+        <div className="modal-actions">
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => setInscricao(null)}>Cancelar</button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={async () => {
+              try {
+                await inscreverAoVivo(inscricao.id);
+                setMsg("Inscrição confirmada!");
+                setInscricao(null);
+                carregar();
+              } catch (e) {
+                setErro(e.message);
+              }
+            }}
+          >
+            Confirmar
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

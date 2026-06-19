@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const STATUS = [
@@ -12,9 +13,12 @@ const STATUS = [
 export default function GestaoCursosPage() {
   const [cursos, setCursos] = useState([]);
   const [filtro, setFiltro] = useState("");
+  const [excluir, setExcluir] = useState(null);
+
+  const carregar = () => gestaoApi.listarCursos(filtro || undefined).then(setCursos);
 
   useEffect(() => {
-    gestaoApi.listarCursos(filtro || undefined).then(setCursos);
+    carregar();
   }, [filtro]);
 
   return (
@@ -52,11 +56,28 @@ export default function GestaoCursosPage() {
               <td><span className={`gestao-status gestao-status--${c.status}`}>{c.status}</span></td>
               <td>{c.setor_nome || "—"}</td>
               <td>{c.total_modulos}</td>
-              <td><Link to={`/gestao/cursos/${c.id}`}>Editar</Link></td>
+              <td>
+                <Link to={`/gestao/cursos/${c.id}`}>Editar</Link>
+                {" · "}
+                <button type="button" className="btn-link" onClick={() => setExcluir(c)}>Excluir</button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <ConfirmDialog
+        open={!!excluir}
+        onClose={() => setExcluir(null)}
+        onConfirm={async () => {
+          await gestaoApi.excluirCurso(excluir.id);
+          carregar();
+        }}
+        title="Excluir curso"
+        message={`Excluir "${excluir?.titulo}"?`}
+        confirmLabel="Excluir"
+        danger
+      />
     </div>
   );
 }

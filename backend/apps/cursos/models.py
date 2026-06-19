@@ -321,3 +321,61 @@ class Conquista(models.Model):
         unique_together = [["usuario", "slug"]]
         verbose_name = "Conquista"
         verbose_name_plural = "Conquistas"
+
+
+def biblioteca_upload_path(instance, filename):
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "pdf"
+    uid = instance.pk or uuid.uuid4().hex[:12]
+    return f"biblioteca/{uid}.{ext}"
+
+
+class MaterialBiblioteca(models.Model):
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True)
+    arquivo = models.FileField(upload_to=biblioteca_upload_path, blank=True, null=True)
+    setor = models.ForeignKey(
+        Setor, null=True, blank=True, on_delete=models.SET_NULL, related_name="materiais"
+    )
+    publicado = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        verbose_name = "Material da biblioteca"
+        verbose_name_plural = "Materiais da biblioteca"
+
+    @property
+    def arquivo_url(self):
+        if self.arquivo:
+            return self.arquivo.url
+        return None
+
+
+class InscricaoAoVivo(models.Model):
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="inscricoes_ao_vivo"
+    )
+    treinamento = models.ForeignKey(
+        TreinamentoAoVivo, on_delete=models.CASCADE, related_name="inscricoes"
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [["usuario", "treinamento"]]
+        verbose_name = "Inscrição ao vivo"
+        verbose_name_plural = "Inscrições ao vivo"
+
+
+class ComunicadoLeitura(models.Model):
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comunicados_lidos"
+    )
+    comunicado = models.ForeignKey(
+        Comunicado, on_delete=models.CASCADE, related_name="leituras"
+    )
+    lido_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [["usuario", "comunicado"]]
+        verbose_name = "Leitura de comunicado"
+        verbose_name_plural = "Leituras de comunicados"

@@ -4,13 +4,25 @@ import DashboardLayout from "./components/DashboardLayout";
 import GestaoLayout from "./components/GestaoLayout";
 import GestaoRoute from "./components/GestaoRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AjudaPage from "./pages/AjudaPage";
+import AoVivoPage from "./pages/AoVivoPage";
+import BibliotecaPage from "./pages/BibliotecaPage";
+import CertificadosPage from "./pages/CertificadosPage";
+import ComunicadosPage from "./pages/ComunicadosPage";
 import CursoPlayerPage from "./pages/CursoPlayerPage";
 import DashboardPage from "./pages/DashboardPage";
+import ExplorarCursosPage from "./pages/ExplorarCursosPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import MeusCursosPage from "./pages/MeusCursosPage";
-import PlaceholderPage from "./pages/PlaceholderPage";
+import ProgressoPage from "./pages/ProgressoPage";
+import RankingPage from "./pages/RankingPage";
 import RegisterPage from "./pages/RegisterPage";
+import TrilhaDetalhePage from "./pages/TrilhaDetalhePage";
+import TrilhasPage from "./pages/TrilhasPage";
+import GestaoAoVivoPage from "./pages/gestao/GestaoAoVivoPage";
+import GestaoBibliotecaPage from "./pages/gestao/GestaoBibliotecaPage";
+import GestaoComunicadosPage from "./pages/gestao/GestaoComunicadosPage";
 import GestaoCursoEditorPage from "./pages/gestao/GestaoCursoEditorPage";
 import GestaoCursoNovoPage from "./pages/gestao/GestaoCursoNovoPage";
 import GestaoCursosPage from "./pages/gestao/GestaoCursosPage";
@@ -40,79 +52,17 @@ function App() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="meus-cursos" element={<MeusCursosPage />} />
+          <Route path="explorar" element={<ExplorarCursosPage />} />
           <Route path="cursos/:cursoId" element={<CursoPlayerPage />} />
-          <Route
-            path="trilhas"
-            element={
-              <PlaceholderPage
-                titulo="Trilhas"
-                descricao="Trilhas de aprendizado organizadas por setor e carreira."
-              />
-            }
-          />
-          <Route
-            path="ao-vivo"
-            element={
-              <PlaceholderPage
-                titulo="Treinamentos ao vivo"
-                descricao="Agenda de workshops e treinamentos presenciais online."
-              />
-            }
-          />
-          <Route
-            path="certificados"
-            element={
-              <PlaceholderPage
-                titulo="Certificados"
-                descricao="Seus certificados emitidos ao concluir os cursos."
-              />
-            }
-          />
-          <Route
-            path="biblioteca"
-            element={
-              <PlaceholderPage
-                titulo="Biblioteca"
-                descricao="Materiais de apoio, PDFs e recursos complementares."
-              />
-            }
-          />
-          <Route
-            path="ranking"
-            element={
-              <PlaceholderPage
-                titulo="Ranking"
-                descricao="Classificação de evolução entre colaboradores."
-              />
-            }
-          />
-          <Route
-            path="comunicados"
-            element={
-              <PlaceholderPage
-                titulo="Comunicados"
-                descricao="Notícias e avisos internos da Money Promotora."
-              />
-            }
-          />
-          <Route
-            path="progresso"
-            element={
-              <PlaceholderPage
-                titulo="Meu progresso"
-                descricao="Visão detalhada das suas horas e metas de treinamento."
-              />
-            }
-          />
-          <Route
-            path="ajuda"
-            element={
-              <PlaceholderPage
-                titulo="Ajuda"
-                descricao="Suporte e perguntas frequentes sobre a plataforma."
-              />
-            }
-          />
+          <Route path="trilhas" element={<TrilhasPage />} />
+          <Route path="trilhas/:id" element={<TrilhaDetalhePage />} />
+          <Route path="ao-vivo" element={<AoVivoPage />} />
+          <Route path="certificados" element={<CertificadosPage />} />
+          <Route path="biblioteca" element={<BibliotecaPage />} />
+          <Route path="ranking" element={<RankingPage />} />
+          <Route path="comunicados" element={<ComunicadosPage />} />
+          <Route path="progresso" element={<ProgressoPage />} />
+          <Route path="ajuda" element={<AjudaPage />} />
         </Route>
 
         <Route
@@ -130,6 +80,9 @@ function App() {
           <Route path="cursos/:id" element={<GestaoCursoEditorPage />} />
           <Route path="trilhas" element={<GestaoTrilhasPage />} />
           <Route path="trilhas/:id" element={<GestaoTrilhaEditorPage />} />
+          <Route path="comunicados" element={<GestaoComunicadosPage />} />
+          <Route path="ao-vivo" element={<GestaoAoVivoPage />} />
+          <Route path="biblioteca" element={<GestaoBibliotecaPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

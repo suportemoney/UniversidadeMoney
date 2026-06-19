@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from .models import AulaVideo, Certificado, Curso, Matricula, Modulo, ProgressoAula
+from .models import AulaVideo, Certificado, Conquista, Curso, Matricula, Modulo, ProgressoAula
 
 
 def recalcular_curso(curso):
@@ -59,6 +59,21 @@ def concluir_curso(matricula):
     matricula.concluido_em = timezone.now()
     matricula.save(update_fields=["progresso", "concluido_em", "atualizado_em"])
     Certificado.objects.get_or_create(usuario=matricula.usuario, curso=matricula.curso)
+    emitir_conquista(matricula.usuario, "primeiro-curso", "Primeiro Curso")
+    emitir_conquista(matricula.usuario, "especialista", "Especialista")
+
+
+def emitir_conquista(usuario, slug, titulo):
+    """Emite conquista se ainda não existir."""
+    Conquista.objects.get_or_create(usuario=usuario, slug=slug, defaults={"titulo": titulo})
+
+
+def calcular_horas_usuario(usuario):
+    """Total de horas de treinamento do usuário."""
+    horas = 0.0
+    for m in Matricula.objects.filter(usuario=usuario).select_related("curso"):
+        horas += float(m.curso.duracao_horas) * (m.progresso / 100)
+    return round(horas, 1)
 
 
 def corrigir_questoes(questoes, respostas):

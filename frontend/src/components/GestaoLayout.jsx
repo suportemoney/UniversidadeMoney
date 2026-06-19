@@ -7,6 +7,9 @@ const MENU = [
   { to: "/gestao", label: "Resumo", end: true },
   { to: "/gestao/cursos", label: "Cursos" },
   { to: "/gestao/trilhas", label: "Trilhas" },
+  { to: "/gestao/comunicados", label: "Comunicados" },
+  { to: "/gestao/ao-vivo", label: "Ao vivo" },
+  { to: "/gestao/biblioteca", label: "Biblioteca" },
   { to: "/gestao/equipe", label: "Equipe", superOnly: true },
 ];
 

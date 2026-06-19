@@ -120,4 +120,39 @@ export const gestaoApi = {
       method: "POST",
       body: JSON.stringify({ curso_ids: cursoIds }),
     }),
+
+  uploadThumbnail: (cursoId, file) => {
+    const fd = new FormData();
+    fd.append("thumbnail", file);
+    return gestaoFetch(`/gestao/cursos/${cursoId}/upload-thumbnail/`, { method: "POST", body: fd });
+  },
+
+  atualizarQuestao: (id, data) =>
+    gestaoFetch(`/gestao/questoes/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  listarComunicados: () => gestaoFetch("/gestao/comunicados/"),
+  criarComunicado: (data) =>
+    gestaoFetch("/gestao/comunicados/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarComunicado: (id, data) =>
+    gestaoFetch(`/gestao/comunicados/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirComunicado: (id) => gestaoFetch(`/gestao/comunicados/${id}/`, { method: "DELETE" }),
+
+  listarAoVivo: () => gestaoFetch("/gestao/ao-vivo/"),
+  criarAoVivo: (data) =>
+    gestaoFetch("/gestao/ao-vivo/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarAoVivo: (id, data) =>
+    gestaoFetch(`/gestao/ao-vivo/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirAoVivo: (id) => gestaoFetch(`/gestao/ao-vivo/${id}/`, { method: "DELETE" }),
+
+  listarBiblioteca: () => gestaoFetch("/gestao/biblioteca/"),
+  criarBiblioteca: (data) =>
+    gestaoFetch("/gestao/biblioteca/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarBiblioteca: (id, data) =>
+    gestaoFetch(`/gestao/biblioteca/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirBiblioteca: (id) => gestaoFetch(`/gestao/biblioteca/${id}/`, { method: "DELETE" }),
+  uploadPdfBiblioteca: (id, file) => {
+    const fd = new FormData();
+    fd.append("pdf", file);
+    return gestaoFetch(`/gestao/biblioteca/${id}/upload-pdf/`, { method: "POST", body: fd });
+  },
 };

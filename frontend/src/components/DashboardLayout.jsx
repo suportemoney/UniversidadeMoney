@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { getMe, logout } from "../services/api";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import NotificationPanel from "./dashboard/NotificationPanel";
+import SearchOverlay from "./dashboard/SearchOverlay";
+import { getComunicadosNaoLidos, getMe, logout } from "../services/api";
 import "../styles/dashboard.css";
 
 const MENU = [
@@ -19,6 +21,14 @@ const MENU = [
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [busca, setBusca] = useState("");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notif, setNotif] = useState({ count: 0, itens: [] });
+  const [perfilOpen, setPerfilOpen] = useState(false);
+
+  const carregarNotif = () => {
+    getComunicadosNaoLidos().then(setNotif).catch(() => setNotif({ count: 0, itens: [] }));
+  };
 
   useEffect(() => {
     getMe()
@@ -27,6 +37,7 @@ export default function DashboardLayout() {
         logout();
         navigate("/login");
       });
+    carregarNotif();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -59,30 +70,53 @@ export default function DashboardLayout() {
         <header className="dash-header">
           <div className="dash-search">
             <span className="dash-search-icon">🔍</span>
-            <input type="search" placeholder="Buscar cursos, trilhas, temas..." />
+            <input
+              type="search"
+              placeholder="Buscar cursos, trilhas, temas..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
           </div>
+          <SearchOverlay query={busca} onClose={() => setBusca("")} />
+
           <div className="dash-header-actions">
             {user?.pode_gestao && (
               <NavLink to="/gestao" className="btn btn-outline btn-sm">
                 Gestão
               </NavLink>
             )}
-            <button type="button" className="dash-notif" aria-label="Notificações">
+            <button
+              type="button"
+              className="dash-notif"
+              aria-label="Notificações"
+              onClick={() => setNotifOpen(true)}
+            >
               🔔
-              <span className="dash-notif-badge">3</span>
+              {notif.count > 0 && <span className="dash-notif-badge">{notif.count}</span>}
             </button>
             {user && (
-              <div className="dash-profile">
-                <div className="dash-avatar">{user.first_name?.charAt(0) || "U"}</div>
-                <div className="dash-profile-info">
-                  <span>Olá, {user.first_name}</span>
-                  <small>{user.cargo || "Colaborador"}</small>
-                </div>
+              <div className="dash-profile-wrap">
+                <button
+                  type="button"
+                  className="dash-profile"
+                  onClick={() => setPerfilOpen((v) => !v)}
+                >
+                  <div className="dash-avatar">{user.first_name?.charAt(0) || "U"}</div>
+                  <div className="dash-profile-info">
+                    <span>Olá, {user.first_name}</span>
+                    <small>{user.cargo || "Colaborador"}</small>
+                  </div>
+                </button>
+                {perfilOpen && (
+                  <div className="dash-profile-menu">
+                    <p><strong>{user.first_name}</strong></p>
+                    <small>{user.cargo || "Colaborador"}</small>
+                    <Link to="/dashboard/progresso" onClick={() => setPerfilOpen(false)}>Meu progresso</Link>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={handleLogout}>Sair</button>
+                  </div>
+                )}
               </div>
             )}
-            <button type="button" className="btn btn-outline btn-sm" onClick={handleLogout}>
-              Sair
-            </button>
           </div>
         </header>
 
@@ -90,6 +124,13 @@ export default function DashboardLayout() {
           <Outlet context={{ user }} />
         </main>
       </div>
+
+      <NotificationPanel
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        itens={notif.itens}
+        onAtualizar={carregarNotif}
+      />
     </div>
   );
 }

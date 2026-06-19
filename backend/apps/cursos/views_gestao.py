@@ -12,11 +12,14 @@ from rest_framework.views import APIView
 from .models import (
     Atividade,
     AulaVideo,
+    Comunicado,
     Curso,
+    MaterialBiblioteca,
     Modulo,
     ProvaFinal,
     Questao,
     Setor,
+    TreinamentoAoVivo,
     Trilha,
     TrilhaCurso,
 )
@@ -24,13 +27,16 @@ from .permissions import IsGestor, IsSuperuserGestao
 from .serializers_gestao import (
     AtividadeSerializer,
     AulaVideoSerializer,
+    ComunicadoSerializer,
     CursoGestaoDetailSerializer,
     CursoGestaoListSerializer,
     CursoGestaoWriteSerializer,
+    MaterialBibliotecaSerializer,
     ModuloSerializer,
     ProvaFinalSerializer,
     QuestaoSerializer,
     SetorSerializer,
+    TreinamentoAoVivoSerializer,
     TrilhaCursoItemSerializer,
     TrilhaGestaoSerializer,
     TrilhaGestaoWriteSerializer,
@@ -40,6 +46,9 @@ from .services import curso_pronto_publicar, recalcular_curso
 
 VIDEO_MAX_MB = int(os.getenv("VIDEO_MAX_MB", "500"))
 VIDEO_EXT = {".mp4", ".webm", ".mov"}
+THUMB_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+PDF_MAX_MB = int(os.getenv("PDF_MAX_MB", "50"))
+PDF_EXT = {".pdf"}
 
 
 class GestaoResumoView(APIView):
@@ -434,3 +443,98 @@ class GestaoTrilhaCursosView(APIView):
 
         trilha = Trilha.objects.prefetch_related("itens__curso").get(pk=pk)
         return Response(TrilhaGestaoSerializer(trilha).data)
+
+
+class GestaoCursoUploadThumbnailView(APIView):
+    permission_classes = [IsGestor]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        try:
+            curso = Curso.objects.get(pk=pk)
+        except Curso.DoesNotExist:
+            return Response({"detail": "Curso não encontrado."}, status=404)
+
+        arquivo = request.FILES.get("thumbnail")
+        if not arquivo:
+            return Response({"detail": "Envie o arquivo thumbnail."}, status=400)
+
+        ext = os.path.splitext(arquivo.name)[1].lower()
+        if ext not in THUMB_EXT:
+            return Response({"detail": "Use jpg, png ou webp."}, status=400)
+
+        if curso.thumbnail:
+            curso.thumbnail.delete(save=False)
+        curso.thumbnail = arquivo
+        curso.save()
+        return Response(CursoGestaoDetailSerializer(curso).data)
+
+
+class GestaoComunicadosListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = ComunicadoSerializer
+    queryset = Comunicado.objects.all()
+
+
+class GestaoComunicadoDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = ComunicadoSerializer
+    queryset = Comunicado.objects.all()
+
+
+class GestaoAoVivoListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = TreinamentoAoVivoSerializer
+    queryset = TreinamentoAoVivo.objects.select_related("setor")
+
+
+class GestaoAoVivoDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = TreinamentoAoVivoSerializer
+    queryset = TreinamentoAoVivo.objects.select_related("setor")
+
+
+class GestaoBibliotecaListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = MaterialBibliotecaSerializer
+    queryset = MaterialBiblioteca.objects.select_related("setor")
+
+
+class GestaoBibliotecaDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = MaterialBibliotecaSerializer
+    queryset = MaterialBiblioteca.objects.select_related("setor")
+
+    def perform_destroy(self, instance):
+        if instance.arquivo:
+            instance.arquivo.delete(save=False)
+        instance.delete()
+
+
+class GestaoBibliotecaUploadPdfView(APIView):
+    permission_classes = [IsGestor]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        try:
+            material = MaterialBiblioteca.objects.get(pk=pk)
+        except MaterialBiblioteca.DoesNotExist:
+            return Response({"detail": "Material não encontrado."}, status=404)
+
+        arquivo = request.FILES.get("pdf")
+        if not arquivo:
+            return Response({"detail": "Envie o arquivo pdf."}, status=400)
+
+        ext = os.path.splitext(arquivo.name)[1].lower()
+        if ext not in PDF_EXT:
+            return Response({"detail": "Somente PDF é permitido."}, status=400)
+
+        max_bytes = PDF_MAX_MB * 1024 * 1024
+        if arquivo.size > max_bytes:
+            return Response({"detail": f"PDF excede {PDF_MAX_MB}MB."}, status=400)
+
+        if material.arquivo:
+            material.arquivo.delete(save=False)
+        material.arquivo = arquivo
+        material.save()
+        return Response(MaterialBibliotecaSerializer(material).data)

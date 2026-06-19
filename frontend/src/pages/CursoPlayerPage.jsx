@@ -3,6 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../services/api";
 import "../styles/gestao.css";
 
+function formatTimer(segundos) {
+  const m = Math.floor(segundos / 60);
+  const s = segundos % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 export default function CursoPlayerPage() {
   const { cursoId } = useParams();
   const [data, setData] = useState(null);
@@ -12,6 +18,7 @@ export default function CursoPlayerPage() {
   const [respostas, setRespostas] = useState({});
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState("");
+  const [tempoRestante, setTempoRestante] = useState(null);
 
   const carregar = () => {
     apiFetch(`/cursos/${cursoId}/conteudo/`).then(setData);
@@ -21,6 +28,16 @@ export default function CursoPlayerPage() {
     carregar();
   }, [cursoId]);
 
+  useEffect(() => {
+    if (!prova?.tempo_limite_min || tempoRestante === null) return;
+    if (tempoRestante <= 0) {
+      setErro("Tempo esgotado. Envie a prova ou perderá a tentativa.");
+      return;
+    }
+    const t = setInterval(() => setTempoRestante((v) => v - 1), 1000);
+    return () => clearInterval(t);
+  }, [prova, tempoRestante]);
+
   const concluirAula = async (aulaId) => {
     await apiFetch(`/aulas/${aulaId}/concluir/`, { method: "POST" });
     carregar();
@@ -29,6 +46,7 @@ export default function CursoPlayerPage() {
   const abrirAtividade = async (id) => {
     setResultado(null);
     setRespostas({});
+    setTempoRestante(null);
     const d = await apiFetch(`/atividades/${id}/`);
     setAtividade(d);
     setAulaAtual(null);
@@ -48,22 +66,33 @@ export default function CursoPlayerPage() {
     if (!data?.prova_final) return;
     setResultado(null);
     setRespostas({});
+    setErro("");
     try {
       const p = await apiFetch(`/provas/${data.prova_final.id}/`);
       setProva(p);
       setAtividade(null);
       setAulaAtual(null);
+      if (p.tempo_limite_min) {
+        setTempoRestante(p.tempo_limite_min * 60);
+      } else {
+        setTempoRestante(null);
+      }
     } catch (e) {
       setErro(e.message);
     }
   };
 
   const enviarProva = async () => {
+    if (prova?.tempo_limite_min && tempoRestante !== null && tempoRestante <= 0) {
+      setErro("Tempo esgotado.");
+      return;
+    }
     const r = await apiFetch(`/provas/${prova.id}/`, {
       method: "POST",
       body: JSON.stringify({ respostas }),
     });
     setResultado(r);
+    setTempoRestante(null);
     carregar();
   };
 
@@ -88,7 +117,7 @@ export default function CursoPlayerPage() {
                   key={aula.id}
                   type="button"
                   className={`player-item${aula.concluida ? " done" : ""}`}
-                  onClick={() => { setAulaAtual(aula); setAtividade(null); setProva(null); setResultado(null); }}
+                  onClick={() => { setAulaAtual(aula); setAtividade(null); setProva(null); setResultado(null); setTempoRestante(null); }}
                 >
                   {aula.concluida ? "✓" : "▶"} {aula.titulo}
                 </button>
@@ -167,6 +196,11 @@ export default function CursoPlayerPage() {
             <div>
               <h2>{prova.titulo}</h2>
               <p>Nota mínima: {prova.nota_minima}% — Tentativas restantes: {prova.tentativas_restantes}</p>
+              {tempoRestante !== null && (
+                <div className={`player-timer${tempoRestante < 60 ? " player-timer--urgente" : ""}`}>
+                  Tempo restante: {formatTimer(tempoRestante)}
+                </div>
+              )}
               {prova.questoes.map((q) => (
                 <div key={q.id} className="gestao-questao">
                   <p>{q.enunciado}</p>

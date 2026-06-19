@@ -302,6 +302,16 @@
   flex-wrap: wrap;
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  color: #1d4ed8;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
 .gestao-search-row {
   display: flex;
   gap: 0.5rem;
@@ -438,4 +448,127 @@
   .player-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Modais reutilizáveis */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.modal-box--wide {
+  max-width: 640px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1a2b4a;
+}
+
+.modal-close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.gestao-thumbnail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.gestao-thumbnail-preview {
+  max-width: 240px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.gestao-thumbnail-placeholder {
+  width: 240px;
+  height: 135px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.gestao-modulo-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+
+.gestao-erro {
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin: 0.25rem 0 0;
+}
+
+.player-timer {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.player-timer--urgente {
+  background: #fee2e2;
+  color: #991b1b;
 }

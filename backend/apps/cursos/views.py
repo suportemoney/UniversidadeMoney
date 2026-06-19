@@ -10,11 +10,13 @@ from rest_framework.views import APIView
 from .models import (
     Certificado,
     Comunicado,
+    Conquista,
     Curso,
     Matricula,
     Setor,
     TreinamentoAoVivo,
 )
+from .services import emitir_conquista
 
 
 class DashboardView(APIView):
@@ -152,10 +154,8 @@ class DashboardView(APIView):
         return ranking[:5]
 
     def _conquistas(self, user):
-        conquistas = list(user.conquistas.values("slug", "titulo", "emitido_em"))
-        if not conquistas:
-            conquistas = [{"slug": "boas-vindas", "titulo": "Boas-vindas", "emitido_em": None}]
-        return conquistas
+        emitir_conquista(user, "boas-vindas", "Boas-vindas")
+        return list(Conquista.objects.filter(usuario=user).values("slug", "titulo", "emitido_em"))
 
 
 class MatricularView(APIView):

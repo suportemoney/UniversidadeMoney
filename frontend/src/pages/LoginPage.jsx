@@ -7,7 +7,7 @@ export default function LoginPage() {
   const location = useLocation();
   const successMsg = location.state?.message;
 
-  const [email, setEmail] = useState("");
+  const [identificador, setIdentificador] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export default function LoginPage() {
     setErro("");
     setLoading(true);
     try {
-      await login(email, password);
+      await login(identificador, password);
       navigate("/dashboard");
     } catch (err) {
       setErro(err.message || "Credenciais inválidas.");
@@ -36,14 +36,14 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="auth-form">
         <label>
-          E-mail
+          E-mail ou usuário
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={identificador}
+            onChange={(e) => setIdentificador(e.target.value)}
             required
-            autoComplete="email"
-            placeholder="seu@email.com"
+            autoComplete="username"
+            placeholder="seu@email.com ou usuário admin"
           />
         </label>
         <label>

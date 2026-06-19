@@ -38,6 +38,11 @@ class RegisterSerializer(serializers.Serializer):
         return user
 
 
+class MeUpdateSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=150, required=False)
+    cargo = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+
 class UserSerializer(serializers.ModelSerializer):
     cpf = serializers.SerializerMethodField()
     cargo = serializers.SerializerMethodField()

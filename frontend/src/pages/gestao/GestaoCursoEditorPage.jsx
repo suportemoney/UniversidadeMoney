@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import AtividadeModal from "../../components/gestao/AtividadeModal";
+import AulaModal from "../../components/gestao/AulaModal";
+import ModuloModal from "../../components/gestao/ModuloModal";
 import QuestaoEditor from "../../components/gestao/QuestaoEditor";
+import ThumbnailUploadField from "../../components/gestao/ThumbnailUploadField";
 import VideoUploadField from "../../components/gestao/VideoUploadField";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const ABAS = [
@@ -20,6 +25,13 @@ export default function GestaoCursoEditorPage() {
   const [prova, setProva] = useState(null);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
+  const [errosPublicar, setErrosPublicar] = useState([]);
+
+  const [moduloModal, setModuloModal] = useState({ open: false, modulo: null });
+  const [aulaModal, setAulaModal] = useState({ open: false, aula: null, moduloId: null });
+  const [ativModal, setAtivModal] = useState({ open: false, moduloId: null });
+  const [confirm, setConfirm] = useState({ open: false, tipo: "", alvo: null });
+  const [questaoEdit, setQuestaoEdit] = useState(null);
 
   const carregar = useCallback(() => {
     gestaoApi.obterCurso(id).then(setCurso);
@@ -47,28 +59,48 @@ export default function GestaoCursoEditorPage() {
     }
   };
 
-  const addModulo = async () => {
-    const titulo = prompt("Título do módulo:");
-    if (!titulo) return;
-    await gestaoApi.criarModulo(id, { titulo });
+  const salvarModulo = async (data) => {
+    if (moduloModal.modulo) {
+      await gestaoApi.atualizarModulo(moduloModal.modulo.id, data);
+    } else {
+      await gestaoApi.criarModulo(id, data);
+    }
     carregar();
   };
 
-  const addAula = async (moduloId) => {
-    const titulo = prompt("Título da aula:");
-    if (!titulo) return;
-    await gestaoApi.criarAula(moduloId, { titulo });
+  const salvarAula = async (data) => {
+    if (aulaModal.aula) {
+      await gestaoApi.atualizarAula(aulaModal.aula.id, data);
+    } else {
+      await gestaoApi.criarAula(aulaModal.moduloId, data);
+    }
     carregar();
   };
 
-  const addAtividade = async (moduloId) => {
-    const titulo = prompt("Título da atividade:");
-    if (!titulo) return;
-    await gestaoApi.criarAtividade(moduloId, { titulo, tipo: "quiz" });
+  const salvarAtividade = async (data) => {
+    await gestaoApi.criarAtividade(ativModal.moduloId, data);
+    carregar();
+  };
+
+  const reordenarModulo = async (idx, dir) => {
+    const ids = curso.modulos.map((m) => m.id);
+    const j = idx + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[idx], ids[j]] = [ids[j], ids[idx]];
+    await gestaoApi.reordenarModulos(id, ids);
+    carregar();
+  };
+
+  const executarExclusao = async () => {
+    const { tipo, alvo } = confirm;
+    if (tipo === "modulo") await gestaoApi.excluirModulo(alvo.id);
+    if (tipo === "aula") await gestaoApi.excluirAula(alvo.id);
+    if (tipo === "questao") await gestaoApi.excluirQuestao(alvo.id);
     carregar();
   };
 
   const publicar = async () => {
+    setErrosPublicar([]);
     try {
       await gestaoApi.publicarCurso(id);
       setMsg("Curso publicado!");
@@ -110,6 +142,11 @@ export default function GestaoCursoEditorPage() {
 
       {aba === "info" && (
         <form className="gestao-form" onSubmit={salvarInfo}>
+          <ThumbnailUploadField
+            cursoId={id}
+            thumbnailUrl={curso.thumbnail_url}
+            onUploaded={(data) => setCurso(data)}
+          />
           <label>
             Título
             <input
@@ -152,18 +189,70 @@ export default function GestaoCursoEditorPage() {
 
       {aba === "modulos" && (
         <div>
-          <button type="button" className="btn btn-primary btn-sm" onClick={addModulo}>+ Módulo</button>
-          {curso.modulos?.map((mod) => (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => setModuloModal({ open: true, modulo: null })}
+          >
+            + Módulo
+          </button>
+          {curso.modulos?.map((mod, idx) => (
             <div key={mod.id} className="gestao-modulo">
-              <h3>{mod.titulo}</h3>
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => addAula(mod.id)}>+ Aula</button>
+              <div className="gestao-modulo-actions">
+                <h3>{mod.titulo}</h3>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => reordenarModulo(idx, -1)}>↑</button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => reordenarModulo(idx, 1)}>↓</button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setModuloModal({ open: true, modulo: mod })}
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setConfirm({ open: true, tipo: "modulo", alvo: mod })}
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setAulaModal({ open: true, aula: null, moduloId: mod.id })}
+                >
+                  + Aula
+                </button>
+              </div>
               {mod.aulas?.map((aula) => (
                 <div key={aula.id} className="gestao-aula">
-                  <strong>{aula.titulo}</strong>
-                  <VideoUploadField
-                    aula={aula}
-                    onUploaded={() => carregar()}
-                  />
+                  <div className="gestao-modulo-actions">
+                    <strong>{aula.titulo}</strong>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => setAulaModal({ open: true, aula, moduloId: mod.id })}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => setConfirm({ open: true, tipo: "aula", alvo: aula })}
+                    >
+                      Excluir
+                    </button>
+                    {aula.video_url && (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => gestaoApi.removerVideo(aula.id).then(carregar)}
+                      >
+                        Remover vídeo
+                      </button>
+                    )}
+                  </div>
+                  <VideoUploadField aula={aula} onUploaded={() => carregar()} />
                 </div>
               ))}
             </div>
@@ -176,34 +265,67 @@ export default function GestaoCursoEditorPage() {
           {curso.modulos?.map((mod) => (
             <div key={mod.id} className="gestao-modulo">
               <h3>{mod.titulo}</h3>
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => addAtividade(mod.id)}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setAtivModal({ open: true, moduloId: mod.id })}
+              >
                 + Atividade
               </button>
               {mod.atividades?.map((ativ) => (
                 <div key={ativ.id} className="gestao-atividade">
-                  <h4>{ativ.titulo}</h4>
+                  <h4>{ativ.titulo} ({ativ.tipo})</h4>
                   {ativ.questoes?.map((q) => (
                     <div key={q.id} className="gestao-questao-resumo">
                       <p>{q.enunciado}</p>
                       <button
                         type="button"
                         className="btn btn-outline btn-sm"
-                        onClick={() => gestaoApi.excluirQuestao(q.id).then(carregar)}
+                        onClick={() => setQuestaoEdit(q)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setConfirm({ open: true, tipo: "questao", alvo: q })}
                       >
                         Excluir
                       </button>
                     </div>
                   ))}
-                  <QuestaoEditor
-                    onSave={async (data) => {
-                      await gestaoApi.criarQuestaoAtividade(ativ.id, data);
-                      carregar();
-                    }}
-                  />
+                  {!questaoEdit && (
+                    <QuestaoEditor
+                      onSave={async (data) => {
+                        await gestaoApi.criarQuestaoAtividade(ativ.id, data);
+                        carregar();
+                      }}
+                    />
+                  )}
                 </div>
               ))}
             </div>
           ))}
+          {questaoEdit && (
+            <div className="gestao-modulo">
+              <h3>Editar questão</h3>
+              <QuestaoEditor
+                questao={questaoEdit}
+                onSave={async (data) => {
+                  await gestaoApi.atualizarQuestao(questaoEdit.id, data);
+                  setQuestaoEdit(null);
+                  carregar();
+                }}
+                onDelete={() => {
+                  setConfirm({ open: true, tipo: "questao", alvo: questaoEdit });
+                  setQuestaoEdit(null);
+                }}
+              />
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setQuestaoEdit(null)}>
+                Cancelar edição
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -235,6 +357,18 @@ export default function GestaoCursoEditorPage() {
               onChange={(e) => setProva({ ...prova, tentativas_max: Number(e.target.value) })}
             />
           </label>
+          <label>
+            Tempo limite (minutos, opcional)
+            <input
+              type="number"
+              min={1}
+              value={prova?.tempo_limite_min ?? ""}
+              onChange={(e) => setProva({
+                ...prova,
+                tempo_limite_min: e.target.value ? Number(e.target.value) : null,
+              })}
+            />
+          </label>
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -243,6 +377,7 @@ export default function GestaoCursoEditorPage() {
                 titulo: prova?.titulo || "Prova final",
                 nota_minima: prova?.nota_minima ?? 70,
                 tentativas_max: prova?.tentativas_max ?? 3,
+                tempo_limite_min: prova?.tempo_limite_min || null,
               });
               setProva(p);
               setMsg("Prova salva.");
@@ -254,17 +389,20 @@ export default function GestaoCursoEditorPage() {
           {prova?.questoes?.map((q) => (
             <div key={q.id} className="gestao-questao-resumo">
               <p>{q.enunciado}</p>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setQuestaoEdit(q)}>
+                Editar
+              </button>
               <button
                 type="button"
                 className="btn btn-outline btn-sm"
-                onClick={() => gestaoApi.excluirQuestao(q.id).then(carregar)}
+                onClick={() => setConfirm({ open: true, tipo: "questao", alvo: q })}
               >
                 Excluir
               </button>
             </div>
           ))}
 
-          {prova?.id && (
+          {prova?.id && !questaoEdit && (
             <QuestaoEditor
               onSave={async (data) => {
                 await gestaoApi.criarQuestaoProva(prova.id, data);
@@ -284,6 +422,11 @@ export default function GestaoCursoEditorPage() {
               {curso.modulos?.reduce((acc, m) => acc + (m.aulas?.length || 0), 0) || 0} aula(s) em vídeo
             </li>
           </ul>
+          {errosPublicar.length > 0 && (
+            <ul className="alert alert-error">
+              {errosPublicar.map((e) => <li key={e}>{e}</li>)}
+            </ul>
+          )}
           {curso.status !== "publicado" && (
             <button type="button" className="btn btn-success" onClick={publicar}>Publicar curso</button>
           )}
@@ -292,6 +435,33 @@ export default function GestaoCursoEditorPage() {
           )}
         </div>
       )}
+
+      <ModuloModal
+        open={moduloModal.open}
+        modulo={moduloModal.modulo}
+        onClose={() => setModuloModal({ open: false, modulo: null })}
+        onSave={salvarModulo}
+      />
+      <AulaModal
+        open={aulaModal.open}
+        aula={aulaModal.aula}
+        onClose={() => setAulaModal({ open: false, aula: null, moduloId: null })}
+        onSave={salvarAula}
+      />
+      <AtividadeModal
+        open={ativModal.open}
+        onClose={() => setAtivModal({ open: false, moduloId: null })}
+        onSave={salvarAtividade}
+      />
+      <ConfirmDialog
+        open={confirm.open}
+        onClose={() => setConfirm({ open: false, tipo: "", alvo: null })}
+        onConfirm={executarExclusao}
+        title="Confirmar exclusão"
+        message="Esta ação não pode ser desfeita. Deseja continuar?"
+        confirmLabel="Excluir"
+        danger
+      />
     </div>
   );
 }

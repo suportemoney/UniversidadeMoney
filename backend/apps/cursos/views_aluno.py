@@ -17,7 +17,7 @@ from .models import (
     TentativaProva,
 )
 from .serializers_gestao import AulaVideoSerializer, CursoGestaoDetailSerializer
-from .services import calcular_progresso_matricula, concluir_curso, corrigir_questoes
+from .services import calcular_progresso_matricula, concluir_curso, corrigir_questoes, emitir_conquista
 
 
 class MeusCursosView(APIView):
@@ -79,6 +79,7 @@ class CursoAlunoDetailView(APIView):
                 "nota_minima": pf.nota_minima,
                 "tentativas_usadas": tentativas,
                 "tentativas_max": pf.tentativas_max,
+                "tempo_limite_min": pf.tempo_limite_min,
                 "aprovado": TentativaProva.objects.filter(
                     matricula=matricula, prova=pf, aprovado=True
                 ).exists(),
@@ -189,6 +190,7 @@ class ProvaAlunoView(APIView):
                 "titulo": prova.titulo,
                 "nota_minima": prova.nota_minima,
                 "tentativas_restantes": prova.tentativas_max - tentativas,
+                "tempo_limite_min": prova.tempo_limite_min,
                 "questoes": questoes,
             }
         )
@@ -219,6 +221,7 @@ class ProvaAlunoView(APIView):
 
         if aprovado:
             concluir_curso(matricula)
+            emitir_conquista(request.user, "prova-aprovada", "Prova Aprovada")
         else:
             calcular_progresso_matricula(matricula)
 

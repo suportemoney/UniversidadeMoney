@@ -5,11 +5,14 @@ from rest_framework import serializers
 from .models import (
     Atividade,
     AulaVideo,
+    Comunicado,
     Curso,
+    MaterialBiblioteca,
     Modulo,
     ProvaFinal,
     Questao,
     Setor,
+    TreinamentoAoVivo,
     Trilha,
     TrilhaCurso,
 )
@@ -156,3 +159,34 @@ class UsuarioEquipeSerializer(serializers.ModelSerializer):
 
     def get_cargo(self, obj):
         return getattr(getattr(obj, "profile", None), "cargo", "Colaborador")
+
+
+class ComunicadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comunicado
+        fields = ["id", "titulo", "conteudo", "tipo", "criado_em"]
+        read_only_fields = ["id", "criado_em"]
+
+
+class TreinamentoAoVivoSerializer(serializers.ModelSerializer):
+    setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
+
+    class Meta:
+        model = TreinamentoAoVivo
+        fields = ["id", "titulo", "data", "hora", "setor", "setor_nome", "descricao"]
+
+
+class MaterialBibliotecaSerializer(serializers.ModelSerializer):
+    setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
+    arquivo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MaterialBiblioteca
+        fields = [
+            "id", "titulo", "descricao", "setor", "setor_nome",
+            "publicado", "arquivo_url", "criado_em",
+        ]
+        read_only_fields = ["id", "arquivo_url", "criado_em"]
+
+    def get_arquivo_url(self, obj):
+        return obj.arquivo_url
