@@ -73,6 +73,14 @@ export async function getMe() {
   return apiFetch("/auth/me/");
 }
 
+export async function getDashboard() {
+  return apiFetch("/dashboard/");
+}
+
+export async function matricularCurso(cursoId) {
+  return apiFetch(`/cursos/${cursoId}/matricular/`, { method: "POST" });
+}
+
 export async function logout() {
   clearTokens();
 }

@@ -1,7 +1,11 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthLayout from "./components/AuthLayout";
+import DashboardLayout from "./components/DashboardLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import DashboardPage from "./pages/DashboardPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import PlaceholderPage from "./pages/PlaceholderPage";
 import RegisterPage from "./pages/RegisterPage";
 import "./App.css";
 
@@ -14,6 +18,100 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/cadastro" element={<RegisterPage />} />
         </Route>
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<DashboardPage />} />
+          <Route
+            path="meus-cursos"
+            element={
+              <PlaceholderPage
+                titulo="Meus cursos"
+                descricao="Acompanhe todos os cursos em que você está matriculado."
+              />
+            }
+          />
+          <Route
+            path="trilhas"
+            element={
+              <PlaceholderPage
+                titulo="Trilhas"
+                descricao="Trilhas de aprendizado organizadas por setor e carreira."
+              />
+            }
+          />
+          <Route
+            path="ao-vivo"
+            element={
+              <PlaceholderPage
+                titulo="Treinamentos ao vivo"
+                descricao="Agenda de workshops e treinamentos presenciais online."
+              />
+            }
+          />
+          <Route
+            path="certificados"
+            element={
+              <PlaceholderPage
+                titulo="Certificados"
+                descricao="Seus certificados emitidos ao concluir os cursos."
+              />
+            }
+          />
+          <Route
+            path="biblioteca"
+            element={
+              <PlaceholderPage
+                titulo="Biblioteca"
+                descricao="Materiais de apoio, PDFs e recursos complementares."
+              />
+            }
+          />
+          <Route
+            path="ranking"
+            element={
+              <PlaceholderPage
+                titulo="Ranking"
+                descricao="Classificação de evolução entre colaboradores."
+              />
+            }
+          />
+          <Route
+            path="comunicados"
+            element={
+              <PlaceholderPage
+                titulo="Comunicados"
+                descricao="Notícias e avisos internos da Money Promotora."
+              />
+            }
+          />
+          <Route
+            path="progresso"
+            element={
+              <PlaceholderPage
+                titulo="Meu progresso"
+                descricao="Visão detalhada das suas horas e metas de treinamento."
+              />
+            }
+          />
+          <Route
+            path="ajuda"
+            element={
+              <PlaceholderPage
+                titulo="Ajuda"
+                descricao="Suporte e perguntas frequentes sobre a plataforma."
+              />
+            }
+          />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

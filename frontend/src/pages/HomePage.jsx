@@ -1,45 +1,39 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { getMe, isAuthenticated, logout } from "../services/api";
 
 export default function HomePage() {
   const [user, setUser] = useState(null);
+  const [checking, setChecking] = useState(isAuthenticated());
 
   useEffect(() => {
     if (isAuthenticated()) {
       getMe()
         .then(setUser)
-        .catch(() => logout());
+        .catch(() => logout())
+        .finally(() => setChecking(false));
     }
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    setUser(null);
-  };
+  if (checking && isAuthenticated()) {
+    return null;
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="home">
       <header className="home-header">
         <span className="logo">UniversidadeMoney</span>
         <nav className="home-nav">
-          {user ? (
-            <>
-              <span className="user-greeting">Olá, {user.first_name}</span>
-              <button type="button" className="btn btn-outline" onClick={handleLogout}>
-                Sair
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="btn btn-outline">
-                Entrar
-              </Link>
-              <Link to="/cadastro" className="btn btn-primary">
-                Criar conta
-              </Link>
-            </>
-          )}
+          <Link to="/login" className="btn btn-outline">
+            Entrar
+          </Link>
+          <Link to="/cadastro" className="btn btn-primary">
+            Criar conta
+          </Link>
         </nav>
       </header>
 
@@ -49,7 +43,7 @@ export default function HomePage() {
           Cursos, conteúdos e trilhas para evoluir na Money Promotora.
           Cadastre-se e comece agora.
         </p>
-        {!user && (
+        {!checking && (
           <div className="hero-actions">
             <Link to="/cadastro" className="btn btn-primary btn-lg">
               Começar gratuitamente

@@ -40,12 +40,24 @@ class RegisterSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     cpf = serializers.SerializerMethodField()
+    cargo = serializers.SerializerMethodField()
+    setor = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "cpf"]
+        fields = ["id", "email", "first_name", "cpf", "cargo", "setor"]
 
     def get_cpf(self, obj):
         if hasattr(obj, "profile"):
             return obj.profile.cpf
+        return None
+
+    def get_cargo(self, obj):
+        if hasattr(obj, "profile"):
+            return obj.profile.cargo
+        return "Colaborador"
+
+    def get_setor(self, obj):
+        if hasattr(obj, "profile") and obj.profile.setor:
+            return obj.profile.setor.nome
         return None

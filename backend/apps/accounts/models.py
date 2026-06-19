@@ -10,6 +10,15 @@ class Profile(models.Model):
         related_name="profile",
     )
     cpf = models.CharField(max_length=11, unique=True, verbose_name="CPF")
+    cargo = models.CharField(max_length=100, blank=True, default="Colaborador")
+    setor = models.ForeignKey(
+        "cursos.Setor",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="colaboradores",
+        verbose_name="Setor",
+    )
 
     class Meta:
         verbose_name = "Perfil"
