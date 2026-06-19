@@ -53,10 +53,10 @@ export async function apiFetch(path, options = {}) {
   return parseResponse(res);
 }
 
-export async function register(nome, email, password) {
+export async function register(nome, email, cpf, password) {
   return apiFetch("/auth/register/", {
     method: "POST",
-    body: JSON.stringify({ nome, email, password }),
+    body: JSON.stringify({ nome, email, cpf, password }),
   });
 }
 

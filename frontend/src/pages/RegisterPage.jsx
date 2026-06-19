@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register } from "../services/api";
+import { formatarCpf } from "../utils/cpf";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleCpfChange = (e) => {
+    setCpf(formatarCpf(e.target.value));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro("");
     setLoading(true);
     try {
-      await register(nome, email, password);
+      await register(nome, email, cpf, password);
       navigate("/login", {
         state: { message: "Conta criada! Faça login para continuar." },
       });
@@ -43,6 +49,19 @@ export default function RegisterPage() {
             required
             autoComplete="name"
             placeholder="Seu nome"
+          />
+        </label>
+        <label>
+          CPF
+          <input
+            type="text"
+            value={cpf}
+            onChange={handleCpfChange}
+            required
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="000.000.000-00"
+            maxLength={14}
           />
         </label>
         <label>
