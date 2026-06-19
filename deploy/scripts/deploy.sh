@@ -15,7 +15,7 @@ source "$VENV/bin/activate"
 pip install -r backend/requirements.txt
 
 cd "$REPO/backend"
-set -a && source "$BASE/.env" && set +a
+# Django carrega /var/www/universidade/.env via config/settings/base.py
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
@@ -23,6 +23,12 @@ sudo systemctl restart universidade-backend
 
 echo "==> Frontend..."
 cd "$REPO/frontend"
+
+# Garante variáveis de build de produção
+if [ ! -f .env.production ]; then
+  cp .env.example .env.production
+fi
+
 npm ci
 npm run build
 

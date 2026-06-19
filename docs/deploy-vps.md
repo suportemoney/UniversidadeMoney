@@ -8,6 +8,20 @@ Guia para deploy inicial, atualizações e verificação do sistema completo.
 2. [backend-vps.md](backend-vps.md) — venv, migrations, gunicorn, systemd
 3. [frontend-vps.md](frontend-vps.md) — build e publicação do React
 4. [nginx-vps.md](nginx-vps.md) — proxy, SSL, rotas
+5. [github-actions-vps.md](github-actions-vps.md) — deploy automático na `main`
+
+---
+
+## Deploy automático (GitHub Actions)
+
+Ver guia completo: [github-actions-vps.md](github-actions-vps.md)
+
+Resumo:
+
+1. Commitar `frontend/package-lock.json` no repositório
+2. Criar secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`
+3. Na VPS: `chmod +x /var/www/universidade/repo/deploy/scripts/deploy.sh`
+4. Push na `main` dispara o workflow
 
 ---
 
@@ -76,8 +90,10 @@ Salvar futuramente em `deploy/scripts/deploy.sh` no repositório.
 Fluxo alvo:
 
 ```
-push main → GitHub Actions → SSH na VPS → deploy.sh
+push main → GitHub Actions → SSH na VPS → deploy/scripts/deploy.sh
 ```
+
+Detalhes: [github-actions-vps.md](github-actions-vps.md)
 
 Secrets necessários no GitHub:
 

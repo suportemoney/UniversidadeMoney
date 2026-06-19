@@ -40,9 +40,19 @@ O `.env` real fica **somente na VPS** (`/var/www/universidade/.env`).
 
 Push na branch `main` dispara deploy via GitHub Actions (SSH na VPS).
 
-Script manual: `deploy/scripts/deploy.sh`
+- Script manual: `deploy/scripts/deploy.sh`
+- Configurar CI/CD: [docs/github-actions-vps.md](docs/github-actions-vps.md)
 
 Domínio: `https://universidade.moneypromotora.com.br`
+
+## Checklist pós-deploy inicial
+
+- [x] VPS: PostgreSQL, backend, frontend, nginx
+- [ ] Commitar `frontend/package-lock.json` (habilita `npm ci` no deploy)
+- [ ] Configurar secrets no GitHub (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`)
+- [ ] `chmod +x deploy/scripts/deploy.sh` na VPS
+- [ ] Reboot opcional da VPS (kernel pendente)
+- [ ] Desenvolver features (models, API, telas)
 
 ## Próximos passos na VPS
 

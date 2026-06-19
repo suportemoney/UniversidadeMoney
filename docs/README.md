@@ -9,5 +9,6 @@ Documentação prática para configurar e operar o sistema na VPS.
 | [frontend-vps.md](frontend-vps.md) | Node.js (build), React, publicar arquivos estáticos |
 | [nginx-vps.md](nginx-vps.md) | Reverse proxy, SSL, rotas `/api`, `/admin`, SPA |
 | [deploy-vps.md](deploy-vps.md) | Deploy manual, atualização, verificação e troubleshooting |
+| [github-actions-vps.md](github-actions-vps.md) | Deploy automático na `main` (GitHub Actions + SSH) |
 
 Visão geral da arquitetura: [ARCHITECTURE.md](../ARCHITECTURE.md).
