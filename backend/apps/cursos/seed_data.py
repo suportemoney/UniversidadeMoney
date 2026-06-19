@@ -1,7 +1,5 @@
-"""Dados iniciais da plataforma Money Promotora."""
+"""Dados iniciais da plataforma Money Promotora (usado pela migration 0002)."""
 from datetime import date, time, timedelta
-
-from django.utils import timezone
 
 
 def seed_dados(apps, schema_editor):

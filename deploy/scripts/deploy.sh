@@ -9,7 +9,8 @@ VENV=$BASE/venv
 echo "==> Atualizando código..."
 cd "$REPO"
 # VPS é espelho do GitHub: descarta commits/alterações locais e alinha com origin/main
-git fetch origin main
+git remote prune origin 2>/dev/null || true
+git fetch origin main 2>/dev/null || git fetch origin +main:refs/remotes/origin/main
 git reset --hard origin/main
 git clean -fd
 

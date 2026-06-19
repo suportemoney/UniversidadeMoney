@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-from apps.cursos.migrations.seed_data import seed_dados, unseed_dados
+from apps.cursos.seed_data import seed_dados, unseed_dados
 
 
 class Migration(migrations.Migration):
