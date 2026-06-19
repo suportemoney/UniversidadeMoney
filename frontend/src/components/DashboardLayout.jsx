@@ -53,10 +53,6 @@ export default function DashboardLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="dash-sidebar-footer">
-          <strong>MONEY PROMOTORA</strong>
-          <span>Transformamos oportunidades em conquistas.</span>
-        </div>
       </aside>
 
       <div className="dash-main">
