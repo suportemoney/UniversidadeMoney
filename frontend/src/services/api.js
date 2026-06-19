@@ -92,6 +92,10 @@ export async function getCatalogoCursos(params = {}) {
   return apiFetch(`/cursos/${qs ? `?${qs}` : ""}`);
 }
 
+export async function getCursoDetalhe(id) {
+  return apiFetch(`/cursos/${id}/detalhe/`);
+}
+
 export async function getTrilhas() {
   return apiFetch("/trilhas/");
 }

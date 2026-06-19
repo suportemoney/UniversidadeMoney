@@ -7,8 +7,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AjudaPage from "./pages/AjudaPage";
 import AoVivoPage from "./pages/AoVivoPage";
 import BibliotecaPage from "./pages/BibliotecaPage";
+import BuscaPage from "./pages/BuscaPage";
 import CertificadosPage from "./pages/CertificadosPage";
 import ComunicadosPage from "./pages/ComunicadosPage";
+import CursoDetalhePage from "./pages/CursoDetalhePage";
 import CursoPlayerPage from "./pages/CursoPlayerPage";
 import DashboardPage from "./pages/DashboardPage";
 import ExplorarCursosPage from "./pages/ExplorarCursosPage";
@@ -53,6 +55,8 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="meus-cursos" element={<MeusCursosPage />} />
           <Route path="explorar" element={<ExplorarCursosPage />} />
+          <Route path="busca" element={<BuscaPage />} />
+          <Route path="curso/:id" element={<CursoDetalhePage />} />
           <Route path="cursos/:cursoId" element={<CursoPlayerPage />} />
           <Route path="trilhas" element={<TrilhasPage />} />
           <Route path="trilhas/:id" element={<TrilhaDetalhePage />} />

@@ -150,11 +150,13 @@ export default function DashboardPage() {
           <ul className="dash-list">
             {data.novos_treinamentos.map((c) => (
               <li key={c.id} className="dash-list-item">
-                <div>
-                  <strong>{c.titulo}</strong>
-                  <small>{c.modulos} módulos · {c.duracao_horas}h</small>
-                </div>
-                {c.is_novo && <span className="dash-badge-novo">Novo</span>}
+                <Link to={`/dashboard/curso/${c.id}`} className="dash-list-item-link">
+                  <div>
+                    <strong>{c.titulo}</strong>
+                    <small>{c.modulos} módulos · {c.duracao_horas}h</small>
+                  </div>
+                  {c.is_novo && <span className="dash-badge-novo">Novo</span>}
+                </Link>
               </li>
             ))}
           </ul>

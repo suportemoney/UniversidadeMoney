@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import EmptyState from "../components/dashboard/EmptyState";
 import PageHeader from "../components/dashboard/PageHeader";
 import PageSkeleton from "../components/dashboard/PageSkeleton";
-import { getCatalogoCursos, matricularCurso } from "../services/api";
+import { getCatalogoCursos } from "../services/api";
 
 export default function ExplorarCursosPage() {
   const navigate = useNavigate();
@@ -14,6 +14,10 @@ export default function ExplorarCursosPage() {
   const [erro, setErro] = useState("");
 
   const buscar = (termo) => {
+    if (termo?.trim().length >= 2) {
+      navigate(`/dashboard/busca?q=${encodeURIComponent(termo.trim())}`);
+      return;
+    }
     setBuscando(true);
     getCatalogoCursos({ q: termo || undefined })
       .then(setCursos)
@@ -25,42 +29,36 @@ export default function ExplorarCursosPage() {
   };
 
   useEffect(() => {
-    buscar();
+    getCatalogoCursos()
+      .then(setCursos)
+      .catch((e) => setErro(e.message))
+      .finally(() => setLoading(false));
   }, []);
-
-  const inscrever = async (id) => {
-    try {
-      await matricularCurso(id);
-      navigate(`/dashboard/cursos/${id}`);
-    } catch (e) {
-      setErro(e.message);
-    }
-  };
 
   return (
     <div className="dash-page">
       <PageHeader
-        icon="🔍"
+        icon="📚"
         titulo="Explorar cursos"
-        subtitulo="Catálogo completo de cursos disponíveis na plataforma."
+        subtitulo="Escolha um curso específico — não precisa fazer a trilha inteira."
       >
-        <div className="dash-page-search">
+        <form
+          className="dash-page-search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            buscar(q);
+          }}
+        >
           <input
             type="search"
             placeholder="Buscar por título ou tema..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && buscar(q)}
           />
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => buscar(q)}
-            disabled={buscando}
-          >
+          <button type="submit" className="btn btn-primary btn-sm" disabled={buscando}>
             {buscando ? "..." : "Buscar"}
           </button>
-        </div>
+        </form>
       </PageHeader>
 
       {erro && <div className="alert alert-error">{erro}</div>}
@@ -69,9 +67,10 @@ export default function ExplorarCursosPage() {
       {!loading && cursos.length > 0 && (
         <div className="dash-card-grid">
           {cursos.map((c, i) => (
-            <article
+            <Link
               key={c.id}
-              className="dash-card dash-curso-card"
+              to={`/dashboard/curso/${c.id}`}
+              className="dash-card dash-card--clickable dash-curso-card"
               style={{ animationDelay: `${i * 50}ms` }}
             >
               {c.is_novo && <span className="dash-badge-novo">Novo</span>}
@@ -83,11 +82,9 @@ export default function ExplorarCursosPage() {
                 <span>⏱️ {c.duracao_horas}h</span>
               </div>
               <div className="dash-card-footer">
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => inscrever(c.id)}>
-                  Inscrever-se
-                </button>
+                <span className="dash-card-meta">Ver detalhes →</span>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       )}
@@ -96,7 +93,7 @@ export default function ExplorarCursosPage() {
         <EmptyState
           icon="🔎"
           titulo="Nenhum curso encontrado"
-          descricao={q ? `Sem resultados para "${q}". Tente outro termo.` : "Não há cursos publicados no momento."}
+          descricao="Não há cursos publicados no momento."
         />
       )}
     </div>

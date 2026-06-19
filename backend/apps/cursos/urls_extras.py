@@ -5,6 +5,7 @@ from . import views_catalogo, views_extras
 urlpatterns = [
     path("busca/", views_catalogo.BuscaView.as_view(), name="busca"),
     path("cursos/", views_catalogo.CatalogoCursosView.as_view(), name="catalogo-cursos"),
+    path("cursos/<int:pk>/detalhe/", views_catalogo.CatalogoCursoDetailView.as_view(), name="catalogo-curso-detalhe"),
     path("trilhas/", views_catalogo.TrilhasAlunoListView.as_view(), name="trilhas-aluno"),
     path("trilhas/<int:pk>/", views_catalogo.TrilhaAlunoDetailView.as_view(), name="trilha-aluno-detail"),
     path("certificados/", views_extras.CertificadosListView.as_view(), name="certificados"),

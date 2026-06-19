@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { buscar } from "../../services/api";
 
-const ICONES = { curso: "📚", trilha: "🛤️", biblioteca: "📄" };
+const ICONES = { cursos: "📚", trilhas: "🛤️", biblioteca: "📄", ao_vivo: "🎥" };
 
-export default function SearchOverlay({ query, onClose }) {
+/** Preview rápido — Enter abre a página completa de busca */
+export default function SearchOverlay({ query, onVerTodos }) {
   const navigate = useNavigate();
   const [resultados, setResultados] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export default function SearchOverlay({ query, onClose }) {
     const t = setTimeout(() => {
       buscar(query)
         .then(setResultados)
-        .catch(() => setResultados({ cursos: [], trilhas: [], biblioteca: [] }))
+        .catch(() => setResultados({ cursos: [], trilhas: [], biblioteca: [], ao_vivo: [] }))
         .finally(() => setLoading(false));
     }, 300);
     return () => clearTimeout(t);
@@ -26,41 +27,57 @@ export default function SearchOverlay({ query, onClose }) {
 
   if (!query || query.length < 2) return null;
 
+  const total = resultados
+    ? (resultados.cursos?.length || 0)
+      + (resultados.trilhas?.length || 0)
+      + (resultados.biblioteca?.length || 0)
+      + (resultados.ao_vivo?.length || 0)
+    : 0;
+
   const ir = (tipo, id, url) => {
-    onClose();
-    if (tipo === "curso") navigate("/dashboard/explorar");
+    onVerTodos();
+    if (tipo === "curso") navigate(`/dashboard/curso/${id}`);
     else if (tipo === "trilha") navigate(`/dashboard/trilhas/${id}`);
+    else if (tipo === "ao_vivo") navigate("/dashboard/ao-vivo");
     else if (url) window.open(url, "_blank");
   };
 
-  const grupos = resultados ? [
+  const grupos = [
     { key: "cursos", label: "Cursos", tipo: "curso" },
     { key: "trilhas", label: "Trilhas", tipo: "trilha" },
-    { key: "biblioteca", label: "Biblioteca", tipo: "biblioteca" },
-  ] : [];
+    { key: "biblioteca", label: "PDFs", tipo: "biblioteca" },
+    { key: "ao_vivo", label: "Ao vivo", tipo: "ao_vivo" },
+  ];
 
   return (
-    <div className="search-overlay" onClick={onClose} role="presentation">
+    <div className="search-overlay" onClick={onVerTodos} role="presentation">
       <div className="search-overlay-box" onClick={(e) => e.stopPropagation()}>
-        <p className="dash-card-meta" style={{ margin: "0 0 0.5rem" }}>
-          Resultados para <strong>&quot;{query}&quot;</strong>
-        </p>
+        <div className="search-overlay-top">
+          <p className="dash-card-meta">
+            Resultados para <strong>&quot;{query}&quot;</strong>
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => navigate(`/dashboard/busca?q=${encodeURIComponent(query)}`)}
+          >
+            Ver todos →
+          </button>
+        </div>
 
-        {loading && (
-          <div className="dash-skeleton" style={{ height: 120 }} />
-        )}
+        {loading && <div className="dash-skeleton" style={{ height: 100 }} />}
 
         {!loading && resultados && grupos.map(({ key, label, tipo }) => {
           const itens = resultados[key];
           if (!itens?.length) return null;
           return (
             <section key={key}>
-              <h3>{label}</h3>
+              <h3>{ICONES[key]} {label}</h3>
               <ul>
-                {itens.map((item) => (
+                {itens.slice(0, 3).map((item) => (
                   <li key={item.id}>
                     <button type="button" onClick={() => ir(tipo, item.id, item.url)}>
-                      <span>{ICONES[tipo]}</span> {item.titulo}
+                      {item.titulo}
                     </button>
                   </li>
                 ))}
@@ -69,8 +86,18 @@ export default function SearchOverlay({ query, onClose }) {
           );
         })}
 
-        {!loading && resultados && !resultados.cursos?.length && !resultados.trilhas?.length && !resultados.biblioteca?.length && (
-          <p className="dash-card-meta">Nenhum resultado encontrado.</p>
+        {!loading && resultados && total === 0 && (
+          <p className="dash-card-meta">Nenhum resultado. Tente outro termo.</p>
+        )}
+
+        {!loading && total > 0 && (
+          <button
+            type="button"
+            className="search-overlay-ver-todos"
+            onClick={() => navigate(`/dashboard/busca?q=${encodeURIComponent(query)}`)}
+          >
+            Ver {total} resultado{total !== 1 ? "s" : ""} completo{total !== 1 ? "s" : ""}
+          </button>
         )}
       </div>
     </div>

@@ -45,6 +45,14 @@ export default function DashboardLayout() {
     navigate("/login");
   };
 
+  const abrirBusca = (termo) => {
+    const q = termo.trim();
+    if (q.length >= 2) {
+      navigate(`/dashboard/busca?q=${encodeURIComponent(q)}`);
+      setBusca("");
+    }
+  };
+
   return (
     <div className="dash">
       <aside className="dash-sidebar">
@@ -72,12 +80,13 @@ export default function DashboardLayout() {
             <span className="dash-search-icon">🔍</span>
             <input
               type="search"
-              placeholder="Buscar cursos, trilhas, temas..."
+              placeholder="Buscar cursos, trilhas, PDFs, ao vivo..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && abrirBusca(busca)}
             />
           </div>
-          <SearchOverlay query={busca} onClose={() => setBusca("")} />
+          <SearchOverlay query={busca} onVerTodos={() => setBusca("")} />
 
           <div className="dash-header-actions">
             {user?.pode_gestao && (
