@@ -1,35 +1,21 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import AuthLayout from "./components/AuthLayout";
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import "./App.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
-
 function App() {
-  const [status, setStatus] = useState("carregando...");
-  const [erro, setErro] = useState(null);
-
-  useEffect(() => {
-    fetch(`${API_URL}/health/`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => setStatus(data.status))
-      .catch((err) => setErro(err.message));
-  }, []);
-
   return (
-    <div className="app">
-      <h1>UniversidadeMoney</h1>
-      <p>Sistema em construção.</p>
-      <div className="status-card">
-        <strong>API:</strong>{" "}
-        {erro ? (
-          <span className="erro">erro — {erro}</span>
-        ) : (
-          <span className="ok">{status}</span>
-        )}
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/cadastro" element={<RegisterPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
