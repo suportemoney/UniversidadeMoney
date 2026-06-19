@@ -8,7 +8,10 @@ VENV=$BASE/venv
 
 echo "==> Atualizando código..."
 cd "$REPO"
-git pull origin main
+# VPS é espelho do GitHub: descarta commits/alterações locais e alinha com origin/main
+git fetch origin main
+git reset --hard origin/main
+git clean -fd
 
 echo "==> Backend..."
 source "$VENV/bin/activate"
@@ -29,7 +32,11 @@ if [ ! -f .env.production ]; then
   cp .env.example .env.production
 fi
 
-npm ci
+if [ -f package-lock.json ]; then
+  npm ci
+else
+  npm install
+fi
 npm run build
 
 sudo rm -rf "$BASE/frontend-dist"/*

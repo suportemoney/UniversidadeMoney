@@ -15,7 +15,11 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            bash /var/www/universidade/repo/deploy/scripts/deploy.sh
+            cd /var/www/universidade/repo
+            git fetch origin main
+            git reset --hard origin/main
+            sed -i 's/\r$//' deploy/scripts/deploy.sh 2>/dev/null || true
+            bash deploy/scripts/deploy.sh
 
 # Secrets necessários no GitHub (Settings > Secrets and variables > Actions):
 #   VPS_HOST     — IP ou hostname da VPS
