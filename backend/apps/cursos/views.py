@@ -107,6 +107,8 @@ class DashboardView(APIView):
                 "data": t.data.isoformat(),
                 "hora": t.hora.strftime("%H:%M"),
                 "setor": t.setor.nome if t.setor else None,
+                "tipo_plataforma": t.tipo_plataforma,
+                "link": t.link,
             }
             for t in filtrar_ao_vivo_queryset(ao_vivo_qs, user)[:4]
         ]

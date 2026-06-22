@@ -202,7 +202,20 @@ class TreinamentoAoVivoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TreinamentoAoVivo
-        fields = ["id", "titulo", "data", "hora", "setor", "setor_nome", "descricao", "tags", "tag_ids"]
+        fields = [
+            "id", "titulo", "data", "hora", "setor", "setor_nome", "descricao",
+            "tipo_plataforma", "link", "tags", "tag_ids",
+        ]
+
+    def validate(self, data):
+        link = data.get("link")
+        if link is None and self.instance:
+            link = self.instance.link
+        if not link:
+            raise serializers.ValidationError(
+                {"link": "Informe o link do Google Meet ou do YouTube Live."}
+            )
+        return data
 
     def create(self, validated_data):
         tags = validated_data.pop("tags", [])

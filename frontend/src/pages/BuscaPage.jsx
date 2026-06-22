@@ -4,6 +4,7 @@ import EmptyState from "../components/dashboard/EmptyState";
 import PageHeader from "../components/dashboard/PageHeader";
 import PageSkeleton from "../components/dashboard/PageSkeleton";
 import { buscar } from "../services/api";
+import { labelLinkAoVivo } from "../utils/aoVivo";
 
 const SECOES = [
   { key: "cursos", label: "Cursos", icon: "📚", rota: (id) => `/dashboard/curso/${id}` },
@@ -146,6 +147,15 @@ export default function BuscaPage() {
                               className="btn btn-outline btn-sm"
                             >
                               Abrir PDF
+                            </a>
+                          ) : key === "ao_vivo" && item.link ? (
+                            <a
+                              href={item.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-primary btn-sm"
+                            >
+                              {labelLinkAoVivo(item.tipo_plataforma)}
                             </a>
                           ) : (
                             <button

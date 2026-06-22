@@ -166,6 +166,8 @@ class AoVivoListView(APIView):
                 "hora": t.hora.strftime("%H:%M"),
                 "setor": t.setor.nome if t.setor else None,
                 "descricao": t.descricao,
+                "tipo_plataforma": t.tipo_plataforma,
+                "link": t.link,
                 "inscrito": t.id in inscritos,
             }
             for t in treinos

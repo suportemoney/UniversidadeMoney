@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import Modal from "../components/ui/Modal";
 import EmptyState from "../components/dashboard/EmptyState";
 import PageHeader from "../components/dashboard/PageHeader";
 import PageSkeleton from "../components/dashboard/PageSkeleton";
-import { getAoVivo, inscreverAoVivo } from "../services/api";
+import { getAoVivo } from "../services/api";
+import { iconeAoVivo, labelLinkAoVivo } from "../utils/aoVivo";
 
 function formatData(iso) {
   if (!iso) return "";
@@ -19,42 +19,24 @@ export default function AoVivoPage() {
   const [treinos, setTreinos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
-  const [confirm, setConfirm] = useState(null);
-  const [msg, setMsg] = useState("");
 
-  const carregar = () => {
+  useEffect(() => {
     setLoading(true);
     getAoVivo()
       .then(setTreinos)
       .catch((e) => setErro(e.message))
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    carregar();
   }, []);
-
-  const inscrever = async () => {
-    try {
-      await inscreverAoVivo(confirm.id);
-      setMsg(`Inscrição confirmada: ${confirm.titulo}`);
-      setConfirm(null);
-      carregar();
-    } catch (e) {
-      setErro(e.message);
-    }
-  };
 
   return (
     <div className="dash-page">
       <PageHeader
         icon="🎥"
         titulo="Treinamentos ao vivo"
-        subtitulo="Workshops e sessões ao vivo com a equipe Money Promotora."
+        subtitulo="Acesse as transmissões pelo Google Meet ou YouTube Live."
       />
 
       {erro && <div className="alert alert-error">{erro}</div>}
-      {msg && <div className="alert alert-success">{msg}</div>}
       {loading && <PageSkeleton cards={2} />}
 
       {!loading && treinos.length > 0 && (
@@ -69,7 +51,7 @@ export default function AoVivoPage() {
               >
                 <span className="dash-live-badge">
                   <span className="dash-live-dot" />
-                  Ao vivo
+                  {t.tipo_plataforma === "youtube" ? "YouTube Live" : "Google Meet"}
                 </span>
                 <div className="dash-live-date-lg">
                   <div className="dash-live-date">
@@ -86,12 +68,17 @@ export default function AoVivoPage() {
                 {t.setor && <span className="dash-tag">{t.setor}</span>}
                 {t.descricao && <p className="dash-card-meta">{t.descricao}</p>}
                 <div className="dash-card-footer">
-                  {t.inscrito ? (
-                    <span className="dash-badge-inscrito">✓ Inscrito</span>
+                  {t.link ? (
+                    <a
+                      href={t.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary btn-sm"
+                    >
+                      {iconeAoVivo(t.tipo_plataforma)} {labelLinkAoVivo(t.tipo_plataforma)}
+                    </a>
                   ) : (
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => setConfirm(t)}>
-                      Inscrever-se
-                    </button>
+                    <span className="dash-card-meta">Link em breve</span>
                   )}
                 </div>
               </article>
@@ -107,14 +94,6 @@ export default function AoVivoPage() {
           descricao="Fique de olho — novos eventos ao vivo aparecerão aqui."
         />
       )}
-
-      <Modal open={!!confirm} onClose={() => setConfirm(null)} title="Confirmar inscrição">
-        <p>Deseja se inscrever em <strong>{confirm?.titulo}</strong>?</p>
-        <div className="modal-actions">
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setConfirm(null)}>Cancelar</button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={inscrever}>Confirmar</button>
-        </div>
-      </Modal>
     </div>
   );
 }

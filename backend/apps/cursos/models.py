@@ -278,6 +278,13 @@ class TentativaProva(models.Model):
 
 
 class TreinamentoAoVivo(models.Model):
+    TIPO_MEET = "meet"
+    TIPO_YOUTUBE = "youtube"
+    TIPO_PLATAFORMA_CHOICES = [
+        (TIPO_MEET, "Google Meet"),
+        (TIPO_YOUTUBE, "YouTube Live"),
+    ]
+
     titulo = models.CharField(max_length=200)
     data = models.DateField()
     hora = models.TimeField()
@@ -285,6 +292,12 @@ class TreinamentoAoVivo(models.Model):
         Setor, null=True, blank=True, on_delete=models.SET_NULL, related_name="treinamentos"
     )
     descricao = models.TextField(blank=True)
+    tipo_plataforma = models.CharField(
+        max_length=20,
+        choices=TIPO_PLATAFORMA_CHOICES,
+        default=TIPO_MEET,
+    )
+    link = models.URLField(max_length=500, blank=True)
     tags = models.ManyToManyField("TagCurso", blank=True, related_name="treinamentos_ao_vivo")
 
     class Meta:

@@ -1,10 +1,24 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+import LandingFaq from "../components/landing/LandingFaq";
+import LandingFeatures from "../components/landing/LandingFeatures";
+import LandingFooter from "../components/landing/LandingFooter";
+import LandingHeader from "../components/landing/LandingHeader";
+import LandingHeroCarousel from "../components/landing/LandingHeroCarousel";
+import LandingHowItWorks from "../components/landing/LandingHowItWorks";
+import LandingPlansCarousel from "../components/landing/LandingPlansCarousel";
+import LandingSocialProof from "../components/landing/LandingSocialProof";
+import LandingStats from "../components/landing/LandingStats";
+import LandingTopBar from "../components/landing/LandingTopBar";
 import { getMe, isAuthenticated, logout } from "../services/api";
+import { getLanding } from "../services/landingApi";
+import "../styles/landing.css";
 
 export default function HomePage() {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(isAuthenticated());
+  const [landing, setLanding] = useState(null);
+  const [loadingLanding, setLoadingLanding] = useState(true);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -13,6 +27,13 @@ export default function HomePage() {
         .catch(() => logout())
         .finally(() => setChecking(false));
     }
+  }, []);
+
+  useEffect(() => {
+    getLanding()
+      .then(setLanding)
+      .catch(() => setLanding({ faixa: null, banners: [], planos: [] }))
+      .finally(() => setLoadingLanding(false));
   }, []);
 
   if (checking && isAuthenticated()) {
@@ -24,55 +45,23 @@ export default function HomePage() {
   }
 
   return (
-    <div className="home">
-      <header className="home-header">
-        <span className="logo">UniversidadeMoney</span>
-        <nav className="home-nav">
-          <Link to="/login" className="btn btn-outline">
-            Entrar
-          </Link>
-          <Link to="/cadastro" className="btn btn-primary">
-            Criar conta
-          </Link>
-        </nav>
-      </header>
-
-      <main className="hero">
-        <h1>Sua plataforma de aprendizado</h1>
-        <p>
-          Cursos, conteúdos e trilhas para evoluir na Money Promotora.
-          Cadastre-se e comece agora.
-        </p>
-        {!checking && (
-          <div className="hero-actions">
-            <Link to="/cadastro" className="btn btn-primary btn-lg">
-              Começar gratuitamente
-            </Link>
-            <Link to="/login" className="btn btn-outline btn-lg">
-              Já tenho conta
-            </Link>
-          </div>
-        )}
-      </main>
-
-      <section className="features">
-        <div className="feature-card">
-          <h3>Cursos online</h3>
-          <p>Conteúdo disponível quando e onde você precisar.</p>
-        </div>
-        <div className="feature-card">
-          <h3>Trilhas de carreira</h3>
-          <p>Aprenda no ritmo certo para sua evolução profissional.</p>
-        </div>
-        <div className="feature-card">
-          <h3>Certificados</h3>
-          <p>Comprove seu progresso ao concluir cada módulo.</p>
-        </div>
-      </section>
-
-      <footer className="home-footer">
-        <p>&copy; {new Date().getFullYear()} Money Promotora — UniversidadeMoney</p>
-      </footer>
+    <div className="landing">
+      <LandingTopBar faixa={landing?.faixa} />
+      <LandingHeader />
+      {loadingLanding ? (
+        <div className="landing-loading">Carregando...</div>
+      ) : (
+        <>
+          <LandingHeroCarousel banners={landing?.banners} />
+          <LandingSocialProof />
+          <LandingStats />
+          <LandingPlansCarousel planos={landing?.planos} />
+          <LandingFeatures />
+          <LandingHowItWorks />
+          <LandingFaq />
+        </>
+      )}
+      <LandingFooter />
     </div>
   );
 }

@@ -176,4 +176,20 @@ export const gestaoApi = {
   atualizarTag: (id, data) =>
     gestaoFetch(`/gestao/tags/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
   excluirTag: (id) => gestaoFetch(`/gestao/tags/${id}/`, { method: "DELETE" }),
+
+  obterFaixaLanding: () => gestaoFetch("/gestao/landing/faixa/"),
+  atualizarFaixaLanding: (data) =>
+    gestaoFetch("/gestao/landing/faixa/", { method: "PATCH", body: JSON.stringify(data) }),
+  listarBannersLanding: () => gestaoFetch("/gestao/landing/banners/"),
+  criarBannerLanding: (data) =>
+    gestaoFetch("/gestao/landing/banners/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarBannerLanding: (id, data) =>
+    gestaoFetch(`/gestao/landing/banners/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirBannerLanding: (id) =>
+    gestaoFetch(`/gestao/landing/banners/${id}/`, { method: "DELETE" }),
+  uploadBannerGif: (id, file) => {
+    const fd = new FormData();
+    fd.append("gif", file);
+    return gestaoFetch(`/gestao/landing/banners/${id}/upload-gif/`, { method: "POST", body: fd });
+  },
 };

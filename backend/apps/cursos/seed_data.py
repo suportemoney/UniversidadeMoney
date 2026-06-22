@@ -78,12 +78,16 @@ def seed_dados(apps, schema_editor):
         data=hoje + timedelta(days=3),
         hora=time(14, 0),
         setor=setores["vendas"],
+        tipo_plataforma="meet",
+        link="https://meet.google.com/abc-defg-hij",
     )
     TreinamentoAoVivo.objects.create(
         titulo="LGPD na Prática",
         data=hoje + timedelta(days=7),
         hora=time(10, 0),
         setor=setores["administrativo"],
+        tipo_plataforma="youtube",
+        link="https://www.youtube.com/live/exemplo",
     )
 
 

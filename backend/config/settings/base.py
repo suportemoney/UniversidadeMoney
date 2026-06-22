@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.cursos",
     "apps.planos",
+    "apps.landing",
 ]
 
 MIDDLEWARE = [

@@ -76,7 +76,7 @@ class MatriculaAdmin(admin.ModelAdmin):
 
 @admin.register(TreinamentoAoVivo)
 class TreinamentoAoVivoAdmin(admin.ModelAdmin):
-    list_display = ["titulo", "data", "hora", "setor"]
+    list_display = ["titulo", "data", "hora", "tipo_plataforma", "setor"]
 
 
 @admin.register(Comunicado)

@@ -84,6 +84,8 @@ class BuscaView(APIView):
                     "setor": t.setor.nome if t.setor else None,
                     "data": t.data.isoformat(),
                     "hora": t.hora.strftime("%H:%M"),
+                    "tipo_plataforma": t.tipo_plataforma,
+                    "link": t.link,
                 }
                 for t in ao_vivo
             ],

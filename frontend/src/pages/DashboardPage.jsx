@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import Modal from "../components/ui/Modal";
-import { getDashboard, inscreverAoVivo, matricularCurso } from "../services/api";
+import { getDashboard, matricularCurso } from "../services/api";
+import { labelLinkAoVivo } from "../utils/aoVivo";
 
 function formatData(iso) {
   if (!iso) return "";
@@ -26,8 +26,6 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
-  const [inscricao, setInscricao] = useState(null);
-  const [msg, setMsg] = useState("");
 
   const carregar = () => {
     setLoading(true);
@@ -175,7 +173,18 @@ export default function DashboardPage() {
                   <strong>{t.titulo}</strong>
                   <small>{t.setor}</small>
                 </div>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => setInscricao(t)}>Inscrever-se</button>
+                {t.link ? (
+                  <a
+                    href={t.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline btn-sm"
+                  >
+                    {labelLinkAoVivo(t.tipo_plataforma)}
+                  </a>
+                ) : (
+                  <Link to="/dashboard/ao-vivo" className="btn btn-outline btn-sm">Ver detalhes</Link>
+                )}
               </li>
             ))}
           </ul>
@@ -216,30 +225,6 @@ export default function DashboardPage() {
           <Link to="/dashboard/certificados">Ver todos os certificados</Link>
         </div>
       </section>
-
-      <Modal open={!!inscricao} onClose={() => setInscricao(null)} title="Confirmar inscrição">
-        <p>Deseja se inscrever em <strong>{inscricao?.titulo}</strong>?</p>
-        {msg && <div className="alert alert-success">{msg}</div>}
-        <div className="modal-actions">
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setInscricao(null)}>Cancelar</button>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={async () => {
-              try {
-                await inscreverAoVivo(inscricao.id);
-                setMsg("Inscrição confirmada!");
-                setInscricao(null);
-                carregar();
-              } catch (e) {
-                setErro(e.message);
-              }
-            }}
-          >
-            Confirmar
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

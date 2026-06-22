@@ -10,6 +10,7 @@ const MENU = [
   { to: "/gestao/comunicados", label: "Comunicados" },
   { to: "/gestao/ao-vivo", label: "Ao vivo" },
   { to: "/gestao/biblioteca", label: "Biblioteca" },
+  { to: "/gestao/landing", label: "Landing" },
   { to: "/gestao/planos", label: "Planos" },
   { to: "/gestao/tags", label: "Tags" },
   { to: "/gestao/tokens", label: "Tokens" },

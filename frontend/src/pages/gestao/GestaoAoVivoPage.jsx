@@ -3,15 +3,24 @@ import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { gestaoApi } from "../../services/gestaoApi";
 
+const FORM_VAZIO = {
+  titulo: "",
+  data: "",
+  hora: "",
+  setor: "",
+  descricao: "",
+  tipo_plataforma: "meet",
+  link: "",
+  tag_ids: [],
+};
+
 export default function GestaoAoVivoPage() {
   const [itens, setItens] = useState([]);
   const [setores, setSetores] = useState([]);
   const [tags, setTags] = useState([]);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
-  const [form, setForm] = useState({
-    titulo: "", data: "", hora: "", setor: "", descricao: "", tag_ids: [],
-  });
+  const [form, setForm] = useState(FORM_VAZIO);
 
   const carregar = () => gestaoApi.listarAoVivo().then(setItens);
 
@@ -30,10 +39,12 @@ export default function GestaoAoVivoPage() {
         hora: modal.item.hora?.slice(0, 5) || modal.item.hora,
         setor: modal.item.setor || "",
         descricao: modal.item.descricao || "",
+        tipo_plataforma: modal.item.tipo_plataforma || "meet",
+        link: modal.item.link || "",
         tag_ids: tagIds,
       });
     } else {
-      setForm({ titulo: "", data: "", hora: "", setor: "", descricao: "", tag_ids: [] });
+      setForm(FORM_VAZIO);
     }
   }, [modal]);
 
@@ -45,6 +56,8 @@ export default function GestaoAoVivoPage() {
       hora: form.hora,
       descricao: form.descricao,
       setor: form.setor ? Number(form.setor) : null,
+      tipo_plataforma: form.tipo_plataforma,
+      link: form.link.trim(),
       tag_ids: form.tag_ids,
     };
     if (modal.item) {
@@ -56,6 +69,8 @@ export default function GestaoAoVivoPage() {
     carregar();
   };
 
+  const labelPlataforma = (tipo) => (tipo === "youtube" ? "YouTube" : "Meet");
+
   return (
     <div>
       <div className="gestao-page-header">
@@ -64,9 +79,12 @@ export default function GestaoAoVivoPage() {
           Novo treinamento
         </button>
       </div>
+      <p className="gestao-muted" style={{ marginBottom: "1rem" }}>
+        Por enquanto, todos os ao vivo são links externos — Google Meet ou transmissão no YouTube.
+      </p>
       <table className="gestao-table">
         <thead>
-          <tr><th>Título</th><th>Data</th><th>Hora</th><th>Setor</th><th>Tags</th><th></th></tr>
+          <tr><th>Título</th><th>Data</th><th>Hora</th><th>Plataforma</th><th>Setor</th><th>Tags</th><th></th></tr>
         </thead>
         <tbody>
           {itens.map((t) => (
@@ -74,6 +92,7 @@ export default function GestaoAoVivoPage() {
               <td>{t.titulo}</td>
               <td>{new Date(t.data).toLocaleDateString("pt-BR")}</td>
               <td>{t.hora?.slice?.(0, 5) || t.hora}</td>
+              <td>{labelPlataforma(t.tipo_plataforma)}</td>
               <td>{t.setor_nome || "—"}</td>
               <td>{t.tags?.map((tag) => tag.nome).join(", ") || "—"}</td>
               <td>
@@ -93,11 +112,29 @@ export default function GestaoAoVivoPage() {
             <label className="gestao-field">Data<input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} required /></label>
             <label className="gestao-field">Hora<input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} required /></label>
           </div>
-          <label className="gestao-field">Setor
-            <select value={form.setor} onChange={(e) => setForm({ ...form, setor: e.target.value })}>
-              <option value="">Geral</option>
-              {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-            </select>
+          <div className="gestao-form-row gestao-form-row--2">
+            <label className="gestao-field">Plataforma
+              <select value={form.tipo_plataforma} onChange={(e) => setForm({ ...form, tipo_plataforma: e.target.value })}>
+                <option value="meet">Google Meet</option>
+                <option value="youtube">YouTube Live</option>
+              </select>
+            </label>
+            <label className="gestao-field">Setor
+              <select value={form.setor} onChange={(e) => setForm({ ...form, setor: e.target.value })}>
+                <option value="">Geral</option>
+                {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="gestao-field">
+            Link da transmissão
+            <input
+              type="url"
+              value={form.link}
+              onChange={(e) => setForm({ ...form, link: e.target.value })}
+              placeholder={form.tipo_plataforma === "youtube" ? "https://www.youtube.com/live/..." : "https://meet.google.com/..."}
+              required
+            />
           </label>
           <label className="gestao-field">Descrição<textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={3} /></label>
           <div className="gestao-form-section">
