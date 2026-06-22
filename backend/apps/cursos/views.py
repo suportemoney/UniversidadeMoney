@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
-from apps.planos.services import curso_visivel_para_usuario, filtrar_cursos_queryset
+from apps.planos.services import curso_visivel_para_usuario, filtrar_ao_vivo_queryset, filtrar_cursos_queryset
 
 from .models import (
     Certificado,
@@ -97,6 +97,9 @@ class DashboardView(APIView):
             for c in cursos_publicados.filter(is_novo=True)[:4]
         ]
 
+        ao_vivo_qs = TreinamentoAoVivo.objects.filter(
+            data__gte=timezone.now().date()
+        ).select_related("setor").prefetch_related("tags")
         ao_vivo = [
             {
                 "id": t.id,
@@ -105,9 +108,7 @@ class DashboardView(APIView):
                 "hora": t.hora.strftime("%H:%M"),
                 "setor": t.setor.nome if t.setor else None,
             }
-            for t in TreinamentoAoVivo.objects.filter(
-                data__gte=timezone.now().date()
-            ).select_related("setor")[:4]
+            for t in filtrar_ao_vivo_queryset(ao_vivo_qs, user)[:4]
         ]
 
         comunicados = [
@@ -142,22 +143,10 @@ class DashboardView(APIView):
                 "novos_treinamentos": novos_treinamentos,
                 "treinamentos_ao_vivo": ao_vivo,
                 "comunicados": comunicados,
-                "ranking": self._ranking(),
                 "conquistas": self._conquistas(user),
                 "total_certificados": certificados_count,
             }
         )
-
-    def _ranking(self):
-        ranking = []
-        for u in User.objects.filter(is_active=True):
-            horas = 0.0
-            for m in Matricula.objects.filter(usuario=u).select_related("curso"):
-                horas += float(m.curso.duracao_horas) * (m.progresso / 100)
-            if horas > 0:
-                ranking.append({"nome": u.first_name or u.email, "horas": round(horas, 1)})
-        ranking.sort(key=lambda x: x["horas"], reverse=True)
-        return ranking[:5]
 
     def _conquistas(self, user):
         emitir_conquista(user, "boas-vindas", "Boas-vindas")

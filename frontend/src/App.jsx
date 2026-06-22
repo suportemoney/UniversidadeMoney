@@ -21,7 +21,6 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import MeusCursosPage from "./pages/MeusCursosPage";
 import ProgressoPage from "./pages/ProgressoPage";
-import RankingPage from "./pages/RankingPage";
 import RegisterPage from "./pages/RegisterPage";
 import TrilhaDetalhePage from "./pages/TrilhaDetalhePage";
 import TrilhasPage from "./pages/TrilhasPage";
@@ -70,11 +69,10 @@ function App() {
           <Route path="trilhas" element={<FeatureRoute feature="acesso_trilhas"><TrilhasPage /></FeatureRoute>} />
           <Route path="trilhas/:id" element={<FeatureRoute feature="acesso_trilhas"><TrilhaDetalhePage /></FeatureRoute>} />
           <Route path="ao-vivo" element={<FeatureRoute feature="acesso_ao_vivo"><AoVivoPage /></FeatureRoute>} />
-          <Route path="certificados" element={<FeatureRoute feature="acesso_certificados"><CertificadosPage /></FeatureRoute>} />
-          <Route path="biblioteca" element={<FeatureRoute feature="acesso_biblioteca"><BibliotecaPage /></FeatureRoute>} />
-          <Route path="ranking" element={<FeatureRoute feature="acesso_ranking"><RankingPage /></FeatureRoute>} />
-          <Route path="comunicados" element={<FeatureRoute feature="acesso_comunicados"><ComunicadosPage /></FeatureRoute>} />
-          <Route path="progresso" element={<FeatureRoute feature="acesso_progresso"><ProgressoPage /></FeatureRoute>} />
+          <Route path="certificados" element={<CertificadosPage />} />
+          <Route path="biblioteca" element={<BibliotecaPage />} />
+          <Route path="comunicados" element={<ComunicadosPage />} />
+          <Route path="progresso" element={<ProgressoPage />} />
           <Route path="ajuda" element={<AjudaPage />} />
         </Route>
 

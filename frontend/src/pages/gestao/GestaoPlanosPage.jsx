@@ -3,15 +3,10 @@ import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { gestaoApi } from "../../services/gestaoApi";
 
-const FEATURES = [
+const MODULOS_RESTRITOS = [
   { key: "acesso_cursos", label: "Cursos", icon: "📚" },
   { key: "acesso_trilhas", label: "Trilhas", icon: "🛤️" },
-  { key: "acesso_biblioteca", label: "Biblioteca", icon: "📖" },
   { key: "acesso_ao_vivo", label: "Ao vivo", icon: "🎥" },
-  { key: "acesso_certificados", label: "Certificados", icon: "🏅" },
-  { key: "acesso_ranking", label: "Ranking", icon: "🏆" },
-  { key: "acesso_comunicados", label: "Comunicados", icon: "📢" },
-  { key: "acesso_progresso", label: "Progresso", icon: "📈" },
 ];
 
 const FORM_VAZIO = {
@@ -21,12 +16,7 @@ const FORM_VAZIO = {
   ativo: true,
   acesso_cursos: true,
   acesso_trilhas: false,
-  acesso_biblioteca: false,
   acesso_ao_vivo: false,
-  acesso_certificados: false,
-  acesso_ranking: false,
-  acesso_comunicados: false,
-  acesso_progresso: false,
   tags_cursos: [],
 };
 
@@ -67,18 +57,30 @@ export default function GestaoPlanosPage() {
     });
   };
 
-  const toggleFeature = (key) => {
+  const toggleModulo = (key) => {
     setForm((f) => ({ ...f, [key]: !f[key] }));
   };
+
+  const payloadSalvar = () => ({
+    titulo: form.titulo,
+    slug: form.slug,
+    descricao: form.descricao,
+    ativo: form.ativo,
+    acesso_cursos: form.acesso_cursos,
+    acesso_trilhas: form.acesso_trilhas,
+    acesso_ao_vivo: form.acesso_ao_vivo,
+    tags_cursos: form.tags_cursos || [],
+  });
 
   const salvar = async (e) => {
     e.preventDefault();
     setErro("");
     try {
+      const payload = payloadSalvar();
       if (modal.item) {
-        await gestaoApi.atualizarPlano(modal.item.id, form);
+        await gestaoApi.atualizarPlano(modal.item.id, payload);
       } else {
-        await gestaoApi.criarPlano(form);
+        await gestaoApi.criarPlano(payload);
       }
       setModal({ open: false, item: null });
       carregar();
@@ -104,7 +106,7 @@ export default function GestaoPlanosPage() {
             <th>Título</th>
             <th>Slug</th>
             <th>Status</th>
-            <th>Recursos</th>
+            <th>Módulos</th>
             <th>Tags</th>
             <th></th>
           </tr>
@@ -116,10 +118,12 @@ export default function GestaoPlanosPage() {
               <td><code>{p.slug}</code></td>
               <td>{p.ativo ? "Ativo" : "Inativo"}</td>
               <td>
-                {FEATURES.filter((f) => p[f.key]).map((f) => f.label).join(", ") || "—"}
+                {MODULOS_RESTRITOS.filter((f) => p[f.key]).map((f) => f.label).join(", ") || "—"}
               </td>
               <td>
-                {p.tags_cursos_detalhe?.map((t) => t.nome).join(", ") || "—"}
+                {p.tags_cursos_detalhe?.length
+                  ? p.tags_cursos_detalhe.map((t) => t.nome).join(", ")
+                  : "Todos"}
               </td>
               <td>
                 <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: p })}>
@@ -196,14 +200,17 @@ export default function GestaoPlanosPage() {
           </div>
 
           <div className="gestao-form-section">
-            <h3 className="gestao-form-section-title">Recursos incluídos</h3>
+            <h3 className="gestao-form-section-title">Módulos restritos por plano</h3>
+            <p className="gestao-muted" style={{ margin: "0 0 0.75rem" }}>
+              Biblioteca, certificados, comunicados e progresso são liberados para todos os planos ativos.
+            </p>
             <div className="gestao-features-grid">
-              {FEATURES.map((f) => (
+              {MODULOS_RESTRITOS.map((f) => (
                 <label key={f.key} className="gestao-feature-card">
                   <input
                     type="checkbox"
                     checked={!!form[f.key]}
-                    onChange={() => toggleFeature(f.key)}
+                    onChange={() => toggleModulo(f.key)}
                   />
                   <span>{f.icon} {f.label}</span>
                 </label>
@@ -212,14 +219,12 @@ export default function GestaoPlanosPage() {
           </div>
 
           <div className="gestao-form-section">
-            <h3 className="gestao-form-section-title">Tags de cursos permitidas</h3>
-            {(!form.tags_cursos || form.tags_cursos.length === 0) && (
-              <p className="modal-alert modal-alert--error" style={{ marginBottom: "0.75rem" }}>
-                Sem tags selecionadas, o aluno não verá nenhum curso novo no catálogo.
-              </p>
-            )}
+            <h3 className="gestao-form-section-title">Filtro por tags (cursos e ao vivo)</h3>
+            <p className="gestao-muted" style={{ margin: "0 0 0.75rem" }}>
+              Nenhuma tag selecionada = todos os cursos e treinamentos ao vivo. Com tags = apenas itens que possuem pelo menos uma tag em comum.
+            </p>
             {todasTags.length === 0 ? (
-              <p className="gestao-muted">Cadastre tags em Gestão → Tags antes de vincular ao plano.</p>
+              <p className="gestao-muted">Cadastre tags em Gestão → Tags antes de restringir conteúdo.</p>
             ) : (
               <div className="gestao-features-grid">
                 {todasTags.filter((t) => t.ativo).map((t) => (

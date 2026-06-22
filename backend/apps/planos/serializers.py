@@ -17,9 +17,7 @@ class PlanoSerializer(serializers.ModelSerializer):
         model = Plano
         fields = [
             "id", "titulo", "slug", "descricao", "ativo",
-            "acesso_cursos", "acesso_trilhas", "acesso_biblioteca",
-            "acesso_ao_vivo", "acesso_certificados", "acesso_ranking",
-            "acesso_comunicados", "acesso_progresso",
+            "acesso_cursos", "acesso_trilhas", "acesso_ao_vivo",
             "tags_cursos", "tags_cursos_detalhe", "criado_em",
         ]
         read_only_fields = ["id", "criado_em"]

@@ -285,6 +285,7 @@ class TreinamentoAoVivo(models.Model):
         Setor, null=True, blank=True, on_delete=models.SET_NULL, related_name="treinamentos"
     )
     descricao = models.TextField(blank=True)
+    tags = models.ManyToManyField("TagCurso", blank=True, related_name="treinamentos_ao_vivo")
 
     class Meta:
         ordering = ["data", "hora"]

@@ -8,15 +8,21 @@ from apps.cursos.permissions import usuario_pode_gestao
 
 from .models import AssinaturaUsuario, Plano, TokenPlano
 
-FEATURES_GESTAO = {
-    "acesso_cursos": True,
-    "acesso_trilhas": True,
+# Módulos padrão — sempre liberados com plano ativo
+FEATURES_PADRAO = {
     "acesso_biblioteca": True,
-    "acesso_ao_vivo": True,
     "acesso_certificados": True,
-    "acesso_ranking": True,
     "acesso_comunicados": True,
     "acesso_progresso": True,
+}
+
+FEATURES_RESTRITAS = ("acesso_cursos", "acesso_trilhas", "acesso_ao_vivo")
+
+FEATURES_GESTAO = {
+    **FEATURES_PADRAO,
+    "acesso_cursos": True,
+    "acesso_trilhas": True,
+    "acesso_ao_vivo": True,
 }
 
 
@@ -42,6 +48,7 @@ def assinatura_ativa(usuario):
             expira_em__gt=timezone.now(),
         )
         .select_related("plano")
+        .prefetch_related("plano__tags_cursos")
         .order_by("-expira_em")
         .first()
     )
@@ -61,7 +68,13 @@ def features_efetivas(usuario):
     assin = assinatura_ativa(usuario)
     if not assin:
         return {k: False for k in FEATURES_GESTAO}
-    return assin.plano.features_dict()
+    plano = assin.plano
+    return {
+        **FEATURES_PADRAO,
+        "acesso_cursos": plano.acesso_cursos,
+        "acesso_trilhas": plano.acesso_trilhas,
+        "acesso_ao_vivo": plano.acesso_ao_vivo,
+    }
 
 
 def usuario_tem_feature(usuario, feature):
@@ -70,8 +83,8 @@ def usuario_tem_feature(usuario, feature):
 
 def tag_ids_do_plano_ativo(usuario):
     """
-    IDs de tags permitidas pelo plano ativo.
-    None = gestão (sem filtro). [] = sem tags / sem plano (nenhum curso novo).
+    IDs de tags do plano ativo.
+    None = gestão (sem filtro). [] = sem restrição por tag (todos os itens).
     """
     if usuario_pode_gestao(usuario):
         return None
@@ -83,28 +96,72 @@ def tag_ids_do_plano_ativo(usuario):
     )
 
 
-def filtrar_cursos_queryset(qs, usuario):
-    """Filtra queryset de cursos pelas tags do plano do usuário."""
-    tag_ids = tag_ids_do_plano_ativo(usuario)
+def _item_permitido_por_tags(obj_com_tags, tag_ids):
+    """Verifica se objeto com M2M tags passa no filtro do plano."""
     if tag_ids is None:
-        return qs
+        return True
     if not tag_ids:
-        return qs.none()
+        return True
+    return obj_com_tags.tags.filter(id__in=tag_ids).exists()
+
+
+def filtrar_por_tags_queryset(qs, usuario):
+    """Filtra queryset com M2M tags (cursos ou ao vivo)."""
+    tag_ids = tag_ids_do_plano_ativo(usuario)
+    if tag_ids is None or not tag_ids:
+        return qs
     return qs.filter(tags__id__in=tag_ids).distinct()
 
 
+def filtrar_cursos_queryset(qs, usuario):
+    """Filtra queryset de cursos pelas tags do plano do usuário."""
+    return filtrar_por_tags_queryset(qs, usuario)
+
+
+def filtrar_ao_vivo_queryset(qs, usuario):
+    """Filtra treinamentos ao vivo pelas tags do plano."""
+    return filtrar_por_tags_queryset(qs, usuario)
+
+
+def curso_permitido_por_tags_plano(usuario, curso):
+    """Apenas regra de tags — sem bypass de matrícula (usado em trilhas)."""
+    if usuario_pode_gestao(usuario):
+        return True
+    if not assinatura_ativa(usuario):
+        return False
+    return _item_permitido_por_tags(curso, tag_ids_do_plano_ativo(usuario))
+
+
 def curso_visivel_para_usuario(usuario, curso):
-    """Gestão, matrícula existente ou curso com tag permitida pelo plano."""
+    """Gestão, matrícula existente ou curso permitido por tags."""
     if usuario_pode_gestao(usuario):
         return True
     from apps.cursos.models import Matricula
 
     if Matricula.objects.filter(usuario=usuario, curso=curso).exists():
         return True
-    tag_ids = tag_ids_do_plano_ativo(usuario)
-    if not tag_ids:
+    return curso_permitido_por_tags_plano(usuario, curso)
+
+
+def trilha_visivel_para_usuario(usuario, trilha):
+    """Trilha visível só se todos os cursos publicados forem permitidos por tags."""
+    if usuario_pode_gestao(usuario):
+        return True
+    from apps.cursos.models import Curso
+
+    itens = trilha.itens.filter(curso__status=Curso.STATUS_PUBLICADO).select_related("curso")
+    if not itens.exists():
         return False
-    return curso.tags.filter(id__in=tag_ids).exists()
+    return all(curso_permitido_por_tags_plano(usuario, item.curso) for item in itens)
+
+
+def ao_vivo_visivel_para_usuario(usuario, treinamento):
+    """Treinamento ao vivo permitido pelas tags do plano."""
+    if usuario_pode_gestao(usuario):
+        return True
+    if not assinatura_ativa(usuario):
+        return False
+    return _item_permitido_por_tags(treinamento, tag_ids_do_plano_ativo(usuario))
 
 
 def validar_token_resgate(token, usuario):
@@ -190,6 +247,6 @@ def serializar_assinatura(assinatura):
         "expira_em": assinatura.expira_em.isoformat(),
         "status": assinatura.status,
         "dias_restantes": dias,
-        "features": assinatura.plano.features_dict(),
+        "features": features_efetivas(assinatura.usuario),
         "tags_cursos": tags,
     }

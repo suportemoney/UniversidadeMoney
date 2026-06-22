@@ -21,12 +21,7 @@ class Plano(models.Model):
 
     acesso_cursos = models.BooleanField(default=True)
     acesso_trilhas = models.BooleanField(default=False)
-    acesso_biblioteca = models.BooleanField(default=False)
     acesso_ao_vivo = models.BooleanField(default=False)
-    acesso_certificados = models.BooleanField(default=True)
-    acesso_ranking = models.BooleanField(default=False)
-    acesso_comunicados = models.BooleanField(default=False)
-    acesso_progresso = models.BooleanField(default=True)
 
     tags_cursos = models.ManyToManyField(
         "cursos.TagCurso",
@@ -45,15 +40,11 @@ class Plano(models.Model):
         return self.titulo
 
     def features_dict(self):
+        """Features restritas do plano (padrão vem de services.FEATURES_PADRAO)."""
         return {
             "acesso_cursos": self.acesso_cursos,
             "acesso_trilhas": self.acesso_trilhas,
-            "acesso_biblioteca": self.acesso_biblioteca,
             "acesso_ao_vivo": self.acesso_ao_vivo,
-            "acesso_certificados": self.acesso_certificados,
-            "acesso_ranking": self.acesso_ranking,
-            "acesso_comunicados": self.acesso_comunicados,
-            "acesso_progresso": self.acesso_progresso,
         }
 
 

@@ -6,7 +6,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
-from apps.planos.services import curso_visivel_para_usuario, filtrar_cursos_queryset
+from apps.planos.services import (
+    curso_visivel_para_usuario,
+    filtrar_ao_vivo_queryset,
+    filtrar_cursos_queryset,
+    trilha_visivel_para_usuario,
+)
 
 from .models import Curso, InscricaoAoVivo, MaterialBiblioteca, Matricula, Modulo, Trilha, TreinamentoAoVivo
 from .serializers_gestao import CursoGestaoListSerializer
@@ -24,16 +29,18 @@ class BuscaView(APIView):
             status=Curso.STATUS_PUBLICADO
         ).filter(Q(titulo__icontains=q) | Q(descricao__icontains=q)).select_related("setor").prefetch_related("tags")
         cursos = filtrar_cursos_queryset(cursos_qs, request.user)[:12]
-        trilhas = Trilha.objects.filter(
+        trilhas_qs = Trilha.objects.filter(
             Q(titulo__icontains=q) | Q(descricao__icontains=q)
-        ).select_related("setor")[:8]
+        ).prefetch_related("itens__curso__tags").select_related("setor")
+        trilhas = [t for t in trilhas_qs if trilha_visivel_para_usuario(request.user, t)][:8]
         pdfs = MaterialBiblioteca.objects.filter(
             publicado=True
         ).filter(Q(titulo__icontains=q) | Q(descricao__icontains=q)).select_related("setor")[:8]
         hoje = timezone.now().date()
-        ao_vivo = TreinamentoAoVivo.objects.filter(
+        ao_vivo_qs = TreinamentoAoVivo.objects.filter(
             data__gte=hoje
-        ).filter(Q(titulo__icontains=q) | Q(descricao__icontains=q)).select_related("setor")[:8]
+        ).filter(Q(titulo__icontains=q) | Q(descricao__icontains=q)).select_related("setor").prefetch_related("tags")
+        ao_vivo = filtrar_ao_vivo_queryset(ao_vivo_qs, request.user)[:8]
 
         return Response({
             "q": q,
@@ -158,16 +165,12 @@ class TrilhasAlunoListView(APIView):
         dados = []
         user = request.user
         for t in trilhas:
-            itens_qs = t.itens.filter(curso__status=Curso.STATUS_PUBLICADO).select_related("curso")
-            itens_visiveis = [
-                item for item in itens_qs
-                if curso_visivel_para_usuario(user, item.curso)
-            ]
-            total = len(itens_visiveis)
-            if total == 0:
+            if not trilha_visivel_para_usuario(user, t):
                 continue
+            itens = list(t.itens.filter(curso__status=Curso.STATUS_PUBLICADO).select_related("curso"))
+            total = len(itens)
             concluidos = sum(
-                1 for item in itens_visiveis
+                1 for item in itens
                 if Matricula.objects.filter(usuario=user, curso=item.curso, progresso=100).exists()
             )
             progresso = int((concluidos / total) * 100) if total else 0
@@ -191,10 +194,11 @@ class TrilhaAlunoDetailView(APIView):
         except Trilha.DoesNotExist:
             return Response({"detail": "Trilha não encontrada."}, status=404)
 
+        if not trilha_visivel_para_usuario(request.user, trilha):
+            return Response({"detail": "Trilha não encontrada."}, status=404)
+
         cursos = []
         for item in trilha.itens.filter(curso__status=Curso.STATUS_PUBLICADO).select_related("curso"):
-            if not curso_visivel_para_usuario(request.user, item.curso):
-                continue
             m = Matricula.objects.filter(usuario=request.user, curso=item.curso).first()
             cursos.append({
                 "id": item.curso.id,

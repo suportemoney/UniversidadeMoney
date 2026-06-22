@@ -195,10 +195,28 @@ class ComunicadoSerializer(serializers.ModelSerializer):
 
 class TreinamentoAoVivoSerializer(serializers.ModelSerializer):
     setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
+    tags = TagCursoSerializer(many=True, read_only=True)
+    tag_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=TagCurso.objects.filter(ativo=True), source="tags", required=False
+    )
 
     class Meta:
         model = TreinamentoAoVivo
-        fields = ["id", "titulo", "data", "hora", "setor", "setor_nome", "descricao"]
+        fields = ["id", "titulo", "data", "hora", "setor", "setor_nome", "descricao", "tags", "tag_ids"]
+
+    def create(self, validated_data):
+        tags = validated_data.pop("tags", [])
+        obj = super().create(validated_data)
+        if tags:
+            obj.tags.set(tags)
+        return obj
+
+    def update(self, instance, validated_data):
+        tags = validated_data.pop("tags", None)
+        obj = super().update(instance, validated_data)
+        if tags is not None:
+            obj.tags.set(tags)
+        return obj
 
 
 class MaterialBibliotecaSerializer(serializers.ModelSerializer):

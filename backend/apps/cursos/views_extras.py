@@ -1,5 +1,4 @@
-"""APIs extras — certificados, ranking, progresso, comunicados, ao-vivo, biblioteca."""
-from django.contrib.auth.models import User
+"""APIs extras — certificados, progresso, comunicados, ao-vivo, biblioteca."""
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import permissions
@@ -7,13 +6,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
+from apps.planos.services import ao_vivo_visivel_para_usuario, filtrar_ao_vivo_queryset
 
 from .models import (
     Certificado,
     Comunicado,
     ComunicadoLeitura,
     Conquista,
-    Curso,
     InscricaoAoVivo,
     Matricula,
     MaterialBiblioteca,
@@ -23,7 +22,7 @@ from .services import calcular_horas_usuario, emitir_conquista
 
 
 class CertificadosListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_certificados")]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         certs = Certificado.objects.filter(usuario=request.user).select_related("curso")
@@ -39,7 +38,7 @@ class CertificadosListView(APIView):
 
 
 class CertificadoDownloadView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_certificados")]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request, pk):
         try:
@@ -61,22 +60,8 @@ class CertificadoDownloadView(APIView):
         return response
 
 
-class RankingView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_ranking")]
-
-    def get(self, request):
-        limit = int(request.query_params.get("limit", 20))
-        ranking = []
-        for u in User.objects.filter(is_active=True):
-            horas = calcular_horas_usuario(u)
-            if horas > 0:
-                ranking.append({"nome": u.first_name or u.email, "horas": horas})
-        ranking.sort(key=lambda x: x["horas"], reverse=True)
-        return Response(ranking[:limit])
-
-
 class ProgressoView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_progresso")]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         user = request.user
@@ -110,7 +95,7 @@ class ProgressoView(APIView):
 
 
 class ComunicadosListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_comunicados")]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         tipo = request.query_params.get("tipo")
@@ -134,7 +119,7 @@ class ComunicadosListView(APIView):
 
 
 class ComunicadosNaoLidosView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_comunicados")]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         lidos = ComunicadoLeitura.objects.filter(usuario=request.user).values_list("comunicado_id", flat=True)
@@ -150,7 +135,7 @@ class ComunicadosNaoLidosView(APIView):
 
 
 class ComunicadoMarcarLidoView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_comunicados")]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def post(self, request, pk):
         try:
@@ -169,7 +154,10 @@ class AoVivoListView(APIView):
         inscritos = set(
             InscricaoAoVivo.objects.filter(usuario=request.user).values_list("treinamento_id", flat=True)
         )
-        treinos = TreinamentoAoVivo.objects.filter(data__gte=hoje).select_related("setor")
+        treinos = filtrar_ao_vivo_queryset(
+            TreinamentoAoVivo.objects.filter(data__gte=hoje).select_related("setor").prefetch_related("tags"),
+            request.user,
+        )
         return Response([
             {
                 "id": t.id,
@@ -189,15 +177,17 @@ class AoVivoInscreverView(APIView):
 
     def post(self, request, pk):
         try:
-            t = TreinamentoAoVivo.objects.get(pk=pk)
+            t = TreinamentoAoVivo.objects.prefetch_related("tags").get(pk=pk)
         except TreinamentoAoVivo.DoesNotExist:
             return Response({"detail": "Treinamento não encontrado."}, status=404)
+        if not ao_vivo_visivel_para_usuario(request.user, t):
+            return Response({"detail": "Treinamento não disponível no seu plano."}, status=403)
         InscricaoAoVivo.objects.get_or_create(usuario=request.user, treinamento=t)
         return Response({"inscrito": True, "titulo": t.titulo})
 
 
 class BibliotecaListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_biblioteca")]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         setor = request.query_params.get("setor")

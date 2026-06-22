@@ -10,7 +10,6 @@ urlpatterns = [
     path("trilhas/<int:pk>/", views_catalogo.TrilhaAlunoDetailView.as_view(), name="trilha-aluno-detail"),
     path("certificados/", views_extras.CertificadosListView.as_view(), name="certificados"),
     path("certificados/<int:pk>/download/", views_extras.CertificadoDownloadView.as_view(), name="certificado-download"),
-    path("ranking/", views_extras.RankingView.as_view(), name="ranking"),
     path("progresso/", views_extras.ProgressoView.as_view(), name="progresso"),
     path("comunicados/", views_extras.ComunicadosListView.as_view(), name="comunicados"),
     path("comunicados/nao-lidos/", views_extras.ComunicadosNaoLidosView.as_view(), name="comunicados-nao-lidos"),

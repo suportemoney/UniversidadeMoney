@@ -10,11 +10,10 @@ const MENU = [
   { to: "/dashboard/meus-cursos", label: "Meus cursos", icon: "📚", feature: "acesso_cursos" },
   { to: "/dashboard/trilhas", label: "Trilhas", icon: "🛤️", feature: "acesso_trilhas" },
   { to: "/dashboard/ao-vivo", label: "Treinamentos ao vivo", icon: "🎥", feature: "acesso_ao_vivo" },
-  { to: "/dashboard/certificados", label: "Certificados", icon: "🏅", feature: "acesso_certificados" },
-  { to: "/dashboard/biblioteca", label: "Biblioteca", icon: "📖", feature: "acesso_biblioteca" },
-  { to: "/dashboard/ranking", label: "Ranking", icon: "🏆", feature: "acesso_ranking" },
-  { to: "/dashboard/comunicados", label: "Comunicados", icon: "📢", feature: "acesso_comunicados" },
-  { to: "/dashboard/progresso", label: "Meu progresso", icon: "📈", feature: "acesso_progresso" },
+  { to: "/dashboard/certificados", label: "Certificados", icon: "🏅" },
+  { to: "/dashboard/biblioteca", label: "Biblioteca", icon: "📖" },
+  { to: "/dashboard/comunicados", label: "Comunicados", icon: "📢" },
+  { to: "/dashboard/progresso", label: "Meu progresso", icon: "📈" },
   { to: "/dashboard/ajuda", label: "Ajuda", icon: "❓" },
 ];
 
@@ -34,10 +33,6 @@ export default function DashboardLayout() {
   const [perfilOpen, setPerfilOpen] = useState(false);
 
   const carregarNotif = () => {
-    if (!user?.features?.acesso_comunicados && !user?.pode_gestao) {
-      setNotif({ count: 0, itens: [] });
-      return;
-    }
     getComunicadosNaoLidos().then(setNotif).catch(() => setNotif({ count: 0, itens: [] }));
   };
 
@@ -116,7 +111,6 @@ export default function DashboardLayout() {
               className="dash-notif"
               aria-label="Notificações"
               onClick={() => setNotifOpen(true)}
-              disabled={!user?.pode_gestao && !user?.features?.acesso_comunicados}
             >
               🔔
               {notif.count > 0 && <span className="dash-notif-badge">{notif.count}</span>}
@@ -138,9 +132,7 @@ export default function DashboardLayout() {
                   <div className="dash-profile-menu">
                     <p><strong>{user.first_name}</strong></p>
                     <small>{user.cargo || "Colaborador"}</small>
-                    {(user.pode_gestao || user.features?.acesso_progresso) && (
-                      <Link to="/dashboard/progresso" onClick={() => setPerfilOpen(false)}>Meu progresso</Link>
-                    )}
+                    <Link to="/dashboard/progresso" onClick={() => setPerfilOpen(false)}>Meu progresso</Link>
                     <button type="button" className="btn btn-outline btn-sm" onClick={handleLogout}>Sair</button>
                   </div>
                 )}

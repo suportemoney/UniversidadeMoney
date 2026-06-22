@@ -108,10 +108,6 @@ export async function getCertificados() {
   return apiFetch("/certificados/");
 }
 
-export async function getRanking(limit = 50) {
-  return apiFetch(`/ranking/?limit=${limit}`);
-}
-
 export async function getProgresso() {
   return apiFetch("/progresso/");
 }

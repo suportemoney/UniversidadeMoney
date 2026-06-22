@@ -196,23 +196,6 @@ export default function DashboardPage() {
             ))}
           </ul>
         </section>
-
-        <section className="dash-panel">
-          <h2>Ranking de evolução</h2>
-          <ol className="dash-ranking">
-            {data.ranking.length === 0 && (
-              <li className="dash-ranking-empty">Complete cursos para aparecer no ranking.</li>
-            )}
-            {data.ranking.map((r, i) => (
-              <li key={r.nome}>
-                <span className="dash-rank-pos">{i + 1}</span>
-                <span className="dash-avatar dash-avatar-sm">{r.nome.charAt(0)}</span>
-                <span className="dash-rank-name">{r.nome}</span>
-                <strong>{r.horas}h</strong>
-              </li>
-            ))}
-          </ol>
-        </section>
       </div>
 
       <section className="dash-conquistas-row">

@@ -488,13 +488,13 @@ class GestaoComunicadoDetailView(generics.RetrieveUpdateDestroyAPIView):
 class GestaoAoVivoListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsGestor]
     serializer_class = TreinamentoAoVivoSerializer
-    queryset = TreinamentoAoVivo.objects.select_related("setor")
+    queryset = TreinamentoAoVivo.objects.select_related("setor").prefetch_related("tags")
 
 
 class GestaoAoVivoDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsGestor]
     serializer_class = TreinamentoAoVivoSerializer
-    queryset = TreinamentoAoVivo.objects.select_related("setor")
+    queryset = TreinamentoAoVivo.objects.select_related("setor").prefetch_related("tags")
 
 
 class GestaoBibliotecaListCreateView(generics.ListCreateAPIView):
