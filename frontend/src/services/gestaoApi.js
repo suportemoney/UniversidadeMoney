@@ -169,4 +169,11 @@ export const gestaoApi = {
   atualizarToken: (id, data) =>
     gestaoFetch(`/gestao/tokens/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
   listarTokenUsos: (id) => gestaoFetch(`/gestao/tokens/${id}/usos/`),
+
+  listarTags: () => gestaoFetch("/gestao/tags/"),
+  criarTag: (data) =>
+    gestaoFetch("/gestao/tags/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarTag: (id, data) =>
+    gestaoFetch(`/gestao/tags/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirTag: (id) => gestaoFetch(`/gestao/tags/${id}/`, { method: "DELETE" }),
 };

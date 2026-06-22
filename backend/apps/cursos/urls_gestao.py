@@ -56,4 +56,6 @@ urlpatterns = [
     path("gestao/biblioteca/", views_gestao.GestaoBibliotecaListCreateView.as_view(), name="gestao-biblioteca"),
     path("gestao/biblioteca/<int:pk>/", views_gestao.GestaoBibliotecaDetailView.as_view(), name="gestao-biblioteca-detail"),
     path("gestao/biblioteca/<int:pk>/upload-pdf/", views_gestao.GestaoBibliotecaUploadPdfView.as_view(), name="gestao-biblioteca-upload"),
+    path("gestao/tags/", views_gestao.GestaoTagsListCreateView.as_view(), name="gestao-tags"),
+    path("gestao/tags/<int:pk>/", views_gestao.GestaoTagDetailView.as_view(), name="gestao-tag-detail"),
 ]

@@ -59,6 +59,22 @@ class TrilhaCurso(models.Model):
         verbose_name_plural = "Cursos na trilha"
 
 
+class TagCurso(models.Model):
+    """Tag para categorizar cursos e restringir visibilidade por plano."""
+    nome = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(unique=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+        verbose_name = "Tag de curso"
+        verbose_name_plural = "Tags de curso"
+
+    def __str__(self):
+        return self.nome
+
+
 class Curso(models.Model):
     STATUS_RASCUNHO = "rascunho"
     STATUS_PUBLICADO = "publicado"
@@ -92,6 +108,7 @@ class Curso(models.Model):
     )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    tags = models.ManyToManyField(TagCurso, blank=True, related_name="cursos")
 
     class Meta:
         ordering = ["-criado_em"]

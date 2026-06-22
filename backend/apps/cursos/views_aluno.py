@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.planos.permissions import TemAcessoAluno
+from apps.planos.services import curso_visivel_para_usuario
 
 from .models import (
     Atividade,
@@ -51,6 +52,9 @@ class CursoAlunoDetailView(APIView):
             ).get(pk=curso_id, status=Curso.STATUS_PUBLICADO)
         except Curso.DoesNotExist:
             return Response({"detail": "Curso não encontrado."}, status=404)
+
+        if not curso_visivel_para_usuario(request.user, curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
         progresso_aulas = {
@@ -113,6 +117,8 @@ class ConcluirAulaView(APIView):
         curso = aula.modulo.curso
         if curso.status != Curso.STATUS_PUBLICADO:
             return Response({"detail": "Curso indisponível."}, status=400)
+        if not curso_visivel_para_usuario(request.user, curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
         pa, _ = ProgressoAula.objects.get_or_create(matricula=matricula, aula=aula)
@@ -136,6 +142,9 @@ class AtividadeAlunoView(APIView):
         except Atividade.DoesNotExist:
             return Response({"detail": "Atividade não encontrada."}, status=404)
 
+        if not curso_visivel_para_usuario(request.user, atividade.modulo.curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
+
         questoes = [
             {"id": q.id, "enunciado": q.enunciado, "tipo": q.tipo, "opcoes": q.opcoes, "ordem": q.ordem}
             for q in atividade.questoes.all()
@@ -151,6 +160,9 @@ class AtividadeAlunoView(APIView):
             return Response({"detail": "Atividade não encontrada."}, status=404)
 
         curso = atividade.modulo.curso
+        if not curso_visivel_para_usuario(request.user, curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
+
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
         questoes = list(atividade.questoes.all())
         respostas = request.data.get("respostas", {})
@@ -177,6 +189,9 @@ class ProvaAlunoView(APIView):
         except ProvaFinal.DoesNotExist:
             return Response({"detail": "Prova não encontrada."}, status=404)
 
+        if not curso_visivel_para_usuario(request.user, prova.curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
+
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=prova.curso)
         tentativas = TentativaProva.objects.filter(matricula=matricula, prova=prova).count()
         if tentativas >= prova.tentativas_max:
@@ -202,6 +217,9 @@ class ProvaAlunoView(APIView):
             prova = ProvaFinal.objects.prefetch_related("questoes").select_related("curso").get(pk=prova_id)
         except ProvaFinal.DoesNotExist:
             return Response({"detail": "Prova não encontrada."}, status=404)
+
+        if not curso_visivel_para_usuario(request.user, prova.curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=prova.curso)
         tentativas = TentativaProva.objects.filter(matricula=matricula, prova=prova).count()

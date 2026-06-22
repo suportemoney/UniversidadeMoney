@@ -61,6 +61,13 @@ export default function CursoDetalhePage() {
           {curso.is_novo && <span className="dash-badge-novo">Novo</span>}
           <h1>{curso.titulo}</h1>
           {curso.setor && <span className="dash-tag">{curso.setor}</span>}
+          {curso.tags?.length > 0 && (
+            <div className="dash-tags-row">
+              {curso.tags.map((t) => (
+                <span key={t.id} className="dash-tag dash-tag--muted">{t.nome}</span>
+              ))}
+            </div>
+          )}
           <p className="dash-curso-desc">{curso.descricao || "Curso disponível na Universidade Money."}</p>
 
           <div className="dash-curso-stats">

@@ -22,6 +22,7 @@ export default function GestaoCursoEditorPage() {
   const [aba, setAba] = useState("info");
   const [curso, setCurso] = useState(null);
   const [setores, setSetores] = useState([]);
+  const [tags, setTags] = useState([]);
   const [prova, setProva] = useState(null);
   const [erro, setErro] = useState("");
   const [msg, setMsg] = useState("");
@@ -41,6 +42,7 @@ export default function GestaoCursoEditorPage() {
   useEffect(() => {
     carregar();
     gestaoApi.setores().then(setSetores);
+    gestaoApi.listarTags().then(setTags);
   }, [carregar]);
 
   const salvarInfo = async (e) => {
@@ -51,6 +53,7 @@ export default function GestaoCursoEditorPage() {
         descricao: curso.descricao,
         setor: curso.setor,
         is_novo: curso.is_novo,
+        tags: (curso.tags || []).map((t) => (typeof t === "object" ? t.id : t)),
       });
       setMsg("Informações salvas.");
       carregar();
@@ -175,6 +178,36 @@ export default function GestaoCursoEditorPage() {
               ))}
             </select>
           </label>
+          <div className="gestao-form-section">
+            <h3 className="gestao-form-section-title">Tags do curso</h3>
+            {tags.length === 0 ? (
+              <p className="gestao-muted">Nenhuma tag cadastrada. Crie em Gestão → Tags.</p>
+            ) : (
+              <div className="gestao-features-grid">
+                {tags.filter((t) => t.ativo).map((t) => {
+                  const selecionadas = (curso.tags || []).map((x) => (typeof x === "object" ? x.id : x));
+                  return (
+                    <label key={t.id} className="gestao-feature-card">
+                      <input
+                        type="checkbox"
+                        checked={selecionadas.includes(t.id)}
+                        onChange={() => {
+                          const ids = selecionadas.includes(t.id)
+                            ? selecionadas.filter((id) => id !== t.id)
+                            : [...selecionadas, t.id];
+                          setCurso({
+                            ...curso,
+                            tags: tags.filter((tag) => ids.includes(tag.id)),
+                          });
+                        }}
+                      />
+                      <span>{t.nome}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <label className="gestao-check">
             <input
               type="checkbox"

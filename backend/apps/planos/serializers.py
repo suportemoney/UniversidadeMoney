@@ -1,19 +1,42 @@
 """Serializers de planos e tokens."""
 from rest_framework import serializers
 
+from apps.cursos.models import TagCurso
+from apps.cursos.serializers_gestao import TagCursoSerializer
+
 from .models import AssinaturaUsuario, Plano, TokenPlano
 
 
 class PlanoSerializer(serializers.ModelSerializer):
+    tags_cursos = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=TagCurso.objects.all(), required=False
+    )
+    tags_cursos_detalhe = TagCursoSerializer(source="tags_cursos", many=True, read_only=True)
+
     class Meta:
         model = Plano
         fields = [
             "id", "titulo", "slug", "descricao", "ativo",
             "acesso_cursos", "acesso_trilhas", "acesso_biblioteca",
             "acesso_ao_vivo", "acesso_certificados", "acesso_ranking",
-            "acesso_comunicados", "acesso_progresso", "criado_em",
+            "acesso_comunicados", "acesso_progresso",
+            "tags_cursos", "tags_cursos_detalhe", "criado_em",
         ]
         read_only_fields = ["id", "criado_em"]
+
+    def create(self, validated_data):
+        tags = validated_data.pop("tags_cursos", [])
+        plano = super().create(validated_data)
+        if tags:
+            plano.tags_cursos.set(tags)
+        return plano
+
+    def update(self, instance, validated_data):
+        tags = validated_data.pop("tags_cursos", None)
+        plano = super().update(instance, validated_data)
+        if tags is not None:
+            plano.tags_cursos.set(tags)
+        return plano
 
 
 class PlanoCatalogoSerializer(serializers.ModelSerializer):

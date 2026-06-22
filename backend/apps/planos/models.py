@@ -28,6 +28,12 @@ class Plano(models.Model):
     acesso_comunicados = models.BooleanField(default=False)
     acesso_progresso = models.BooleanField(default=True)
 
+    tags_cursos = models.ManyToManyField(
+        "cursos.TagCurso",
+        blank=True,
+        related_name="planos",
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:

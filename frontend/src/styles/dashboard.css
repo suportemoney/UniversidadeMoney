@@ -332,6 +332,18 @@
   align-self: flex-start;
 }
 
+.dash-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.dash-tag--muted {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
 .dash-progress {
   height: 6px;
   background: var(--bg);

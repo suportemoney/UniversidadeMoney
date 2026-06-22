@@ -12,6 +12,7 @@ from .models import (
     ProvaFinal,
     Questao,
     Setor,
+    TagCurso,
     TreinamentoAoVivo,
     Trilha,
     TrilhaCurso,
@@ -74,15 +75,23 @@ class ProvaFinalSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
+class TagCursoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TagCurso
+        fields = ["id", "nome", "slug", "ativo", "criado_em"]
+        read_only_fields = ["id", "criado_em"]
+
+
 class CursoGestaoListSerializer(serializers.ModelSerializer):
     setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
     criado_por_nome = serializers.CharField(source="criado_por.first_name", read_only=True, default=None)
+    tags = TagCursoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Curso
         fields = [
             "id", "titulo", "status", "setor", "setor_nome", "total_modulos",
-            "duracao_horas", "is_novo", "criado_em", "atualizado_em", "criado_por_nome",
+            "duracao_horas", "is_novo", "criado_em", "atualizado_em", "criado_por_nome", "tags",
         ]
 
 
@@ -91,13 +100,14 @@ class CursoGestaoDetailSerializer(serializers.ModelSerializer):
     prova_final = ProvaFinalSerializer(read_only=True)
     setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
     thumbnail_url = serializers.SerializerMethodField()
+    tags = TagCursoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Curso
         fields = [
             "id", "titulo", "descricao", "status", "setor", "setor_nome",
             "total_modulos", "duracao_horas", "is_novo", "thumbnail", "thumbnail_url",
-            "criado_em", "atualizado_em", "modulos", "prova_final",
+            "criado_em", "atualizado_em", "modulos", "prova_final", "tags",
         ]
         read_only_fields = ["id", "total_modulos", "duracao_horas", "criado_em", "atualizado_em"]
 
@@ -108,14 +118,29 @@ class CursoGestaoDetailSerializer(serializers.ModelSerializer):
 
 
 class CursoGestaoWriteSerializer(serializers.ModelSerializer):
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=TagCurso.objects.filter(ativo=True), required=False
+    )
+
     class Meta:
         model = Curso
-        fields = ["titulo", "descricao", "setor", "is_novo", "status"]
+        fields = ["titulo", "descricao", "setor", "is_novo", "status", "tags"]
 
     def create(self, validated_data):
+        tags = validated_data.pop("tags", [])
         validated_data.setdefault("status", Curso.STATUS_RASCUNHO)
         validated_data["criado_por"] = self.context["request"].user
-        return super().create(validated_data)
+        curso = super().create(validated_data)
+        if tags:
+            curso.tags.set(tags)
+        return curso
+
+    def update(self, instance, validated_data):
+        tags = validated_data.pop("tags", None)
+        curso = super().update(instance, validated_data)
+        if tags is not None:
+            curso.tags.set(tags)
+        return curso
 
 
 class TrilhaCursoItemSerializer(serializers.ModelSerializer):

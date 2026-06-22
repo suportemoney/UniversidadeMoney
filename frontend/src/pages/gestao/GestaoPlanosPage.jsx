@@ -27,10 +27,12 @@ const FORM_VAZIO = {
   acesso_ranking: false,
   acesso_comunicados: false,
   acesso_progresso: false,
+  tags_cursos: [],
 };
 
 export default function GestaoPlanosPage() {
   const [itens, setItens] = useState([]);
+  const [todasTags, setTodasTags] = useState([]);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState(FORM_VAZIO);
@@ -38,16 +40,32 @@ export default function GestaoPlanosPage() {
 
   const carregar = () => gestaoApi.listarPlanos().then(setItens);
 
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => {
+    carregar();
+    gestaoApi.listarTags().then(setTodasTags);
+  }, []);
 
   useEffect(() => {
     if (modal.item) {
-      setForm({ ...FORM_VAZIO, ...modal.item });
+      const tagIds = modal.item.tags_cursos_detalhe
+        ? modal.item.tags_cursos_detalhe.map((t) => t.id)
+        : (modal.item.tags_cursos || []);
+      setForm({ ...FORM_VAZIO, ...modal.item, tags_cursos: tagIds });
     } else {
       setForm(FORM_VAZIO);
     }
     setErro("");
   }, [modal]);
+
+  const toggleTag = (tagId) => {
+    setForm((f) => {
+      const ids = f.tags_cursos || [];
+      return {
+        ...f,
+        tags_cursos: ids.includes(tagId) ? ids.filter((id) => id !== tagId) : [...ids, tagId],
+      };
+    });
+  };
 
   const toggleFeature = (key) => {
     setForm((f) => ({ ...f, [key]: !f[key] }));
@@ -87,6 +105,7 @@ export default function GestaoPlanosPage() {
             <th>Slug</th>
             <th>Status</th>
             <th>Recursos</th>
+            <th>Tags</th>
             <th></th>
           </tr>
         </thead>
@@ -98,6 +117,9 @@ export default function GestaoPlanosPage() {
               <td>{p.ativo ? "Ativo" : "Inativo"}</td>
               <td>
                 {FEATURES.filter((f) => p[f.key]).map((f) => f.label).join(", ") || "—"}
+              </td>
+              <td>
+                {p.tags_cursos_detalhe?.map((t) => t.nome).join(", ") || "—"}
               </td>
               <td>
                 <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: p })}>
@@ -187,6 +209,31 @@ export default function GestaoPlanosPage() {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="gestao-form-section">
+            <h3 className="gestao-form-section-title">Tags de cursos permitidas</h3>
+            {(!form.tags_cursos || form.tags_cursos.length === 0) && (
+              <p className="modal-alert modal-alert--error" style={{ marginBottom: "0.75rem" }}>
+                Sem tags selecionadas, o aluno não verá nenhum curso novo no catálogo.
+              </p>
+            )}
+            {todasTags.length === 0 ? (
+              <p className="gestao-muted">Cadastre tags em Gestão → Tags antes de vincular ao plano.</p>
+            ) : (
+              <div className="gestao-features-grid">
+                {todasTags.filter((t) => t.ativo).map((t) => (
+                  <label key={t.id} className="gestao-feature-card">
+                    <input
+                      type="checkbox"
+                      checked={(form.tags_cursos || []).includes(t.id)}
+                      onChange={() => toggleTag(t.id)}
+                    />
+                    <span>{t.nome}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         </form>
       </Modal>

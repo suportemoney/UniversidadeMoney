@@ -68,6 +68,45 @@ def usuario_tem_feature(usuario, feature):
     return features_efetivas(usuario).get(feature, False)
 
 
+def tag_ids_do_plano_ativo(usuario):
+    """
+    IDs de tags permitidas pelo plano ativo.
+    None = gestão (sem filtro). [] = sem tags / sem plano (nenhum curso novo).
+    """
+    if usuario_pode_gestao(usuario):
+        return None
+    assin = assinatura_ativa(usuario)
+    if not assin:
+        return []
+    return list(
+        assin.plano.tags_cursos.filter(ativo=True).values_list("id", flat=True)
+    )
+
+
+def filtrar_cursos_queryset(qs, usuario):
+    """Filtra queryset de cursos pelas tags do plano do usuário."""
+    tag_ids = tag_ids_do_plano_ativo(usuario)
+    if tag_ids is None:
+        return qs
+    if not tag_ids:
+        return qs.none()
+    return qs.filter(tags__id__in=tag_ids).distinct()
+
+
+def curso_visivel_para_usuario(usuario, curso):
+    """Gestão, matrícula existente ou curso com tag permitida pelo plano."""
+    if usuario_pode_gestao(usuario):
+        return True
+    from apps.cursos.models import Matricula
+
+    if Matricula.objects.filter(usuario=usuario, curso=curso).exists():
+        return True
+    tag_ids = tag_ids_do_plano_ativo(usuario)
+    if not tag_ids:
+        return False
+    return curso.tags.filter(id__in=tag_ids).exists()
+
+
 def validar_token_resgate(token, usuario):
     """Retorna lista de erros (vazia = ok)."""
     erros = []
@@ -138,6 +177,10 @@ def serializar_assinatura(assinatura):
         return None
     agora = timezone.now()
     dias = max(0, (assinatura.expira_em - agora).days)
+    tags = [
+        {"id": t.id, "nome": t.nome, "slug": t.slug}
+        for t in assinatura.plano.tags_cursos.filter(ativo=True)
+    ]
     return {
         "id": assinatura.id,
         "plano_id": assinatura.plano_id,
@@ -148,4 +191,5 @@ def serializar_assinatura(assinatura):
         "status": assinatura.status,
         "dias_restantes": dias,
         "features": assinatura.plano.features_dict(),
+        "tags_cursos": tags,
     }

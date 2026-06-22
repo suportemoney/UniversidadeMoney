@@ -77,6 +77,13 @@ export default function ExplorarCursosPage() {
               <span className="dash-card-icon dash-card-icon--green">📚</span>
               <h3>{c.titulo}</h3>
               {c.setor_nome && <span className="dash-tag">{c.setor_nome}</span>}
+              {c.tags?.length > 0 && (
+                <div className="dash-tags-row">
+                  {c.tags.map((t) => (
+                    <span key={t.id} className="dash-tag dash-tag--muted">{t.nome}</span>
+                  ))}
+                </div>
+              )}
               <div className="dash-curso-duracao">
                 <span>📦 {c.total_modulos} módulos</span>
                 <span>⏱️ {c.duracao_horas}h</span>

@@ -29,6 +29,7 @@ import GestaoAoVivoPage from "./pages/gestao/GestaoAoVivoPage";
 import GestaoBibliotecaPage from "./pages/gestao/GestaoBibliotecaPage";
 import GestaoComunicadosPage from "./pages/gestao/GestaoComunicadosPage";
 import GestaoPlanosPage from "./pages/gestao/GestaoPlanosPage";
+import GestaoTagsPage from "./pages/gestao/GestaoTagsPage";
 import GestaoTokensPage from "./pages/gestao/GestaoTokensPage";
 import GestaoCursoEditorPage from "./pages/gestao/GestaoCursoEditorPage";
 import GestaoCursoNovoPage from "./pages/gestao/GestaoCursoNovoPage";
@@ -96,6 +97,7 @@ function App() {
           <Route path="ao-vivo" element={<GestaoAoVivoPage />} />
           <Route path="biblioteca" element={<GestaoBibliotecaPage />} />
           <Route path="planos" element={<GestaoPlanosPage />} />
+          <Route path="tags" element={<GestaoTagsPage />} />
           <Route path="tokens" element={<GestaoTokensPage />} />
         </Route>
 

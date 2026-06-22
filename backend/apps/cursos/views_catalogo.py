@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
+from apps.planos.services import curso_visivel_para_usuario, filtrar_cursos_queryset
 
 from .models import Curso, InscricaoAoVivo, MaterialBiblioteca, Matricula, Modulo, Trilha, TreinamentoAoVivo
 from .serializers_gestao import CursoGestaoListSerializer
@@ -19,9 +20,10 @@ class BuscaView(APIView):
         if len(q) < 2:
             return Response({"cursos": [], "trilhas": [], "biblioteca": [], "ao_vivo": []})
 
-        cursos = Curso.objects.filter(
+        cursos_qs = Curso.objects.filter(
             status=Curso.STATUS_PUBLICADO
-        ).filter(Q(titulo__icontains=q) | Q(descricao__icontains=q)).select_related("setor")[:12]
+        ).filter(Q(titulo__icontains=q) | Q(descricao__icontains=q)).select_related("setor").prefetch_related("tags")
+        cursos = filtrar_cursos_queryset(cursos_qs, request.user)[:12]
         trilhas = Trilha.objects.filter(
             Q(titulo__icontains=q) | Q(descricao__icontains=q)
         ).select_related("setor")[:8]
@@ -44,6 +46,7 @@ class BuscaView(APIView):
                     "duracao_horas": float(c.duracao_horas),
                     "total_modulos": c.total_modulos,
                     "is_novo": c.is_novo,
+                    "tags": [{"id": t.id, "nome": t.nome, "slug": t.slug} for t in c.tags.all()],
                 }
                 for c in cursos
             ],
@@ -84,7 +87,10 @@ class CatalogoCursosView(APIView):
     permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
 
     def get(self, request):
-        qs = Curso.objects.filter(status=Curso.STATUS_PUBLICADO).select_related("setor")
+        qs = filtrar_cursos_queryset(
+            Curso.objects.filter(status=Curso.STATUS_PUBLICADO).select_related("setor").prefetch_related("tags"),
+            request.user,
+        )
         setor = request.query_params.get("setor")
         q = request.query_params.get("q", "").strip()
         is_novo = request.query_params.get("is_novo")
@@ -103,10 +109,13 @@ class CatalogoCursoDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            curso = Curso.objects.prefetch_related("modulos__aulas").select_related("setor").get(
+            curso = Curso.objects.prefetch_related("modulos__aulas", "tags").select_related("setor").get(
                 pk=pk, status=Curso.STATUS_PUBLICADO
             )
         except Curso.DoesNotExist:
+            return Response({"detail": "Curso não encontrado."}, status=404)
+
+        if not curso_visivel_para_usuario(request.user, curso):
             return Response({"detail": "Curso não encontrado."}, status=404)
 
         matricula = Matricula.objects.filter(usuario=request.user, curso=curso).first()
@@ -137,6 +146,7 @@ class CatalogoCursoDetailView(APIView):
             "trilhas": trilhas,
             "matriculado": bool(matricula),
             "progresso": matricula.progresso if matricula else 0,
+            "tags": [{"id": t.id, "nome": t.nome, "slug": t.slug} for t in curso.tags.all()],
         })
 
 
@@ -144,16 +154,22 @@ class TrilhasAlunoListView(APIView):
     permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_trilhas")]
 
     def get(self, request):
-        trilhas = Trilha.objects.prefetch_related("itens__curso").select_related("setor")
+        trilhas = Trilha.objects.prefetch_related("itens__curso__tags").select_related("setor")
         dados = []
         user = request.user
         for t in trilhas:
-            itens = t.itens.filter(curso__status=Curso.STATUS_PUBLICADO)
-            total = itens.count()
-            concluidos = 0
-            for item in itens:
-                if Matricula.objects.filter(usuario=user, curso=item.curso, progresso=100).exists():
-                    concluidos += 1
+            itens_qs = t.itens.filter(curso__status=Curso.STATUS_PUBLICADO).select_related("curso")
+            itens_visiveis = [
+                item for item in itens_qs
+                if curso_visivel_para_usuario(user, item.curso)
+            ]
+            total = len(itens_visiveis)
+            if total == 0:
+                continue
+            concluidos = sum(
+                1 for item in itens_visiveis
+                if Matricula.objects.filter(usuario=user, curso=item.curso, progresso=100).exists()
+            )
             progresso = int((concluidos / total) * 100) if total else 0
             dados.append({
                 "id": t.id,
@@ -176,7 +192,9 @@ class TrilhaAlunoDetailView(APIView):
             return Response({"detail": "Trilha não encontrada."}, status=404)
 
         cursos = []
-        for item in trilha.itens.filter(curso__status=Curso.STATUS_PUBLICADO):
+        for item in trilha.itens.filter(curso__status=Curso.STATUS_PUBLICADO).select_related("curso"):
+            if not curso_visivel_para_usuario(request.user, item.curso):
+                continue
             m = Matricula.objects.filter(usuario=request.user, curso=item.curso).first()
             cursos.append({
                 "id": item.curso.id,

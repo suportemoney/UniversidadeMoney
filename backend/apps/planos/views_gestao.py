@@ -16,13 +16,13 @@ from .serializers import (
 
 class GestaoPlanosListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsGestor]
-    queryset = Plano.objects.all()
+    queryset = Plano.objects.prefetch_related("tags_cursos").all()
     serializer_class = PlanoSerializer
 
 
 class GestaoPlanoDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsGestor]
-    queryset = Plano.objects.all()
+    queryset = Plano.objects.prefetch_related("tags_cursos").all()
     serializer_class = PlanoSerializer
 
 

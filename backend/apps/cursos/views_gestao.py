@@ -19,6 +19,7 @@ from .models import (
     ProvaFinal,
     Questao,
     Setor,
+    TagCurso,
     TreinamentoAoVivo,
     Trilha,
     TrilhaCurso,
@@ -36,6 +37,7 @@ from .serializers_gestao import (
     ProvaFinalSerializer,
     QuestaoSerializer,
     SetorSerializer,
+    TagCursoSerializer,
     TreinamentoAoVivoSerializer,
     TrilhaCursoItemSerializer,
     TrilhaGestaoSerializer,
@@ -114,7 +116,7 @@ class GestaoCursosListCreateView(generics.ListCreateAPIView):
         return CursoGestaoListSerializer
 
     def get_queryset(self):
-        qs = Curso.objects.select_related("setor", "criado_por").all()
+        qs = Curso.objects.select_related("setor", "criado_por").prefetch_related("tags").all()
         status_f = self.request.query_params.get("status")
         if status_f:
             qs = qs.filter(status=status_f)
@@ -127,7 +129,7 @@ class GestaoCursosListCreateView(generics.ListCreateAPIView):
 class GestaoCursoDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsGestor]
     queryset = Curso.objects.select_related("setor").prefetch_related(
-        "modulos__aulas", "modulos__atividades__questoes"
+        "modulos__aulas", "modulos__atividades__questoes", "tags"
     )
 
     def get_serializer_class(self):
@@ -140,6 +142,7 @@ class GestaoCursoDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer = CursoGestaoWriteSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        instance.refresh_from_db()
         return Response(CursoGestaoDetailSerializer(instance).data)
 
 
@@ -538,3 +541,15 @@ class GestaoBibliotecaUploadPdfView(APIView):
         material.arquivo = arquivo
         material.save()
         return Response(MaterialBibliotecaSerializer(material).data)
+
+
+class GestaoTagsListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsGestor]
+    queryset = TagCurso.objects.all()
+    serializer_class = TagCursoSerializer
+
+
+class GestaoTagDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsGestor]
+    queryset = TagCurso.objects.all()
+    serializer_class = TagCursoSerializer

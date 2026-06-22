@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
+from apps.planos.services import curso_visivel_para_usuario, filtrar_cursos_queryset
 
 from .models import (
     Certificado,
@@ -38,9 +39,12 @@ class DashboardView(APIView):
         for m in matriculas:
             horas += float(m.curso.duracao_horas) * (m.progresso / 100)
 
-        total_cursos = Curso.objects.filter(status=Curso.STATUS_PUBLICADO).count()
-        novos_semana = Curso.objects.filter(
-            status=Curso.STATUS_PUBLICADO,
+        cursos_publicados = filtrar_cursos_queryset(
+            Curso.objects.filter(status=Curso.STATUS_PUBLICADO),
+            user,
+        )
+        total_cursos = cursos_publicados.count()
+        novos_semana = cursos_publicados.filter(
             criado_em__gte=timezone.now() - timedelta(days=7),
         ).count()
 
@@ -55,7 +59,7 @@ class DashboardView(APIView):
         ]
 
         if not continue_aprendendo:
-            for curso in Curso.objects.filter(status=Curso.STATUS_PUBLICADO).select_related("setor")[:4]:
+            for curso in cursos_publicados.select_related("setor")[:4]:
                 continue_aprendendo.append(
                     {
                         "id": curso.id,
@@ -67,7 +71,7 @@ class DashboardView(APIView):
 
         trilhas_setor = []
         for setor in Setor.objects.all():
-            total = Curso.objects.filter(setor=setor, status=Curso.STATUS_PUBLICADO).count()
+            total = cursos_publicados.filter(setor=setor).count()
             concluidos = Matricula.objects.filter(
                 usuario=user, curso__setor=setor, progresso=100
             ).count()
@@ -90,7 +94,7 @@ class DashboardView(APIView):
                 "duracao_horas": float(c.duracao_horas),
                 "is_novo": c.is_novo,
             }
-            for c in Curso.objects.filter(status=Curso.STATUS_PUBLICADO, is_novo=True)[:4]
+            for c in cursos_publicados.filter(is_novo=True)[:4]
         ]
 
         ao_vivo = [
@@ -170,6 +174,9 @@ class MatricularView(APIView):
             curso = Curso.objects.get(pk=curso_id, status=Curso.STATUS_PUBLICADO)
         except Curso.DoesNotExist:
             return Response({"detail": "Curso não encontrado."}, status=404)
+
+        if not curso_visivel_para_usuario(request.user, curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, created = Matricula.objects.get_or_create(
             usuario=request.user,
