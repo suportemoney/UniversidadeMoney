@@ -7,6 +7,8 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
+
 from .models import (
     Certificado,
     Comunicado,
@@ -22,7 +24,7 @@ from .services import emitir_conquista
 class DashboardView(APIView):
     """Agrega dados do painel principal do colaborador."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         user = request.user
@@ -161,7 +163,7 @@ class DashboardView(APIView):
 class MatricularView(APIView):
     """Matricula o usuário em um curso."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
 
     def post(self, request, curso_id):
         try:

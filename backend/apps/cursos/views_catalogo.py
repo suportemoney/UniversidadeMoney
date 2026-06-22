@@ -5,12 +5,14 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
+
 from .models import Curso, InscricaoAoVivo, MaterialBiblioteca, Matricula, Modulo, Trilha, TreinamentoAoVivo
 from .serializers_gestao import CursoGestaoListSerializer
 
 
 class BuscaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         q = request.query_params.get("q", "").strip()
@@ -79,7 +81,7 @@ class BuscaView(APIView):
 
 
 class CatalogoCursosView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
 
     def get(self, request):
         qs = Curso.objects.filter(status=Curso.STATUS_PUBLICADO).select_related("setor")
@@ -97,7 +99,7 @@ class CatalogoCursosView(APIView):
 
 class CatalogoCursoDetailView(APIView):
     """Detalhe público de um curso para matrícula individual (sem trilha)."""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
 
     def get(self, request, pk):
         try:
@@ -139,7 +141,7 @@ class CatalogoCursoDetailView(APIView):
 
 
 class TrilhasAlunoListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_trilhas")]
 
     def get(self, request):
         trilhas = Trilha.objects.prefetch_related("itens__curso").select_related("setor")
@@ -165,7 +167,7 @@ class TrilhasAlunoListView(APIView):
 
 
 class TrilhaAlunoDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_trilhas")]
 
     def get(self, request, pk):
         try:

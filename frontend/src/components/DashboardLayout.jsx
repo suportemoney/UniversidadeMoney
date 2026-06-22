@@ -7,16 +7,23 @@ import "../styles/dashboard.css";
 
 const MENU = [
   { to: "/dashboard", label: "Home", icon: "🏠", end: true },
-  { to: "/dashboard/meus-cursos", label: "Meus cursos", icon: "📚" },
-  { to: "/dashboard/trilhas", label: "Trilhas", icon: "🛤️" },
-  { to: "/dashboard/ao-vivo", label: "Treinamentos ao vivo", icon: "🎥" },
-  { to: "/dashboard/certificados", label: "Certificados", icon: "🏅" },
-  { to: "/dashboard/biblioteca", label: "Biblioteca", icon: "📖" },
-  { to: "/dashboard/ranking", label: "Ranking", icon: "🏆" },
-  { to: "/dashboard/comunicados", label: "Comunicados", icon: "📢" },
-  { to: "/dashboard/progresso", label: "Meu progresso", icon: "📈" },
+  { to: "/dashboard/meus-cursos", label: "Meus cursos", icon: "📚", feature: "acesso_cursos" },
+  { to: "/dashboard/trilhas", label: "Trilhas", icon: "🛤️", feature: "acesso_trilhas" },
+  { to: "/dashboard/ao-vivo", label: "Treinamentos ao vivo", icon: "🎥", feature: "acesso_ao_vivo" },
+  { to: "/dashboard/certificados", label: "Certificados", icon: "🏅", feature: "acesso_certificados" },
+  { to: "/dashboard/biblioteca", label: "Biblioteca", icon: "📖", feature: "acesso_biblioteca" },
+  { to: "/dashboard/ranking", label: "Ranking", icon: "🏆", feature: "acesso_ranking" },
+  { to: "/dashboard/comunicados", label: "Comunicados", icon: "📢", feature: "acesso_comunicados" },
+  { to: "/dashboard/progresso", label: "Meu progresso", icon: "📈", feature: "acesso_progresso" },
   { to: "/dashboard/ajuda", label: "Ajuda", icon: "❓" },
 ];
+
+function itemMenuVisivel(item, user) {
+  if (!item.feature) return true;
+  if (!user) return false;
+  if (user.pode_gestao) return true;
+  return !!user.features?.[item.feature];
+}
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
@@ -27,6 +34,10 @@ export default function DashboardLayout() {
   const [perfilOpen, setPerfilOpen] = useState(false);
 
   const carregarNotif = () => {
+    if (!user?.features?.acesso_comunicados && !user?.pode_gestao) {
+      setNotif({ count: 0, itens: [] });
+      return;
+    }
     getComunicadosNaoLidos().then(setNotif).catch(() => setNotif({ count: 0, itens: [] }));
   };
 
@@ -37,8 +48,11 @@ export default function DashboardLayout() {
         logout();
         navigate("/login");
       });
-    carregarNotif();
   }, [navigate]);
+
+  useEffect(() => {
+    if (user) carregarNotif();
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -58,7 +72,7 @@ export default function DashboardLayout() {
       <aside className="dash-sidebar">
         <div className="dash-sidebar-brand">Universidade Money</div>
         <nav className="dash-nav">
-          {MENU.map((item) => (
+          {MENU.filter((item) => itemMenuVisivel(item, user)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -84,9 +98,12 @@ export default function DashboardLayout() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && abrirBusca(busca)}
+              disabled={!itemMenuVisivel({ feature: "acesso_cursos" }, user)}
             />
           </div>
-          <SearchOverlay query={busca} onVerTodos={() => setBusca("")} />
+          {(user?.pode_gestao || user?.features?.acesso_cursos) && (
+            <SearchOverlay query={busca} onVerTodos={() => setBusca("")} />
+          )}
 
           <div className="dash-header-actions">
             {user?.pode_gestao && (
@@ -99,6 +116,7 @@ export default function DashboardLayout() {
               className="dash-notif"
               aria-label="Notificações"
               onClick={() => setNotifOpen(true)}
+              disabled={!user?.pode_gestao && !user?.features?.acesso_comunicados}
             >
               🔔
               {notif.count > 0 && <span className="dash-notif-badge">{notif.count}</span>}
@@ -120,7 +138,9 @@ export default function DashboardLayout() {
                   <div className="dash-profile-menu">
                     <p><strong>{user.first_name}</strong></p>
                     <small>{user.cargo || "Colaborador"}</small>
-                    <Link to="/dashboard/progresso" onClick={() => setPerfilOpen(false)}>Meu progresso</Link>
+                    {(user.pode_gestao || user.features?.acesso_progresso) && (
+                      <Link to="/dashboard/progresso" onClick={() => setPerfilOpen(false)}>Meu progresso</Link>
+                    )}
                     <button type="button" className="btn btn-outline btn-sm" onClick={handleLogout}>Sair</button>
                   </div>
                 )}

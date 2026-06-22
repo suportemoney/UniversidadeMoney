@@ -4,6 +4,8 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.planos.permissions import TemAcessoAluno
+
 from .models import (
     Atividade,
     AulaVideo,
@@ -21,7 +23,7 @@ from .services import calcular_progresso_matricula, concluir_curso, corrigir_que
 
 
 class MeusCursosView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request):
         matriculas = Matricula.objects.filter(usuario=request.user).select_related("curso", "curso__setor")
@@ -40,7 +42,7 @@ class MeusCursosView(APIView):
 
 
 class CursoAlunoDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request, curso_id):
         try:
@@ -100,7 +102,7 @@ class CursoAlunoDetailView(APIView):
 
 
 class ConcluirAulaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def post(self, request, aula_id):
         try:
@@ -124,7 +126,7 @@ class ConcluirAulaView(APIView):
 
 
 class AtividadeAlunoView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request, atividade_id):
         try:
@@ -167,7 +169,7 @@ class AtividadeAlunoView(APIView):
 
 
 class ProvaAlunoView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
 
     def get(self, request, prova_id):
         try:

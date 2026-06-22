@@ -151,3 +151,18 @@ export function certificadoDownloadUrl(id) {
 export async function logout() {
   clearTokens();
 }
+
+export async function resgatarToken(chave) {
+  return apiFetch("/planos/resgatar/", {
+    method: "POST",
+    body: JSON.stringify({ chave }),
+  });
+}
+
+export async function getMinhaAssinatura() {
+  return apiFetch("/planos/minha-assinatura/");
+}
+
+export async function getCatalogoPlanos() {
+  return apiFetch("/planos/catalogo/");
+}

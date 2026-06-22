@@ -155,4 +155,18 @@ export const gestaoApi = {
     fd.append("pdf", file);
     return gestaoFetch(`/gestao/biblioteca/${id}/upload-pdf/`, { method: "POST", body: fd });
   },
+
+  listarPlanos: () => gestaoFetch("/gestao/planos/"),
+  criarPlano: (data) =>
+    gestaoFetch("/gestao/planos/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarPlano: (id, data) =>
+    gestaoFetch(`/gestao/planos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirPlano: (id) => gestaoFetch(`/gestao/planos/${id}/`, { method: "DELETE" }),
+
+  listarTokens: () => gestaoFetch("/gestao/tokens/"),
+  criarToken: (data) =>
+    gestaoFetch("/gestao/tokens/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarToken: (id, data) =>
+    gestaoFetch(`/gestao/tokens/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  listarTokenUsos: (id) => gestaoFetch(`/gestao/tokens/${id}/usos/`),
 };

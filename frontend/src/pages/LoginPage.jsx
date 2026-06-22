@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { login } from "../services/api";
+import { login, getMe } from "../services/api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,7 +18,13 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(identificador, password);
-      navigate("/dashboard");
+      const me = await getMe();
+      const destino = location.state?.from?.pathname;
+      if (me.pode_gestao || me.tem_plano) {
+        navigate(destino || "/dashboard");
+      } else {
+        navigate("/dashboard/ativar-plano");
+      }
     } catch (err) {
       setErro(err.message || "Credenciais inválidas.");
     } finally {
