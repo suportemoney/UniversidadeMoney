@@ -4,14 +4,14 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const FEATURES = [
-  { key: "acesso_cursos", label: "Cursos" },
-  { key: "acesso_trilhas", label: "Trilhas" },
-  { key: "acesso_biblioteca", label: "Biblioteca" },
-  { key: "acesso_ao_vivo", label: "Ao vivo" },
-  { key: "acesso_certificados", label: "Certificados" },
-  { key: "acesso_ranking", label: "Ranking" },
-  { key: "acesso_comunicados", label: "Comunicados" },
-  { key: "acesso_progresso", label: "Progresso" },
+  { key: "acesso_cursos", label: "Cursos", icon: "📚" },
+  { key: "acesso_trilhas", label: "Trilhas", icon: "🛤️" },
+  { key: "acesso_biblioteca", label: "Biblioteca", icon: "📖" },
+  { key: "acesso_ao_vivo", label: "Ao vivo", icon: "🎥" },
+  { key: "acesso_certificados", label: "Certificados", icon: "🏅" },
+  { key: "acesso_ranking", label: "Ranking", icon: "🏆" },
+  { key: "acesso_comunicados", label: "Comunicados", icon: "📢" },
+  { key: "acesso_progresso", label: "Progresso", icon: "📈" },
 ];
 
 const FORM_VAZIO = {
@@ -69,6 +69,8 @@ export default function GestaoPlanosPage() {
     }
   };
 
+  const fecharModal = () => setModal({ open: false, item: null });
+
   return (
     <div>
       <div className="gestao-page-header">
@@ -113,62 +115,78 @@ export default function GestaoPlanosPage() {
 
       <Modal
         open={modal.open}
-        onClose={() => setModal({ open: false, item: null })}
+        onClose={fecharModal}
         title={modal.item ? "Editar plano" : "Novo plano"}
+        wide
+        footer={(
+          <>
+            <button type="button" className="btn btn-outline btn-sm" onClick={fecharModal}>
+              Cancelar
+            </button>
+            <button type="submit" form="form-plano" className="btn btn-primary btn-sm">
+              Salvar plano
+            </button>
+          </>
+        )}
       >
-        {erro && <div className="alert alert-error">{erro}</div>}
-        <form className="gestao-form" onSubmit={salvar}>
-          <label>
-            Título
-            <input
-              value={form.titulo}
-              onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Slug
-            <input
-              value={form.slug}
-              onChange={(e) => setForm({ ...form, slug: e.target.value })}
-              required
-              placeholder="basico"
-            />
-          </label>
-          <label>
+        {erro && <div className="modal-alert modal-alert--error">{erro}</div>}
+        <form id="form-plano" className="gestao-form gestao-form--modal" onSubmit={salvar}>
+          <div className="gestao-form-row gestao-form-row--2">
+            <label className="gestao-field">
+              Título
+              <input
+                value={form.titulo}
+                onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                placeholder="Ex.: Plano Básico"
+                required
+              />
+            </label>
+            <label className="gestao-field">
+              Slug
+              <input
+                value={form.slug}
+                onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                required
+                placeholder="basico"
+              />
+            </label>
+          </div>
+
+          <label className="gestao-field">
             Descrição
             <textarea
               value={form.descricao}
               onChange={(e) => setForm({ ...form, descricao: e.target.value })}
               rows={3}
+              placeholder="Descreva o que este plano oferece..."
             />
           </label>
-          <label className="gestao-checkbox">
-            <input
-              type="checkbox"
-              checked={form.ativo}
-              onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
-            />
-            Plano ativo
-          </label>
-          <fieldset className="gestao-fieldset">
-            <legend>Recursos incluídos</legend>
-            {FEATURES.map((f) => (
-              <label key={f.key} className="gestao-checkbox">
-                <input
-                  type="checkbox"
-                  checked={!!form[f.key]}
-                  onChange={() => toggleFeature(f.key)}
-                />
-                {f.label}
-              </label>
-            ))}
-          </fieldset>
-          <div className="modal-actions">
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => setModal({ open: false, item: null })}>
-              Cancelar
-            </button>
-            <button type="submit" className="btn btn-primary btn-sm">Salvar</button>
+
+          <div className="gestao-toggle-row">
+            <label className="gestao-checkbox">
+              <input
+                type="checkbox"
+                checked={form.ativo}
+                onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
+              />
+              Plano ativo e disponível para novos tokens
+            </label>
+          </div>
+
+          <div className="gestao-form-section">
+            <h3 className="gestao-form-section-title">Recursos incluídos</h3>
+            <div className="gestao-features-grid">
+              {FEATURES.map((f) => (
+                <label key={f.key} className="gestao-feature-card">
+                  <input
+                    type="checkbox"
+                    checked={!!form[f.key]}
+                    onChange={() => toggleFeature(f.key)}
+                  />
+                  <span>{f.icon} {f.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </form>
       </Modal>

@@ -127,25 +127,40 @@ export default function GestaoTokensPage() {
         </tbody>
       </table>
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Gerar token">
+      <Modal
+        open={modal}
+        onClose={() => setModal(false)}
+        title="Gerar token"
+        wide
+        footer={chaveCriada ? (
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => setModal(false)}>
+            Fechar
+          </button>
+        ) : (
+          <>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setModal(false)}>
+              Cancelar
+            </button>
+            <button type="submit" form="form-token" className="btn btn-primary btn-sm">
+              Gerar token
+            </button>
+          </>
+        )}
+      >
         {chaveCriada ? (
-          <div>
-            <p>Token criado com sucesso:</p>
-            <p><code style={{ fontSize: "1.1rem" }}>{chaveCriada}</code></p>
+          <div className="modal-success-block">
+            <div className="modal-success-icon" aria-hidden="true">✓</div>
+            <p>Token criado com sucesso. Copie e envie ao aluno:</p>
+            <code className="modal-token-chave">{chaveCriada}</code>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => copiarChave(chaveCriada)}>
               Copiar chave
             </button>
-            <div className="modal-actions">
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setModal(false)}>
-                Fechar
-              </button>
-            </div>
           </div>
         ) : (
           <>
-            {erro && <div className="alert alert-error">{erro}</div>}
-            <form className="gestao-form" onSubmit={criar}>
-              <label>
+            {erro && <div className="modal-alert modal-alert--error">{erro}</div>}
+            <form id="form-token" className="gestao-form gestao-form--modal" onSubmit={criar}>
+              <label className="gestao-field">
                 Plano
                 <select
                   value={form.plano}
@@ -157,28 +172,30 @@ export default function GestaoTokensPage() {
                   ))}
                 </select>
               </label>
-              <label>
-                Máximo de usos
-                <input
-                  type="number"
-                  min={1}
-                  value={form.max_usos}
-                  onChange={(e) => setForm({ ...form, max_usos: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Tipo de expiração
-                <select
-                  value={form.tipo_expiracao}
-                  onChange={(e) => setForm({ ...form, tipo_expiracao: e.target.value })}
-                >
-                  <option value="duracao">Duração (dias após resgate)</option>
-                  <option value="data_fixa">Data fixa de fim</option>
-                </select>
-              </label>
+              <div className="gestao-form-row gestao-form-row--2">
+                <label className="gestao-field">
+                  Máximo de usos
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.max_usos}
+                    onChange={(e) => setForm({ ...form, max_usos: e.target.value })}
+                    required
+                  />
+                </label>
+                <label className="gestao-field">
+                  Tipo de expiração
+                  <select
+                    value={form.tipo_expiracao}
+                    onChange={(e) => setForm({ ...form, tipo_expiracao: e.target.value })}
+                  >
+                    <option value="duracao">Duração após resgate</option>
+                    <option value="data_fixa">Data fixa de fim</option>
+                  </select>
+                </label>
+              </div>
               {form.tipo_expiracao === "duracao" ? (
-                <label>
+                <label className="gestao-field">
                   Duração (dias)
                   <input
                     type="number"
@@ -189,7 +206,7 @@ export default function GestaoTokensPage() {
                   />
                 </label>
               ) : (
-                <label>
+                <label className="gestao-field">
                   Data fim do benefício
                   <input
                     type="date"
@@ -199,7 +216,7 @@ export default function GestaoTokensPage() {
                   />
                 </label>
               )}
-              <label>
+              <label className="gestao-field">
                 Válido para resgate até (opcional)
                 <input
                   type="date"
@@ -207,18 +224,17 @@ export default function GestaoTokensPage() {
                   onChange={(e) => setForm({ ...form, valido_ate_resgate: e.target.value })}
                 />
               </label>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => setModal(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary btn-sm">Gerar</button>
-              </div>
             </form>
           </>
         )}
       </Modal>
 
-      <Modal open={!!usosModal} onClose={() => setUsosModal(null)} title={`Usos — ${usosModal?.chave}`}>
+      <Modal open={!!usosModal} onClose={() => setUsosModal(null)} title="Usos do token" wide>
+        {usosModal && (
+          <p className="gestao-muted" style={{ marginTop: 0, marginBottom: "1rem" }}>
+            Chave: <code>{usosModal.chave}</code>
+          </p>
+        )}
         {usos.length === 0 ? (
           <p>Nenhum resgate registrado.</p>
         ) : (
