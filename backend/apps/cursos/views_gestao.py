@@ -144,9 +144,15 @@ class GestaoResumoView(APIView):
         )
 
 
-class GestaoSetoresView(generics.ListAPIView):
+class GestaoSetoresListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsGestor]
-    queryset = Setor.objects.all()
+    queryset = Setor.objects.all().order_by("ordem", "nome")
+    serializer_class = SetorSerializer
+
+
+class GestaoSetorDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsGestor]
+    queryset = Setor.objects.all().order_by("ordem", "nome")
     serializer_class = SetorSerializer
 
 

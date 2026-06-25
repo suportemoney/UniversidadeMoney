@@ -4,7 +4,8 @@ from . import views_gestao
 
 urlpatterns = [
     path("gestao/resumo/", views_gestao.GestaoResumoView.as_view(), name="gestao-resumo"),
-    path("gestao/setores/", views_gestao.GestaoSetoresView.as_view(), name="gestao-setores"),
+    path("gestao/setores/", views_gestao.GestaoSetoresListCreateView.as_view(), name="gestao-setores"),
+    path("gestao/setores/<int:pk>/", views_gestao.GestaoSetorDetailView.as_view(), name="gestao-setor-detail"),
     path("gestao/usuarios/", views_gestao.GestaoUsuariosView.as_view(), name="gestao-usuarios"),
     path(
         "gestao/usuarios/<int:user_id>/",

@@ -29,6 +29,7 @@ import GestaoBibliotecaPage from "./pages/gestao/GestaoBibliotecaPage";
 import GestaoComunicadosPage from "./pages/gestao/GestaoComunicadosPage";
 import GestaoLandingPage from "./pages/gestao/GestaoLandingPage";
 import GestaoPlanosPage from "./pages/gestao/GestaoPlanosPage";
+import GestaoSetoresPage from "./pages/gestao/GestaoSetoresPage";
 import GestaoTagsPage from "./pages/gestao/GestaoTagsPage";
 import GestaoTokensPage from "./pages/gestao/GestaoTokensPage";
 import GestaoCursoEditorPage from "./pages/gestao/GestaoCursoEditorPage";
@@ -88,6 +89,7 @@ function App() {
           <Route path="equipe" element={<GestaoEquipePage />} />
           <Route path="cursos" element={<GestaoCursosPage />} />
           <Route path="cursos/:id" element={<GestaoCursoEditorPage />} />
+          <Route path="setores" element={<GestaoSetoresPage />} />
           <Route path="trilhas" element={<GestaoTrilhasPage />} />
           <Route path="trilhas/:id" element={<GestaoTrilhaEditorPage />} />
           <Route path="comunicados" element={<GestaoComunicadosPage />} />

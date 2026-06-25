@@ -32,6 +32,12 @@ async function gestaoFetch(path, options = {}) {
 export const gestaoApi = {
   resumo: () => gestaoFetch("/gestao/resumo/"),
   setores: () => gestaoFetch("/gestao/setores/"),
+  listarSetores: () => gestaoFetch("/gestao/setores/"),
+  criarSetor: (data) =>
+    gestaoFetch("/gestao/setores/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarSetor: (id, data) =>
+    gestaoFetch(`/gestao/setores/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirSetor: (id) => gestaoFetch(`/gestao/setores/${id}/`, { method: "DELETE" }),
   usuarios: (q) => gestaoFetch(`/gestao/usuarios/${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   criarUsuarioEquipe: (data) =>
     gestaoFetch("/gestao/usuarios/", { method: "POST", body: JSON.stringify(data) }),

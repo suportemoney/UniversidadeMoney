@@ -9,6 +9,7 @@ import "../styles/gestao.css";
 const MENU = [
   { to: "/gestao", label: "Resumo", icon: "resumo", end: true },
   { to: "/gestao/cursos", label: "Cursos", icon: "cursos" },
+  { to: "/gestao/setores", label: "Setores", icon: "setores" },
   { to: "/gestao/trilhas", label: "Trilhas", icon: "trilhas" },
   { to: "/gestao/comunicados", label: "Comunicados", icon: "comunicados" },
   { to: "/gestao/ao-vivo", label: "Ao vivo", icon: "aoVivo" },

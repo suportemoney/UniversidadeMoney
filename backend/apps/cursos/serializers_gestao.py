@@ -23,7 +23,8 @@ from .models import (
 class SetorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Setor
-        fields = ["id", "nome", "slug", "icone"]
+        fields = ["id", "nome", "slug", "icone", "ordem"]
+        read_only_fields = ["id"]
 
 
 class QuestaoSerializer(serializers.ModelSerializer):

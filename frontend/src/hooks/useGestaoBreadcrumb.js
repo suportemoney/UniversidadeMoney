@@ -5,6 +5,7 @@ const ROTAS = [
   { match: /^\/gestao$/, crumbs: [{ label: "Resumo" }] },
   { match: /^\/gestao\/cursos\/\d+$/, crumbs: [{ label: "Cursos", to: "/gestao/cursos" }, { label: "Editar curso" }] },
   { match: /^\/gestao\/cursos$/, crumbs: [{ label: "Cursos" }] },
+  { match: /^\/gestao\/setores$/, crumbs: [{ label: "Setores" }] },
   { match: /^\/gestao\/trilhas\/\d+$/, crumbs: [{ label: "Trilhas", to: "/gestao/trilhas" }, { label: "Montar trilha" }] },
   { match: /^\/gestao\/trilhas$/, crumbs: [{ label: "Trilhas" }] },
   { match: /^\/gestao\/comunicados$/, crumbs: [{ label: "Comunicados" }] },

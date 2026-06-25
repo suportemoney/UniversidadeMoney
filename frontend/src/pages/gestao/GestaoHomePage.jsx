@@ -103,15 +103,16 @@ export default function GestaoHomePage() {
             to="/gestao/ao-vivo"
             delay={0}
           />
-          <GestaoKpiCard icon="tags" value={kpis.tags_ativas} label="Tags ativas" to="/gestao/tags" delay={40} />
-          <GestaoKpiCard icon="equipe" value={kpis.membros_equipe} label="Membros da equipe" to="/gestao/equipe" delay={80} />
+          <GestaoKpiCard icon="setores" value={kpis.setores} label="Setores" to="/gestao/setores" delay={40} />
+          <GestaoKpiCard icon="tags" value={kpis.tags_ativas} label="Tags ativas" to="/gestao/tags" delay={80} />
+          <GestaoKpiCard icon="equipe" value={kpis.membros_equipe} label="Membros da equipe" to="/gestao/equipe" delay={120} />
           <GestaoKpiCard
             icon="planos"
             value={kpis.planos_ativos}
             label="Planos ativos"
             hint={kpis.tokens_ativos ? `${kpis.tokens_ativos} token(s) ativo(s)` : undefined}
             to="/gestao/planos"
-            delay={120}
+            delay={160}
           />
         </div>
       </section>
