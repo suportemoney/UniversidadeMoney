@@ -22,6 +22,8 @@ urlpatterns = [
     path("gestao/cursos/<int:pk>/", views_gestao.GestaoCursoDetailView.as_view(), name="gestao-curso-detail"),
     path("gestao/cursos/<int:pk>/publicar/", views_gestao.GestaoCursoPublicarView.as_view(), name="gestao-curso-publicar"),
     path("gestao/cursos/<int:pk>/arquivar/", views_gestao.GestaoCursoArquivarView.as_view(), name="gestao-curso-arquivar"),
+    path("gestao/cursos/<int:curso_id>/participantes/", views_gestao.GestaoCursoParticipantesListCreateView.as_view(), name="gestao-curso-participantes"),
+    path("gestao/participantes/<int:pk>/", views_gestao.GestaoParticipanteDetailView.as_view(), name="gestao-participante-detail"),
     path("gestao/cursos/<int:curso_id>/modulos/", views_gestao.GestaoModulosListCreateView.as_view(), name="gestao-modulos"),
     path(
         "gestao/cursos/<int:curso_id>/modulos/reordenar/",
@@ -29,6 +31,8 @@ urlpatterns = [
         name="gestao-modulos-reordenar",
     ),
     path("gestao/modulos/<int:pk>/", views_gestao.GestaoModuloDetailView.as_view(), name="gestao-modulo-detail"),
+    path("gestao/modulos/<int:modulo_id>/arquivos/", views_gestao.GestaoModuloArquivosListCreateView.as_view(), name="gestao-modulo-arquivos"),
+    path("gestao/modulos/arquivos/<int:pk>/", views_gestao.GestaoModuloArquivoDetailView.as_view(), name="gestao-modulo-arquivo-detail"),
     path("gestao/modulos/<int:modulo_id>/aulas/", views_gestao.GestaoAulasListCreateView.as_view(), name="gestao-aulas"),
     path("gestao/aulas/<int:pk>/", views_gestao.GestaoAulaDetailView.as_view(), name="gestao-aula-detail"),
     path("gestao/aulas/<int:pk>/upload-video/", views_gestao.GestaoAulaUploadVideoView.as_view(), name="gestao-aula-upload"),

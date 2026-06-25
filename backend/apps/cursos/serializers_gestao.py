@@ -8,8 +8,10 @@ from .models import (
     AulaVideo,
     Comunicado,
     Curso,
+    CursoParticipante,
     MaterialBiblioteca,
     Modulo,
+    ModuloArquivo,
     ProvaFinal,
     Questao,
     Setor,
@@ -43,7 +45,7 @@ class AulaVideoSerializer(serializers.ModelSerializer):
             "id", "modulo", "titulo", "descricao", "video", "video_url",
             "duracao_segundos", "ordem", "obrigatoria",
         ]
-        read_only_fields = ["id", "video_url"]
+        read_only_fields = ["id", "video_url", "modulo", "ordem"]
 
     def get_video_url(self, obj):
         return obj.video_url
@@ -55,17 +57,45 @@ class AtividadeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Atividade
         fields = ["id", "modulo", "titulo", "tipo", "ordem", "obrigatoria", "questoes"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "modulo", "ordem"]
+
+
+class ModuloArquivoSerializer(serializers.ModelSerializer):
+    arquivo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ModuloArquivo
+        fields = ["id", "modulo", "titulo", "tipo", "arquivo", "arquivo_url", "ordem"]
+        read_only_fields = ["id", "arquivo_url", "modulo", "ordem"]
+
+    def get_arquivo_url(self, obj):
+        return obj.arquivo_url
 
 
 class ModuloSerializer(serializers.ModelSerializer):
     aulas = AulaVideoSerializer(many=True, read_only=True)
     atividades = AtividadeSerializer(many=True, read_only=True)
+    arquivos = ModuloArquivoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Modulo
-        fields = ["id", "curso", "titulo", "ordem", "duracao_minutos", "aulas", "atividades"]
-        read_only_fields = ["id", "duracao_minutos"]
+        fields = [
+            "id", "curso", "titulo", "tipo", "conteudo_texto", "ordem",
+            "duracao_minutos", "aulas", "atividades", "arquivos",
+        ]
+        read_only_fields = ["id", "duracao_minutos", "curso", "ordem"]
+
+    def validate(self, attrs):
+        if self.instance and "tipo" in attrs and attrs["tipo"] != self.instance.tipo:
+            raise serializers.ValidationError({"tipo": "O tipo do módulo não pode ser alterado após a criação."})
+        return attrs
+
+
+class CursoParticipanteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CursoParticipante
+        fields = ["id", "curso", "nome", "cargo", "ordem"]
+        read_only_fields = ["id", "curso", "ordem"]
 
 
 class ProvaFinalSerializer(serializers.ModelSerializer):
@@ -101,13 +131,16 @@ class CursoGestaoDetailSerializer(serializers.ModelSerializer):
     modulos = ModuloSerializer(many=True, read_only=True)
     prova_final = ProvaFinalSerializer(read_only=True)
     setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
+    instrutor_nome = serializers.CharField(source="instrutor.first_name", read_only=True, default=None)
     thumbnail_url = serializers.SerializerMethodField()
     tags = TagCursoSerializer(many=True, read_only=True)
+    participantes = CursoParticipanteSerializer(many=True, read_only=True)
 
     class Meta:
         model = Curso
         fields = [
             "id", "titulo", "descricao", "status", "setor", "setor_nome",
+            "instrutor", "instrutor_nome", "participantes",
             "total_modulos", "duracao_horas", "is_novo", "thumbnail", "thumbnail_url",
             "criado_em", "atualizado_em", "modulos", "prova_final", "tags",
         ]
@@ -126,7 +159,7 @@ class CursoGestaoWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Curso
-        fields = ["titulo", "descricao", "setor", "is_novo", "status", "tags"]
+        fields = ["titulo", "descricao", "setor", "is_novo", "status", "tags", "instrutor"]
 
     def create(self, validated_data):
         tags = validated_data.pop("tags", [])

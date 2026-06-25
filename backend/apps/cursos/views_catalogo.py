@@ -118,7 +118,9 @@ class CatalogoCursoDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            curso = Curso.objects.prefetch_related("modulos__aulas", "tags").select_related("setor").get(
+            curso = Curso.objects.prefetch_related(
+                "modulos__aulas", "modulos__arquivos", "participantes", "tags"
+            ).select_related("setor", "instrutor").get(
                 pk=pk, status=Curso.STATUS_PUBLICADO
             )
         except Curso.DoesNotExist:
@@ -132,7 +134,8 @@ class CatalogoCursoDetailView(APIView):
             {
                 "id": m.id,
                 "titulo": m.titulo,
-                "total_aulas": m.aulas.count(),
+                "tipo": m.tipo,
+                "total_aulas": m.aulas.count() if m.tipo == Modulo.TIPO_VIDEO else m.arquivos.count(),
                 "duracao_minutos": m.duracao_minutos,
             }
             for m in curso.modulos.all()
@@ -151,6 +154,11 @@ class CatalogoCursoDetailView(APIView):
             "duracao_horas": float(curso.duracao_horas),
             "is_novo": curso.is_novo,
             "thumbnail_url": curso.thumbnail.url if curso.thumbnail else None,
+            "instrutor_nome": curso.instrutor.first_name if curso.instrutor else None,
+            "participantes": [
+                {"id": p.id, "nome": p.nome, "cargo": p.cargo}
+                for p in curso.participantes.all()
+            ],
             "modulos": modulos,
             "trilhas": trilhas,
             "matriculado": bool(matricula),

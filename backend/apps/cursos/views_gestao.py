@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,9 +19,11 @@ from .models import (
     AulaVideo,
     Comunicado,
     Curso,
+    CursoParticipante,
     MaterialBiblioteca,
     Matricula,
     Modulo,
+    ModuloArquivo,
     ProvaFinal,
     Questao,
     Setor,
@@ -37,7 +40,9 @@ from .serializers_gestao import (
     CursoGestaoDetailSerializer,
     CursoGestaoListSerializer,
     CursoGestaoWriteSerializer,
+    CursoParticipanteSerializer,
     MaterialBibliotecaSerializer,
+    ModuloArquivoSerializer,
     ModuloSerializer,
     ProvaFinalSerializer,
     QuestaoSerializer,
@@ -58,6 +63,8 @@ VIDEO_EXT = {".mp4", ".webm", ".mov"}
 THUMB_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 PDF_MAX_MB = int(os.getenv("PDF_MAX_MB", "50"))
 PDF_EXT = {".pdf"}
+AUDIO_EXT = {".mp3", ".wav", ".ogg", ".m4a", ".aac"}
+ARQUIVO_MAX_MB = int(os.getenv("ARQUIVO_MAX_MB", "50"))
 
 
 class GestaoResumoView(APIView):
@@ -250,8 +257,12 @@ class GestaoCursosListCreateView(generics.ListCreateAPIView):
 
 class GestaoCursoDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsGestor]
-    queryset = Curso.objects.select_related("setor").prefetch_related(
-        "modulos__aulas", "modulos__atividades__questoes", "tags"
+    queryset = Curso.objects.select_related("setor", "instrutor").prefetch_related(
+        "modulos__aulas",
+        "modulos__atividades__questoes",
+        "modulos__arquivos",
+        "participantes",
+        "tags",
     )
 
     def get_serializer_class(self):
@@ -273,7 +284,7 @@ class GestaoCursoPublicarView(APIView):
 
     def post(self, request, pk):
         try:
-            curso = Curso.objects.get(pk=pk)
+            curso = Curso.objects.prefetch_related("modulos__aulas", "modulos__arquivos").get(pk=pk)
         except Curso.DoesNotExist:
             return Response({"detail": "Curso não encontrado."}, status=404)
 
@@ -313,13 +324,97 @@ class GestaoModulosListCreateView(generics.ListCreateAPIView):
     serializer_class = ModuloSerializer
 
     def get_queryset(self):
-        return Modulo.objects.filter(curso_id=self.kwargs["curso_id"]).prefetch_related("aulas", "atividades")
+        return Modulo.objects.filter(curso_id=self.kwargs["curso_id"]).prefetch_related(
+            "aulas", "atividades", "arquivos"
+        )
 
     def perform_create(self, serializer):
         curso_id = self.kwargs["curso_id"]
         ordem = Modulo.objects.filter(curso_id=curso_id).count()
-        modulo = serializer.save(curso_id=curso_id, ordem=ordem)
+        tipo = serializer.validated_data.get("tipo", Modulo.TIPO_VIDEO)
+        modulo = serializer.save(curso_id=curso_id, ordem=ordem, tipo=tipo)
         recalcular_curso(modulo.curso)
+
+
+class GestaoCursoParticipantesListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = CursoParticipanteSerializer
+
+    def get_queryset(self):
+        return CursoParticipante.objects.filter(curso_id=self.kwargs["curso_id"])
+
+    def perform_create(self, serializer):
+        curso_id = self.kwargs["curso_id"]
+        ordem = CursoParticipante.objects.filter(curso_id=curso_id).count()
+        serializer.save(curso_id=curso_id, ordem=ordem)
+
+
+class GestaoParticipanteDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = CursoParticipanteSerializer
+    queryset = CursoParticipante.objects.all()
+
+
+class GestaoModuloArquivosListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = ModuloArquivoSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        return ModuloArquivo.objects.filter(modulo_id=self.kwargs["modulo_id"])
+
+    def create(self, request, *args, **kwargs):
+        try:
+            modulo = Modulo.objects.get(pk=self.kwargs["modulo_id"])
+        except Modulo.DoesNotExist:
+            return Response({"detail": "Módulo não encontrado."}, status=404)
+        if modulo.tipo != Modulo.TIPO_APOSTILA:
+            return Response({"detail": "Este módulo não aceita arquivos."}, status=400)
+
+        titulo = request.data.get("titulo", "").strip()
+        tipo_arquivo = request.data.get("tipo", ModuloArquivo.TIPO_PDF)
+        arquivo = request.FILES.get("arquivo")
+        if not titulo:
+            return Response({"detail": "Informe o título do arquivo."}, status=400)
+        if not arquivo:
+            return Response({"detail": "Envie o arquivo."}, status=400)
+
+        ext = os.path.splitext(arquivo.name)[1].lower()
+        extensoes = PDF_EXT if tipo_arquivo == ModuloArquivo.TIPO_PDF else AUDIO_EXT
+        if ext not in extensoes:
+            return Response({"detail": f"Formato não permitido para {tipo_arquivo}."}, status=400)
+
+        max_bytes = ARQUIVO_MAX_MB * 1024 * 1024
+        if arquivo.size > max_bytes:
+            return Response({"detail": f"Arquivo excede {ARQUIVO_MAX_MB}MB."}, status=400)
+
+        ordem = ModuloArquivo.objects.filter(modulo=modulo).count()
+        obj = ModuloArquivo.objects.create(
+            modulo=modulo,
+            titulo=titulo,
+            tipo=tipo_arquivo,
+            arquivo=arquivo,
+            ordem=ordem,
+        )
+        recalcular_curso(modulo.curso)
+        return Response(ModuloArquivoSerializer(obj).data, status=status.HTTP_201_CREATED)
+
+
+class GestaoModuloArquivoDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsGestor]
+    serializer_class = ModuloArquivoSerializer
+    queryset = ModuloArquivo.objects.select_related("modulo__curso")
+
+    def perform_update(self, serializer):
+        obj = serializer.save()
+        recalcular_curso(obj.modulo.curso)
+
+    def perform_destroy(self, instance):
+        curso = instance.modulo.curso
+        if instance.arquivo:
+            instance.arquivo.delete(save=False)
+        instance.delete()
+        recalcular_curso(curso)
 
 
 class GestaoModuloDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -347,7 +442,7 @@ class GestaoModulosReordenarView(APIView):
         with transaction.atomic():
             for idx, mid in enumerate(ids):
                 Modulo.objects.filter(pk=mid, curso_id=curso_id).update(ordem=idx)
-        modulos = Modulo.objects.filter(curso_id=curso_id).prefetch_related("aulas", "atividades")
+        modulos = Modulo.objects.filter(curso_id=curso_id).prefetch_related("aulas", "atividades", "arquivos")
         return Response(ModuloSerializer(modulos, many=True).data)
 
 
@@ -360,6 +455,12 @@ class GestaoAulasListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         modulo_id = self.kwargs["modulo_id"]
+        try:
+            modulo = Modulo.objects.get(pk=modulo_id)
+        except Modulo.DoesNotExist:
+            raise ValidationError({"detail": "Módulo não encontrado."})
+        if modulo.tipo != Modulo.TIPO_VIDEO:
+            raise ValidationError({"detail": "Este módulo não aceita aulas em vídeo."})
         ordem = AulaVideo.objects.filter(modulo_id=modulo_id).count()
         aula = serializer.save(modulo_id=modulo_id, ordem=ordem)
         recalcular_curso(aula.modulo.curso)

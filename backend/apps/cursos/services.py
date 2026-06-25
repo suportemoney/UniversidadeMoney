@@ -3,11 +3,22 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from .models import AulaVideo, Certificado, Conquista, Curso, Matricula, Modulo, ProgressoAula
+from .models import (
+    AulaVideo,
+    Certificado,
+    Conquista,
+    Curso,
+    Matricula,
+    Modulo,
+    ModuloArquivo,
+    ProgressoAula,
+    ProgressoModuloArquivo,
+    ProgressoModuloTexto,
+)
 
 
 def recalcular_curso(curso):
-    """Atualiza total de módulos e duração com base nas aulas."""
+    """Atualiza total de módulos e duração com base nas aulas em vídeo."""
     modulos = Modulo.objects.filter(curso=curso)
     total_modulos = modulos.count()
     segundos = 0
@@ -27,26 +38,51 @@ def curso_pronto_publicar(curso):
     erros = []
     if not curso.titulo.strip():
         erros.append("Informe o título do curso.")
-    modulos = curso.modulos.all()
-    if not modulos.exists():
+    if not curso.instrutor_id:
+        erros.append("Selecione o instrutor do curso.")
+    modulos = list(curso.modulos.all())
+    if not modulos:
         erros.append("Adicione pelo menos um módulo.")
-    total_aulas = AulaVideo.objects.filter(modulo__curso=curso).count()
-    if total_aulas == 0:
-        erros.append("Adicione pelo menos uma aula em vídeo.")
+    for modulo in modulos:
+        if modulo.tipo == Modulo.TIPO_TEXTO:
+            if not modulo.conteudo_texto.strip():
+                erros.append(f'Módulo "{modulo.titulo}": preencha o texto "O que você vai aprender".')
+        elif modulo.tipo == Modulo.TIPO_APOSTILA:
+            if not modulo.arquivos.exists():
+                erros.append(f'Módulo "{modulo.titulo}": adicione pelo menos um arquivo (PDF ou áudio).')
+        elif modulo.tipo == Modulo.TIPO_VIDEO:
+            if not modulo.aulas.exists():
+                erros.append(f'Módulo "{modulo.titulo}": adicione pelo menos uma aula em vídeo.')
     return erros
 
 
 def calcular_progresso_matricula(matricula):
     """Calcula progresso percentual da matrícula."""
     curso = matricula.curso
-    aulas = AulaVideo.objects.filter(modulo__curso=curso, obrigatoria=True)
-    total = aulas.count()
+    total = 0
+    concluidas = 0
+
+    aulas_obrigatorias = AulaVideo.objects.filter(modulo__curso=curso, obrigatoria=True)
+    total += aulas_obrigatorias.count()
+    concluidas += ProgressoAula.objects.filter(
+        matricula=matricula, aula__in=aulas_obrigatorias, concluida=True
+    ).count()
+
+    modulos_texto = Modulo.objects.filter(curso=curso, tipo=Modulo.TIPO_TEXTO)
+    total += modulos_texto.count()
+    concluidas += ProgressoModuloTexto.objects.filter(
+        matricula=matricula, modulo__in=modulos_texto, concluida=True
+    ).count()
+
+    arquivos = ModuloArquivo.objects.filter(modulo__curso=curso, modulo__tipo=Modulo.TIPO_APOSTILA)
+    total += arquivos.count()
+    concluidas += ProgressoModuloArquivo.objects.filter(
+        matricula=matricula, arquivo__in=arquivos, concluida=True
+    ).count()
+
     if total == 0:
         return matricula.progresso
 
-    concluidas = ProgressoAula.objects.filter(
-        matricula=matricula, aula__in=aulas, concluida=True
-    ).count()
     progresso = int((concluidas / total) * 100)
     matricula.progresso = min(progresso, 99)
     matricula.save(update_fields=["progresso", "atualizado_em"])

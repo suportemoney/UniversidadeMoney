@@ -17,6 +17,12 @@ def curso_thumbnail_upload_path(instance, filename):
     return f"cursos/{instance.pk or 'novo'}/thumb.{ext}"
 
 
+def modulo_arquivo_upload_path(instance, filename):
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "pdf"
+    uid = instance.pk or uuid.uuid4().hex[:12]
+    return f"cursos/{instance.modulo.curso_id}/modulos/{instance.modulo_id}/{uid}.{ext}"
+
+
 class Setor(models.Model):
     nome = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
@@ -109,6 +115,14 @@ class Curso(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField(TagCurso, blank=True, related_name="cursos")
+    instrutor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cursos_instruidos",
+        verbose_name="Instrutor",
+    )
 
     class Meta:
         ordering = ["-criado_em"]
@@ -127,9 +141,36 @@ class Curso(models.Model):
         return self.status == self.STATUS_PUBLICADO
 
 
+class CursoParticipante(models.Model):
+    """Participantes opcionais exibidos no curso (texto livre)."""
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="participantes")
+    nome = models.CharField(max_length=200)
+    cargo = models.CharField(max_length=120, blank=True, default="")
+    ordem = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "id"]
+        verbose_name = "Participante do curso"
+        verbose_name_plural = "Participantes do curso"
+
+    def __str__(self):
+        return self.nome
+
+
 class Modulo(models.Model):
+    TIPO_TEXTO = "texto"
+    TIPO_APOSTILA = "apostila"
+    TIPO_VIDEO = "video"
+    TIPO_CHOICES = [
+        (TIPO_TEXTO, "O que você vai aprender"),
+        (TIPO_APOSTILA, "Apostilas"),
+        (TIPO_VIDEO, "Videoaulas"),
+    ]
+
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="modulos")
     titulo = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_VIDEO)
+    conteudo_texto = models.TextField(blank=True, default="")
     ordem = models.PositiveIntegerField(default=0)
     duracao_minutos = models.PositiveIntegerField(default=0)
 
@@ -140,6 +181,35 @@ class Modulo(models.Model):
 
     def __str__(self):
         return self.titulo
+
+
+class ModuloArquivo(models.Model):
+    TIPO_PDF = "pdf"
+    TIPO_AUDIO = "audio"
+    TIPO_CHOICES = [
+        (TIPO_PDF, "PDF"),
+        (TIPO_AUDIO, "Áudio"),
+    ]
+
+    modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name="arquivos")
+    titulo = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default=TIPO_PDF)
+    arquivo = models.FileField(upload_to=modulo_arquivo_upload_path, blank=True, null=True)
+    ordem = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem"]
+        verbose_name = "Arquivo do módulo"
+        verbose_name_plural = "Arquivos do módulo"
+
+    def __str__(self):
+        return self.titulo
+
+    @property
+    def arquivo_url(self):
+        if self.arquivo:
+            return self.arquivo.url
+        return None
 
 
 class AulaVideo(models.Model):
@@ -249,6 +319,30 @@ class ProgressoAula(models.Model):
         unique_together = [["matricula", "aula"]]
         verbose_name = "Progresso de aula"
         verbose_name_plural = "Progressos de aula"
+
+
+class ProgressoModuloTexto(models.Model):
+    matricula = models.ForeignKey(Matricula, on_delete=models.CASCADE, related_name="progresso_modulos_texto")
+    modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name="progressos_texto")
+    concluida = models.BooleanField(default=False)
+    concluida_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [["matricula", "modulo"]]
+        verbose_name = "Progresso de módulo texto"
+        verbose_name_plural = "Progressos de módulo texto"
+
+
+class ProgressoModuloArquivo(models.Model):
+    matricula = models.ForeignKey(Matricula, on_delete=models.CASCADE, related_name="progresso_modulos_arquivo")
+    arquivo = models.ForeignKey(ModuloArquivo, on_delete=models.CASCADE, related_name="progressos")
+    concluida = models.BooleanField(default=False)
+    concluida_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [["matricula", "arquivo"]]
+        verbose_name = "Progresso de arquivo do módulo"
+        verbose_name_plural = "Progressos de arquivo do módulo"
 
 
 class TentativaAtividade(models.Model):

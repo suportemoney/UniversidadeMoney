@@ -4,6 +4,18 @@ import PageHeader from "../components/dashboard/PageHeader";
 import PageSkeleton from "../components/dashboard/PageSkeleton";
 import { getCursoDetalhe, matricularCurso } from "../services/api";
 
+const TIPO_MODULO = {
+  texto: "Texto",
+  apostila: "Apostilas",
+  video: "Vídeos",
+};
+
+function metaModulo(m) {
+  if (m.tipo === "texto") return "Conteúdo escrito";
+  if (m.tipo === "apostila") return `${m.total_aulas} arquivo(s)`;
+  return `${m.total_aulas} aula(s) · ${m.duracao_minutos || 0} min`;
+}
+
 export default function CursoDetalhePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -70,6 +82,20 @@ export default function CursoDetalhePage() {
           )}
           <p className="dash-curso-desc">{curso.descricao || "Curso disponível na Universidade Money."}</p>
 
+          {curso.instrutor_nome && (
+            <p className="dash-curso-meta"><strong>Instrutor:</strong> {curso.instrutor_nome}</p>
+          )}
+          {curso.participantes?.length > 0 && (
+            <div className="dash-participantes">
+              <strong>Participantes:</strong>
+              {curso.participantes.map((p) => (
+                <span key={p.id} className="dash-tag dash-tag--muted">
+                  {p.nome}{p.cargo ? ` (${p.cargo})` : ""}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="dash-curso-stats">
             <div><strong>{curso.total_modulos}</strong><small>módulos</small></div>
             <div><strong>{curso.duracao_horas}h</strong><small>duração</small></div>
@@ -110,7 +136,7 @@ export default function CursoDetalhePage() {
               <div className="dash-timeline-content">
                 <strong>{m.titulo}</strong>
                 <small className="dash-card-meta">
-                  {m.total_aulas} aula(s) · {m.duracao_minutos || 0} min
+                  {TIPO_MODULO[m.tipo] || m.tipo} · {metaModulo(m)}
                 </small>
               </div>
             </div>

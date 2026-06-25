@@ -9,16 +9,34 @@ function formatTimer(segundos) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+const TIPO_ICONE = {
+  texto: "📖",
+  apostila: "📎",
+  video: "▶",
+};
+
 export default function CursoPlayerPage() {
   const { cursoId } = useParams();
   const [data, setData] = useState(null);
   const [aulaAtual, setAulaAtual] = useState(null);
+  const [textoModulo, setTextoModulo] = useState(null);
+  const [arquivoAtual, setArquivoAtual] = useState(null);
   const [atividade, setAtividade] = useState(null);
   const [prova, setProva] = useState(null);
   const [respostas, setRespostas] = useState({});
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState("");
   const [tempoRestante, setTempoRestante] = useState(null);
+
+  const limparConteudo = () => {
+    setAulaAtual(null);
+    setTextoModulo(null);
+    setArquivoAtual(null);
+    setAtividade(null);
+    setProva(null);
+    setResultado(null);
+    setTempoRestante(null);
+  };
 
   const carregar = () => {
     apiFetch(`/cursos/${cursoId}/conteudo/`).then(setData);
@@ -43,14 +61,20 @@ export default function CursoPlayerPage() {
     carregar();
   };
 
+  const concluirTexto = async (moduloId) => {
+    await apiFetch(`/modulos-texto/${moduloId}/concluir/`, { method: "POST" });
+    carregar();
+  };
+
+  const concluirArquivo = async (arquivoId) => {
+    await apiFetch(`/modulos-arquivos/${arquivoId}/concluir/`, { method: "POST" });
+    carregar();
+  };
+
   const abrirAtividade = async (id) => {
-    setResultado(null);
-    setRespostas({});
-    setTempoRestante(null);
+    limparConteudo();
     const d = await apiFetch(`/atividades/${id}/`);
     setAtividade(d);
-    setAulaAtual(null);
-    setProva(null);
   };
 
   const enviarAtividade = async () => {
@@ -64,18 +88,13 @@ export default function CursoPlayerPage() {
 
   const abrirProva = async () => {
     if (!data?.prova_final) return;
-    setResultado(null);
-    setRespostas({});
+    limparConteudo();
     setErro("");
     try {
       const p = await apiFetch(`/provas/${data.prova_final.id}/`);
       setProva(p);
-      setAtividade(null);
-      setAulaAtual(null);
       if (p.tempo_limite_min) {
         setTempoRestante(p.tempo_limite_min * 60);
-      } else {
-        setTempoRestante(null);
       }
     } catch (e) {
       setErro(e.message);
@@ -98,6 +117,8 @@ export default function CursoPlayerPage() {
 
   if (!data) return <p>Carregando curso...</p>;
 
+  const temConteudo = aulaAtual || textoModulo || arquivoAtual || atividade || prova;
+
   return (
     <div className="player">
       <div className="gestao-page-header">
@@ -112,17 +133,40 @@ export default function CursoPlayerPage() {
           {data.modulos.map((mod) => (
             <div key={mod.id} className="player-modulo">
               <h3>{mod.titulo}</h3>
-              {mod.aulas.map((aula) => (
+
+              {mod.tipo === "texto" && (
+                <button
+                  type="button"
+                  className={`player-item${mod.texto_concluido ? " done" : ""}`}
+                  onClick={() => { limparConteudo(); setTextoModulo(mod); }}
+                >
+                  {mod.texto_concluido ? "✓" : TIPO_ICONE.texto} O que você vai aprender
+                </button>
+              )}
+
+              {mod.tipo === "apostila" && mod.arquivos?.map((arq) => (
+                <button
+                  key={arq.id}
+                  type="button"
+                  className={`player-item${arq.concluida ? " done" : ""}`}
+                  onClick={() => { limparConteudo(); setArquivoAtual({ ...arq, moduloId: mod.id }); }}
+                >
+                  {arq.concluida ? "✓" : TIPO_ICONE.apostila} {arq.titulo}
+                </button>
+              ))}
+
+              {mod.tipo === "video" && mod.aulas?.map((aula) => (
                 <button
                   key={aula.id}
                   type="button"
                   className={`player-item${aula.concluida ? " done" : ""}`}
-                  onClick={() => { setAulaAtual(aula); setAtividade(null); setProva(null); setResultado(null); setTempoRestante(null); }}
+                  onClick={() => { limparConteudo(); setAulaAtual(aula); }}
                 >
-                  {aula.concluida ? "✓" : "▶"} {aula.titulo}
+                  {aula.concluida ? "✓" : TIPO_ICONE.video} {aula.titulo}
                 </button>
               ))}
-              {mod.atividades.map((a) => (
+
+              {mod.atividades?.map((a) => (
                 <button
                   key={a.id}
                   type="button"
@@ -142,6 +186,40 @@ export default function CursoPlayerPage() {
         </aside>
 
         <main className="player-main">
+          {textoModulo && (
+            <div>
+              <h2>{textoModulo.titulo}</h2>
+              <div className="player-texto-conteudo">
+                {(textoModulo.conteudo_texto || "").split("\n").map((linha, i) => (
+                  <p key={i}>{linha || "\u00A0"}</p>
+                ))}
+              </div>
+              {!textoModulo.texto_concluido && (
+                <button type="button" className="btn btn-success" onClick={() => concluirTexto(textoModulo.id)}>
+                  Marcar como lido
+                </button>
+              )}
+            </div>
+          )}
+
+          {arquivoAtual && (
+            <div>
+              <h2>{arquivoAtual.titulo}</h2>
+              {arquivoAtual.tipo === "audio" && arquivoAtual.arquivo_url ? (
+                <audio controls src={arquivoAtual.arquivo_url} className="player-audio" />
+              ) : arquivoAtual.arquivo_url ? (
+                <iframe title={arquivoAtual.titulo} src={arquivoAtual.arquivo_url} className="player-pdf" />
+              ) : (
+                <p>Arquivo indisponível.</p>
+              )}
+              {!arquivoAtual.concluida && (
+                <button type="button" className="btn btn-success" onClick={() => concluirArquivo(arquivoAtual.id)}>
+                  Marcar como concluído
+                </button>
+              )}
+            </div>
+          )}
+
           {aulaAtual && (
             <div>
               <h2>{aulaAtual.titulo}</h2>
@@ -228,8 +306,8 @@ export default function CursoPlayerPage() {
             </div>
           )}
 
-          {!aulaAtual && !atividade && !prova && (
-            <p>Selecione uma aula, atividade ou a prova final.</p>
+          {!temConteudo && (
+            <p>Selecione um módulo, atividade ou a prova final.</p>
           )}
         </main>
       </div>

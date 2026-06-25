@@ -78,6 +78,26 @@ export const gestaoApi = {
       body: JSON.stringify({ ordem }),
     }),
 
+  listarParticipantes: (cursoId) => gestaoFetch(`/gestao/cursos/${cursoId}/participantes/`),
+  criarParticipante: (cursoId, data) =>
+    gestaoFetch(`/gestao/cursos/${cursoId}/participantes/`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  atualizarParticipante: (id, data) =>
+    gestaoFetch(`/gestao/participantes/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirParticipante: (id) => gestaoFetch(`/gestao/participantes/${id}/`, { method: "DELETE" }),
+
+  uploadModuloArquivo: (moduloId, file, titulo, tipo) => {
+    const fd = new FormData();
+    fd.append("arquivo", file);
+    fd.append("titulo", titulo);
+    fd.append("tipo", tipo);
+    return gestaoFetch(`/gestao/modulos/${moduloId}/arquivos/`, { method: "POST", body: fd });
+  },
+  excluirModuloArquivo: (id) =>
+    gestaoFetch(`/gestao/modulos/arquivos/${id}/`, { method: "DELETE" }),
+
   criarAula: (moduloId, data) =>
     gestaoFetch(`/gestao/modulos/${moduloId}/aulas/`, {
       method: "POST",

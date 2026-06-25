@@ -13,7 +13,11 @@ from .models import (
     Certificado,
     Curso,
     Matricula,
+    Modulo,
+    ModuloArquivo,
     ProgressoAula,
+    ProgressoModuloArquivo,
+    ProgressoModuloTexto,
     ProvaFinal,
     Questao,
     TentativaAtividade,
@@ -48,8 +52,11 @@ class CursoAlunoDetailView(APIView):
     def get(self, request, curso_id):
         try:
             curso = Curso.objects.prefetch_related(
-                "modulos__aulas", "modulos__atividades"
-            ).get(pk=curso_id, status=Curso.STATUS_PUBLICADO)
+                "modulos__aulas",
+                "modulos__atividades",
+                "modulos__arquivos",
+                "participantes",
+            ).select_related("instrutor").get(pk=curso_id, status=Curso.STATUS_PUBLICADO)
         except Curso.DoesNotExist:
             return Response({"detail": "Curso não encontrado."}, status=404)
 
@@ -61,19 +68,46 @@ class CursoAlunoDetailView(APIView):
             pa.aula_id: pa.concluida
             for pa in ProgressoAula.objects.filter(matricula=matricula)
         }
+        progresso_texto = {
+            p.modulo_id: p.concluida
+            for p in ProgressoModuloTexto.objects.filter(matricula=matricula)
+        }
+        progresso_arquivos = {
+            p.arquivo_id: p.concluida
+            for p in ProgressoModuloArquivo.objects.filter(matricula=matricula)
+        }
 
         modulos = []
         for modulo in curso.modulos.all():
-            aulas = []
-            for aula in modulo.aulas.all():
-                item = AulaVideoSerializer(aula).data
-                item["concluida"] = progresso_aulas.get(aula.id, False)
-                aulas.append(item)
-            atividades = [
+            item = {
+                "id": modulo.id,
+                "titulo": modulo.titulo,
+                "tipo": modulo.tipo,
+                "conteudo_texto": modulo.conteudo_texto if modulo.tipo == Modulo.TIPO_TEXTO else "",
+                "texto_concluido": progresso_texto.get(modulo.id, False),
+                "aulas": [],
+                "atividades": [],
+                "arquivos": [],
+            }
+            if modulo.tipo == Modulo.TIPO_VIDEO:
+                for aula in modulo.aulas.all():
+                    aula_data = AulaVideoSerializer(aula).data
+                    aula_data["concluida"] = progresso_aulas.get(aula.id, False)
+                    item["aulas"].append(aula_data)
+            elif modulo.tipo == Modulo.TIPO_APOSTILA:
+                for arq in modulo.arquivos.all():
+                    item["arquivos"].append({
+                        "id": arq.id,
+                        "titulo": arq.titulo,
+                        "tipo": arq.tipo,
+                        "arquivo_url": arq.arquivo_url,
+                        "concluida": progresso_arquivos.get(arq.id, False),
+                    })
+            item["atividades"] = [
                 {"id": a.id, "titulo": a.titulo, "tipo": a.tipo, "obrigatoria": a.obrigatoria}
                 for a in modulo.atividades.all()
             ]
-            modulos.append({"id": modulo.id, "titulo": modulo.titulo, "aulas": aulas, "atividades": atividades})
+            modulos.append(item)
 
         prova = None
         if hasattr(curso, "prova_final"):
@@ -92,10 +126,11 @@ class CursoAlunoDetailView(APIView):
             }
 
         certificado = Certificado.objects.filter(usuario=request.user, curso=curso).exists()
+        curso_data = CursoGestaoDetailSerializer(curso).data
 
         return Response(
             {
-                "curso": CursoGestaoDetailSerializer(curso).data,
+                "curso": curso_data,
                 "matricula_id": matricula.id,
                 "progresso": matricula.progresso,
                 "modulos": modulos,
@@ -126,6 +161,58 @@ class ConcluirAulaView(APIView):
             pa.concluida = True
             pa.concluida_em = timezone.now()
             pa.save()
+
+        progresso = calcular_progresso_matricula(matricula)
+        return Response({"progresso": progresso, "concluida": True})
+
+
+class ConcluirModuloTextoView(APIView):
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+
+    def post(self, request, modulo_id):
+        try:
+            modulo = Modulo.objects.select_related("curso").get(pk=modulo_id, tipo=Modulo.TIPO_TEXTO)
+        except Modulo.DoesNotExist:
+            return Response({"detail": "Módulo não encontrado."}, status=404)
+
+        curso = modulo.curso
+        if curso.status != Curso.STATUS_PUBLICADO:
+            return Response({"detail": "Curso indisponível."}, status=400)
+        if not curso_visivel_para_usuario(request.user, curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
+
+        matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
+        prog, _ = ProgressoModuloTexto.objects.get_or_create(matricula=matricula, modulo=modulo)
+        if not prog.concluida:
+            prog.concluida = True
+            prog.concluida_em = timezone.now()
+            prog.save()
+
+        progresso = calcular_progresso_matricula(matricula)
+        return Response({"progresso": progresso, "concluida": True})
+
+
+class ConcluirModuloArquivoView(APIView):
+    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+
+    def post(self, request, arquivo_id):
+        try:
+            arquivo = ModuloArquivo.objects.select_related("modulo__curso").get(pk=arquivo_id)
+        except ModuloArquivo.DoesNotExist:
+            return Response({"detail": "Arquivo não encontrado."}, status=404)
+
+        curso = arquivo.modulo.curso
+        if curso.status != Curso.STATUS_PUBLICADO:
+            return Response({"detail": "Curso indisponível."}, status=400)
+        if not curso_visivel_para_usuario(request.user, curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
+
+        matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
+        prog, _ = ProgressoModuloArquivo.objects.get_or_create(matricula=matricula, arquivo=arquivo)
+        if not prog.concluida:
+            prog.concluida = True
+            prog.concluida_em = timezone.now()
+            prog.save()
 
         progresso = calcular_progresso_matricula(matricula)
         return Response({"progresso": progresso, "concluida": True})
