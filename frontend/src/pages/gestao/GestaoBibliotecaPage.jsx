@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
 import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
 import GestaoIcon from "../../components/gestao/GestaoIcons";
 import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import GestaoPagination from "../../components/gestao/GestaoPagination";
+import { GestaoSelectCell, GestaoSelectHeaderCell } from "../../components/gestao/GestaoTableCheckbox";
 import GestaoTableActions from "../../components/gestao/GestaoTableActions";
 import GestaoToolbar from "../../components/gestao/GestaoToolbar";
 import StatusBadge from "../../components/gestao/StatusBadge";
+import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
@@ -19,6 +22,7 @@ export default function GestaoBibliotecaPage() {
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState({ titulo: "", descricao: "", setor: "", publicado: true });
   const [pdfId, setPdfId] = useState(null);
+  const crud = useGestaoCrudTable();
 
   const carregar = () => {
     setLoading(true);
@@ -48,6 +52,12 @@ export default function GestaoBibliotecaPage() {
   } = usePaginatedList(itens, { searchKeys: ["titulo"], pageSize: 8 });
 
   const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+  const pageIds = paginados.map((m) => m.id);
+
+  const confirmarLote = async () => {
+    await crud.confirmarLote((id) => gestaoApi.excluirBiblioteca(id), { sucesso: "materiais excluídos" });
+    carregar();
+  };
 
   const salvar = async (e) => {
     e.preventDefault();
@@ -78,23 +88,50 @@ export default function GestaoBibliotecaPage() {
         </button>
       </GestaoPageHeader>
 
-      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar materiais..." />
+      {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
+
+      <GestaoToolbar
+        bulkActions={(
+          <GestaoBulkActions
+            count={crud.selection.count}
+            actionLabel="Excluir selecionados"
+            onAction={() => crud.setLoteOpen(true)}
+            onClear={crud.selection.clear}
+            loading={crud.loteLoading}
+          />
+        )}
+        searchValue={busca}
+        onSearchChange={setBusca}
+        searchPlaceholder="Buscar materiais..."
+      />
 
       <GestaoDataTable
         loading={loading}
         empty={vazio}
         emptyTitle="Nenhum material na biblioteca"
-        skeletonCols={5}
+        skeletonCols={6}
         footer={!vazio && !loading ? (
           <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
         ) : null}
       >
         <thead>
-          <tr><th>Material</th><th>Setor</th><th>PDF</th><th>Status</th><th>Ações</th></tr>
+          <tr>
+            <GestaoSelectHeaderCell
+              checked={crud.selection.isAllSelected(pageIds)}
+              indeterminate={crud.selection.isIndeterminate(pageIds)}
+              onChange={() => crud.selection.toggleAll(pageIds)}
+              disabled={!paginados.length}
+            />
+            <th>Material</th><th>Setor</th><th>PDF</th><th>Status</th><th>Ações</th>
+          </tr>
         </thead>
         <tbody>
           {paginados.map((m, i) => (
-            <GestaoTableRow key={m.id} index={i}>
+            <GestaoTableRow key={m.id} index={i} selected={crud.selection.isSelected(m.id)}>
+              <GestaoSelectCell
+                checked={crud.selection.isSelected(m.id)}
+                onChange={() => crud.selection.toggle(m.id)}
+              />
               <td><GestaoCellCurso titulo={m.titulo} descricao={m.descricao} /></td>
               <td>{m.setor_nome || "—"}</td>
               <td>
@@ -148,6 +185,16 @@ export default function GestaoBibliotecaPage() {
         title="Excluir material"
         message={`Excluir "${excluir?.titulo}"?`}
         confirmLabel="Excluir"
+        danger
+      />
+
+      <ConfirmDialog
+        open={crud.loteOpen}
+        onClose={() => crud.setLoteOpen(false)}
+        onConfirm={confirmarLote}
+        title="Excluir materiais selecionados"
+        message={`Excluir ${crud.selection.count} material(is) selecionado(s)?`}
+        confirmLabel="Excluir selecionados"
         danger
       />
     </div>

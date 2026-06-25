@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
 import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
 import GestaoIcon from "../../components/gestao/GestaoIcons";
 import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import GestaoPagination from "../../components/gestao/GestaoPagination";
+import { GestaoSelectCell, GestaoSelectHeaderCell } from "../../components/gestao/GestaoTableCheckbox";
 import GestaoTableActions from "../../components/gestao/GestaoTableActions";
 import GestaoToolbar from "../../components/gestao/GestaoToolbar";
 import StatusBadge from "../../components/gestao/StatusBadge";
+import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
@@ -34,6 +37,7 @@ export default function GestaoPlanosPage() {
   const [todasTags, setTodasTags] = useState([]);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
+  const crud = useGestaoCrudTable();
   const [form, setForm] = useState(FORM_VAZIO);
   const [erro, setErro] = useState("");
 
@@ -108,6 +112,12 @@ export default function GestaoPlanosPage() {
   } = usePaginatedList(itens, { searchKeys: ["titulo", "slug"], pageSize: 8 });
 
   const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+  const pageIds = paginados.map((p) => p.id);
+
+  const confirmarLote = async () => {
+    await crud.confirmarLote((id) => gestaoApi.excluirPlano(id), { sucesso: "planos excluídos" });
+    carregar();
+  };
 
   return (
     <div>
@@ -118,19 +128,40 @@ export default function GestaoPlanosPage() {
         </button>
       </GestaoPageHeader>
 
-      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar planos..." />
+      {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
+
+      <GestaoToolbar
+        bulkActions={(
+          <GestaoBulkActions
+            count={crud.selection.count}
+            actionLabel="Excluir selecionados"
+            onAction={() => crud.setLoteOpen(true)}
+            onClear={crud.selection.clear}
+            loading={crud.loteLoading}
+          />
+        )}
+        searchValue={busca}
+        onSearchChange={setBusca}
+        searchPlaceholder="Buscar planos..."
+      />
 
       <GestaoDataTable
         loading={loading}
         empty={vazio}
         emptyTitle="Nenhum plano cadastrado"
-        skeletonCols={6}
+        skeletonCols={7}
         footer={!vazio && !loading ? (
           <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
         ) : null}
       >
         <thead>
           <tr>
+            <GestaoSelectHeaderCell
+              checked={crud.selection.isAllSelected(pageIds)}
+              indeterminate={crud.selection.isIndeterminate(pageIds)}
+              onChange={() => crud.selection.toggleAll(pageIds)}
+              disabled={!paginados.length}
+            />
             <th>Plano</th>
             <th>Slug</th>
             <th>Status</th>
@@ -141,7 +172,11 @@ export default function GestaoPlanosPage() {
         </thead>
         <tbody>
           {paginados.map((p, i) => (
-            <GestaoTableRow key={p.id} index={i}>
+            <GestaoTableRow key={p.id} index={i} selected={crud.selection.isSelected(p.id)}>
+              <GestaoSelectCell
+                checked={crud.selection.isSelected(p.id)}
+                onChange={() => crud.selection.toggle(p.id)}
+              />
               <td><GestaoCellCurso titulo={p.titulo} descricao={p.descricao} /></td>
               <td><code>{p.slug}</code></td>
               <td><StatusBadge status={p.ativo ? "ativo" : "inativo"} /></td>
@@ -278,6 +313,16 @@ export default function GestaoPlanosPage() {
         title="Excluir plano"
         message={`Excluir o plano "${excluir?.titulo}"? Tokens vinculados podem deixar de funcionar.`}
         confirmLabel="Excluir"
+        danger
+      />
+
+      <ConfirmDialog
+        open={crud.loteOpen}
+        onClose={() => crud.setLoteOpen(false)}
+        onConfirm={confirmarLote}
+        title="Excluir planos selecionados"
+        message={`Excluir ${crud.selection.count} plano(s) selecionado(s)? Tokens vinculados podem deixar de funcionar.`}
+        confirmLabel="Excluir selecionados"
         danger
       />
     </div>

@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
 import GestaoDataTable, { GestaoTableRow } from "../../components/gestao/GestaoDataTable";
 import GestaoIcon from "../../components/gestao/GestaoIcons";
 import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import GestaoPagination from "../../components/gestao/GestaoPagination";
+import { GestaoSelectCell, GestaoSelectHeaderCell } from "../../components/gestao/GestaoTableCheckbox";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
 import GestaoToolbar from "../../components/gestao/GestaoToolbar";
 import StatusBadge from "../../components/gestao/StatusBadge";
+import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
@@ -28,6 +33,8 @@ export default function GestaoTokensPage() {
   const [form, setForm] = useState(FORM_VAZIO);
   const [erro, setErro] = useState("");
   const [chaveCriada, setChaveCriada] = useState("");
+  const [cancelar, setCancelar] = useState(null);
+  const crud = useGestaoCrudTable();
 
   const carregar = () => {
     setLoading(true);
@@ -52,6 +59,21 @@ export default function GestaoTokensPage() {
   } = usePaginatedList(tokens, { searchKeys: ["chave", "plano_titulo"], pageSize: 8 });
 
   const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+  const pageIds = paginados.filter((t) => t.ativo).map((t) => t.id);
+
+  const confirmarLote = async () => {
+    await crud.confirmarLote(
+      (id) => gestaoApi.atualizarToken(id, { ativo: false }),
+      { sucesso: "tokens cancelados" }
+    );
+    carregar();
+  };
+
+  const confirmarCancelar = async () => {
+    await gestaoApi.atualizarToken(cancelar.id, { ativo: false });
+    setCancelar(null);
+    carregar();
+  };
 
   const criar = async (e) => {
     e.preventDefault();
@@ -87,8 +109,8 @@ export default function GestaoTokensPage() {
     setUsosModal(token);
   };
 
-  const toggleAtivo = async (token) => {
-    await gestaoApi.atualizarToken(token.id, { ativo: !token.ativo });
+  const reativar = async (token) => {
+    await gestaoApi.atualizarToken(token.id, { ativo: true });
     carregar();
   };
 
@@ -101,19 +123,40 @@ export default function GestaoTokensPage() {
         </button>
       </GestaoPageHeader>
 
-      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar tokens..." />
+      {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
+
+      <GestaoToolbar
+        bulkActions={(
+          <GestaoBulkActions
+            count={crud.selection.count}
+            actionLabel="Cancelar selecionados"
+            onAction={() => crud.setLoteOpen(true)}
+            onClear={crud.selection.clear}
+            loading={crud.loteLoading}
+          />
+        )}
+        searchValue={busca}
+        onSearchChange={setBusca}
+        searchPlaceholder="Buscar tokens..."
+      />
 
       <GestaoDataTable
         loading={loading}
         empty={vazio}
         emptyTitle="Nenhum token gerado"
-        skeletonCols={6}
+        skeletonCols={7}
         footer={!vazio && !loading ? (
           <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
         ) : null}
       >
         <thead>
           <tr>
+            <GestaoSelectHeaderCell
+              checked={crud.selection.isAllSelected(pageIds)}
+              indeterminate={crud.selection.isIndeterminate(pageIds)}
+              onChange={() => crud.selection.toggleAll(pageIds)}
+              disabled={!pageIds.length}
+            />
             <th>Chave</th>
             <th>Plano</th>
             <th>Usos</th>
@@ -124,7 +167,12 @@ export default function GestaoTokensPage() {
         </thead>
         <tbody>
           {paginados.map((t, i) => (
-            <GestaoTableRow key={t.id} index={i}>
+            <GestaoTableRow key={t.id} index={i} selected={crud.selection.isSelected(t.id)}>
+              <GestaoSelectCell
+                checked={crud.selection.isSelected(t.id)}
+                onChange={() => crud.selection.toggle(t.id)}
+                disabled={!t.ativo}
+              />
               <td>
                 <code>{t.chave}</code>{" "}
                 <button type="button" className="btn-link" onClick={() => copiarChave(t.chave)}>Copiar</button>
@@ -138,11 +186,17 @@ export default function GestaoTokensPage() {
               </td>
               <td><StatusBadge status={t.ativo ? "ativo" : "inativo"} /></td>
               <td>
-                <button type="button" className="btn-link" onClick={() => verUsos(t)}>Usos</button>
-                {" · "}
-                <button type="button" className="btn-link" onClick={() => toggleAtivo(t)}>
-                  {t.ativo ? "Desativar" : "Ativar"}
-                </button>
+                <div className="gestao-table-actions">
+                  <GestaoTableActions
+                    onEdit={() => verUsos(t)}
+                    editLabel="Usos"
+                    onDelete={t.ativo ? () => setCancelar(t) : undefined}
+                    deleteLabel="Cancelar"
+                  />
+                  {!t.ativo && (
+                    <button type="button" className="btn-link" onClick={() => reativar(t)}>Ativar</button>
+                  )}
+                </div>
               </td>
             </GestaoTableRow>
           ))}
@@ -239,6 +293,26 @@ export default function GestaoTokensPage() {
           </table>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={!!cancelar}
+        onClose={() => setCancelar(null)}
+        onConfirm={confirmarCancelar}
+        title="Cancelar token"
+        message={`Cancelar o token "${cancelar?.chave}"? Novos resgates não serão permitidos.`}
+        confirmLabel="Cancelar token"
+        danger
+      />
+
+      <ConfirmDialog
+        open={crud.loteOpen}
+        onClose={() => crud.setLoteOpen(false)}
+        onConfirm={confirmarLote}
+        title="Cancelar tokens selecionados"
+        message={`Cancelar ${crud.selection.count} token(s) selecionado(s)? Novos resgates não serão permitidos.`}
+        confirmLabel="Cancelar selecionados"
+        danger
+      />
     </div>
   );
 }

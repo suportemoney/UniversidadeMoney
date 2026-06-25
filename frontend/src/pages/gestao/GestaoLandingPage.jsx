@@ -1,8 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
+import GestaoDataTable, { GestaoTableRow } from "../../components/gestao/GestaoDataTable";
 import GestaoFilterTabs from "../../components/gestao/GestaoFilterTabs";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
 import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import { GestaoSelectCell, GestaoSelectHeaderCell } from "../../components/gestao/GestaoTableCheckbox";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
+import StatusBadge from "../../components/gestao/StatusBadge";
+import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const FAIXA_VAZIA = {
@@ -39,6 +46,7 @@ export default function GestaoLandingPage() {
   const [gifFile, setGifFile] = useState(null);
   const [msg, setMsg] = useState("");
   const [erro, setErro] = useState("");
+  const crud = useGestaoCrudTable();
 
   const carregarFaixa = () =>
     gestaoApi.obterFaixaLanding().then((data) => {
@@ -104,6 +112,13 @@ export default function GestaoLandingPage() {
     } catch (err) {
       setErro(err.message);
     }
+  };
+
+  const pageIds = useMemo(() => banners.map((b) => b.id), [banners]);
+
+  const confirmarLote = async () => {
+    await crud.confirmarLote((id) => gestaoApi.excluirBannerLanding(id), { sucesso: "banners excluídos" });
+    carregarBanners();
   };
 
   return (
@@ -189,25 +204,54 @@ export default function GestaoLandingPage() {
             <p className="gestao-muted">Carrossel do hero — apenas arquivos .gif</p>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary gestao-btn-cta"
               onClick={() => setModal({ open: true, item: null })}
             >
+              <GestaoIcon name="mais" />
               Novo banner
             </button>
           </div>
-          <table className="gestao-table">
+
+          {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
+
+          <div className="gestao-toolbar-wrap gestao-animate-in gestao-animate-in--delay-1">
+            <GestaoBulkActions
+              count={crud.selection.count}
+              actionLabel="Excluir selecionados"
+              onAction={() => crud.setLoteOpen(true)}
+              onClear={crud.selection.clear}
+              loading={crud.loteLoading}
+            />
+          </div>
+
+          <GestaoDataTable
+            loading={false}
+            empty={banners.length === 0}
+            emptyTitle="Nenhum banner cadastrado"
+            skeletonCols={6}
+          >
             <thead>
               <tr>
+                <GestaoSelectHeaderCell
+                  checked={crud.selection.isAllSelected(pageIds)}
+                  indeterminate={crud.selection.isIndeterminate(pageIds)}
+                  onChange={() => crud.selection.toggleAll(pageIds)}
+                  disabled={!banners.length}
+                />
                 <th>Ordem</th>
                 <th>Preview</th>
                 <th>Título</th>
-                <th>Ativo</th>
-                <th></th>
+                <th>Status</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {banners.map((b) => (
-                <tr key={b.id}>
+              {banners.map((b, i) => (
+                <GestaoTableRow key={b.id} index={i} selected={crud.selection.isSelected(b.id)}>
+                  <GestaoSelectCell
+                    checked={crud.selection.isSelected(b.id)}
+                    onChange={() => crud.selection.toggle(b.id)}
+                  />
                   <td>{b.ordem}</td>
                   <td>
                     {b.imagem_url ? (
@@ -215,18 +259,17 @@ export default function GestaoLandingPage() {
                     ) : "—"}
                   </td>
                   <td>{b.titulo || "—"}</td>
-                  <td>{b.ativo ? "Sim" : "Não"}</td>
+                  <td><StatusBadge status={b.ativo ? "ativo" : "inativo"} /></td>
                   <td>
-                    <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: b })}>
-                      Editar
-                    </button>
-                    {" · "}
-                    <button type="button" className="btn-link" onClick={() => setExcluir(b)}>Excluir</button>
+                    <GestaoTableActions
+                      onEdit={() => setModal({ open: true, item: b })}
+                      onDelete={() => setExcluir(b)}
+                    />
                   </td>
-                </tr>
+                </GestaoTableRow>
               ))}
             </tbody>
-          </table>
+          </GestaoDataTable>
         </>
       )}
 
@@ -295,6 +338,16 @@ export default function GestaoLandingPage() {
         title="Excluir banner"
         message={`Excluir o banner "${excluir?.titulo || excluir?.id}"?`}
         confirmLabel="Excluir"
+        danger
+      />
+
+      <ConfirmDialog
+        open={crud.loteOpen}
+        onClose={() => crud.setLoteOpen(false)}
+        onConfirm={confirmarLote}
+        title="Excluir banners selecionados"
+        message={`Excluir ${crud.selection.count} banner(s) selecionado(s)?`}
+        confirmLabel="Excluir selecionados"
         danger
       />
     </div>

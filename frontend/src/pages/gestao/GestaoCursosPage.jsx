@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
 import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
 import GestaoIcon from "../../components/gestao/GestaoIcons";
 import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import GestaoPagination from "../../components/gestao/GestaoPagination";
+import { GestaoSelectCell, GestaoSelectHeaderCell } from "../../components/gestao/GestaoTableCheckbox";
 import GestaoTableActions from "../../components/gestao/GestaoTableActions";
 import GestaoToolbar from "../../components/gestao/GestaoToolbar";
 import StatusBadge from "../../components/gestao/StatusBadge";
+import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
@@ -25,6 +28,7 @@ export default function GestaoCursosPage() {
   const [filtro, setFiltro] = useState("");
   const [loading, setLoading] = useState(true);
   const [excluir, setExcluir] = useState(null);
+  const crud = useGestaoCrudTable();
 
   const carregar = () => {
     setLoading(true);
@@ -49,6 +53,12 @@ export default function GestaoCursosPage() {
   } = usePaginatedList(cursos, { searchKeys: ["titulo", "descricao"], pageSize: PAGE_SIZE });
 
   const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+  const pageIds = paginados.map((c) => c.id);
+
+  const confirmarLote = async () => {
+    await crud.confirmarLote((id) => gestaoApi.excluirCurso(id), { sucesso: "cursos excluídos" });
+    carregar();
+  };
 
   return (
     <div>
@@ -63,7 +73,18 @@ export default function GestaoCursosPage() {
         </Link>
       </GestaoPageHeader>
 
+      {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
+
       <GestaoToolbar
+        bulkActions={(
+          <GestaoBulkActions
+            count={crud.selection.count}
+            actionLabel="Excluir selecionados"
+            onAction={() => crud.setLoteOpen(true)}
+            onClear={crud.selection.clear}
+            loading={crud.loteLoading}
+          />
+        )}
         filterOptions={STATUS}
         filterValue={filtro}
         onFilterChange={(v) => { setFiltro(v); setPage(1); }}
@@ -82,7 +103,7 @@ export default function GestaoCursosPage() {
             Criar primeiro curso
           </Link>
         )}
-        skeletonCols={5}
+        skeletonCols={6}
         footer={!vazio && !loading ? (
           <GestaoPagination
             page={page}
@@ -95,6 +116,12 @@ export default function GestaoCursosPage() {
       >
         <thead>
           <tr>
+            <GestaoSelectHeaderCell
+              checked={crud.selection.isAllSelected(pageIds)}
+              indeterminate={crud.selection.isIndeterminate(pageIds)}
+              onChange={() => crud.selection.toggleAll(pageIds)}
+              disabled={!paginados.length}
+            />
             <th>Curso</th>
             <th>Status</th>
             <th>Setor</th>
@@ -104,7 +131,11 @@ export default function GestaoCursosPage() {
         </thead>
         <tbody>
           {paginados.map((c, i) => (
-            <GestaoTableRow key={c.id} index={i}>
+            <GestaoTableRow key={c.id} index={i} selected={crud.selection.isSelected(c.id)}>
+              <GestaoSelectCell
+                checked={crud.selection.isSelected(c.id)}
+                onChange={() => crud.selection.toggle(c.id)}
+              />
               <td>
                 <GestaoCellCurso
                   titulo={c.titulo}
@@ -135,6 +166,16 @@ export default function GestaoCursosPage() {
         title="Excluir curso"
         message={`Excluir "${excluir?.titulo}"?`}
         confirmLabel="Excluir"
+        danger
+      />
+
+      <ConfirmDialog
+        open={crud.loteOpen}
+        onClose={() => crud.setLoteOpen(false)}
+        onConfirm={confirmarLote}
+        title="Excluir cursos selecionados"
+        message={`Excluir ${crud.selection.count} curso(s) selecionado(s)? Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir selecionados"
         danger
       />
     </div>

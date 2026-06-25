@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import GestaoIcon from "./GestaoIcons";
 
-export default function GestaoTableActions({ editTo, onEdit, onDelete, editLabel = "Editar" }) {
+export default function GestaoTableActions({ editTo, onEdit, onDelete, editLabel = "Editar", deleteLabel = "Excluir" }) {
   return (
     <div className="gestao-table-actions">
       {editTo && (
@@ -18,8 +18,8 @@ export default function GestaoTableActions({ editTo, onEdit, onDelete, editLabel
         <button
           type="button"
           className="gestao-icon-btn gestao-icon-btn--danger"
-          title="Excluir"
-          aria-label="Excluir"
+          title={deleteLabel}
+          aria-label={deleteLabel}
           onClick={onDelete}
         >
           <GestaoIcon name="excluir" />

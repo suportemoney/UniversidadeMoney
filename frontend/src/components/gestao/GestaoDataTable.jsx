@@ -47,10 +47,11 @@ export default function GestaoDataTable({
   );
 }
 
-export function GestaoTableRow({ index = 0, children, className = "" }) {
+export function GestaoTableRow({ index = 0, children, className = "", selected = false }) {
   const style = { animationDelay: `${Math.min(index, 12) * 40}ms` };
+  const selectedClass = selected ? " gestao-table-row--selected" : "";
   return (
-    <tr className={`gestao-table-row-in${className ? ` ${className}` : ""}`} style={style}>
+    <tr className={`gestao-table-row-in${selectedClass}${className ? ` ${className}` : ""}`} style={style}>
       {children}
     </tr>
   );

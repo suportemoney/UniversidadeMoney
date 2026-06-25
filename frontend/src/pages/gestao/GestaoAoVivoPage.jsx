@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
 import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
 import GestaoIcon from "../../components/gestao/GestaoIcons";
 import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import GestaoPagination from "../../components/gestao/GestaoPagination";
+import { GestaoSelectCell, GestaoSelectHeaderCell } from "../../components/gestao/GestaoTableCheckbox";
 import GestaoTableActions from "../../components/gestao/GestaoTableActions";
 import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
@@ -22,6 +25,7 @@ export default function GestaoAoVivoPage() {
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState(FORM_VAZIO);
+  const crud = useGestaoCrudTable();
 
   const carregar = () => {
     setLoading(true);
@@ -57,6 +61,12 @@ export default function GestaoAoVivoPage() {
   } = usePaginatedList(itens, { searchKeys: ["titulo"], pageSize: 8 });
 
   const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+  const pageIds = paginados.map((t) => t.id);
+
+  const confirmarLote = async () => {
+    await crud.confirmarLote((id) => gestaoApi.excluirAoVivo(id), { sucesso: "treinamentos excluídos" });
+    carregar();
+  };
 
   const salvar = async (e) => {
     e.preventDefault();
@@ -94,23 +104,50 @@ export default function GestaoAoVivoPage() {
         </button>
       </GestaoPageHeader>
 
-      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar treinamentos..." />
+      {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
+
+      <GestaoToolbar
+        bulkActions={(
+          <GestaoBulkActions
+            count={crud.selection.count}
+            actionLabel="Excluir selecionados"
+            onAction={() => crud.setLoteOpen(true)}
+            onClear={crud.selection.clear}
+            loading={crud.loteLoading}
+          />
+        )}
+        searchValue={busca}
+        onSearchChange={setBusca}
+        searchPlaceholder="Buscar treinamentos..."
+      />
 
       <GestaoDataTable
         loading={loading}
         empty={vazio}
         emptyTitle="Nenhum treinamento ao vivo"
-        skeletonCols={6}
+        skeletonCols={7}
         footer={!vazio && !loading ? (
           <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
         ) : null}
       >
         <thead>
-          <tr><th>Treinamento</th><th>Data</th><th>Hora</th><th>Plataforma</th><th>Setor</th><th>Ações</th></tr>
+          <tr>
+            <GestaoSelectHeaderCell
+              checked={crud.selection.isAllSelected(pageIds)}
+              indeterminate={crud.selection.isIndeterminate(pageIds)}
+              onChange={() => crud.selection.toggleAll(pageIds)}
+              disabled={!paginados.length}
+            />
+            <th>Treinamento</th><th>Data</th><th>Hora</th><th>Plataforma</th><th>Setor</th><th>Ações</th>
+          </tr>
         </thead>
         <tbody>
           {paginados.map((t, i) => (
-            <GestaoTableRow key={t.id} index={i}>
+            <GestaoTableRow key={t.id} index={i} selected={crud.selection.isSelected(t.id)}>
+              <GestaoSelectCell
+                checked={crud.selection.isSelected(t.id)}
+                onChange={() => crud.selection.toggle(t.id)}
+              />
               <td>
                 <GestaoCellCurso
                   titulo={t.titulo}
@@ -193,6 +230,16 @@ export default function GestaoAoVivoPage() {
         title="Excluir treinamento"
         message={`Excluir "${excluir?.titulo}"?`}
         confirmLabel="Excluir"
+        danger
+      />
+
+      <ConfirmDialog
+        open={crud.loteOpen}
+        onClose={() => crud.setLoteOpen(false)}
+        onConfirm={confirmarLote}
+        title="Excluir treinamentos selecionados"
+        message={`Excluir ${crud.selection.count} treinamento(s) selecionado(s)?`}
+        confirmLabel="Excluir selecionados"
         danger
       />
     </div>
