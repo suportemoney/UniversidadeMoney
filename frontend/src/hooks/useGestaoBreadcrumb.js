@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 
 const ROTAS = [
   { match: /^\/gestao$/, crumbs: [{ label: "Resumo" }] },
-  { match: /^\/gestao\/cursos\/novo$/, crumbs: [{ label: "Cursos", to: "/gestao/cursos" }, { label: "Novo curso" }] },
   { match: /^\/gestao\/cursos\/\d+$/, crumbs: [{ label: "Cursos", to: "/gestao/cursos" }, { label: "Editar curso" }] },
   { match: /^\/gestao\/cursos$/, crumbs: [{ label: "Cursos" }] },
   { match: /^\/gestao\/trilhas\/\d+$/, crumbs: [{ label: "Trilhas", to: "/gestao/trilhas" }, { label: "Montar trilha" }] },

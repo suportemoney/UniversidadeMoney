@@ -21,7 +21,7 @@ export default function GestaoBibliotecaPage() {
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState({ titulo: "", descricao: "", setor: "", publicado: true });
-  const [pdfId, setPdfId] = useState(null);
+  const [pdfModal, setPdfModal] = useState(null);
   const crud = useGestaoCrudTable();
 
   const carregar = () => {
@@ -73,9 +73,9 @@ export default function GestaoBibliotecaPage() {
 
   const uploadPdf = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || !pdfId) return;
-    await gestaoApi.uploadPdfBiblioteca(pdfId, file);
-    setPdfId(null);
+    if (!file || !pdfModal) return;
+    await gestaoApi.uploadPdfBiblioteca(pdfModal, file);
+    setPdfModal(null);
     carregar();
   };
 
@@ -138,7 +138,7 @@ export default function GestaoBibliotecaPage() {
                 {m.arquivo_url ? (
                   <a href={m.arquivo_url} target="_blank" rel="noopener noreferrer">Ver PDF</a>
                 ) : (
-                  <button type="button" className="btn-link" onClick={() => setPdfId(m.id)}>Enviar PDF</button>
+                  <button type="button" className="btn-link" onClick={() => setPdfModal(m.id)}>Enviar PDF</button>
                 )}
               </td>
               <td><StatusBadge status={m.publicado ? "publicado" : "rascunho"} label={m.publicado ? "Publicado" : "Rascunho"} /></td>
@@ -150,12 +150,20 @@ export default function GestaoBibliotecaPage() {
         </tbody>
       </GestaoDataTable>
 
-      {pdfId && (
-        <label className="btn btn-outline btn-sm gestao-form-card" style={{ marginTop: "1rem", cursor: "pointer" }}>
-          Selecionar PDF
-          <input type="file" accept="application/pdf" hidden onChange={uploadPdf} />
+      <Modal
+        open={!!pdfModal}
+        onClose={() => setPdfModal(null)}
+        title="Enviar PDF"
+        footer={(
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => setPdfModal(null)}>Cancelar</button>
+        )}
+      >
+        <p className="gestao-muted" style={{ marginTop: 0 }}>Selecione o arquivo PDF para este material.</p>
+        <label className="gestao-field">
+          Arquivo PDF
+          <input type="file" accept="application/pdf" onChange={uploadPdf} />
         </label>
-      )}
+      </Modal>
 
       <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })} title={modal.item ? "Editar material" : "Novo material"}>
         <form className="gestao-form" onSubmit={salvar}>

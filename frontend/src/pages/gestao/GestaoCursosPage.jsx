@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
 import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
@@ -21,12 +21,19 @@ const STATUS = [
   { value: "arquivado", label: "Arquivado" },
 ];
 
+const FORM_VAZIO = { titulo: "", descricao: "", setor: "" };
+
 const PAGE_SIZE = 8;
 
 export default function GestaoCursosPage() {
   const [cursos, setCursos] = useState([]);
+  const [setores, setSetores] = useState([]);
   const [filtro, setFiltro] = useState("");
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState(FORM_VAZIO);
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
   const [excluir, setExcluir] = useState(null);
   const crud = useGestaoCrudTable();
 
@@ -40,6 +47,14 @@ export default function GestaoCursosPage() {
   useEffect(() => {
     carregar();
   }, [filtro]);
+
+  useEffect(() => {
+    if (modal) {
+      setForm(FORM_VAZIO);
+      setErro("");
+      gestaoApi.setores().then(setSetores);
+    }
+  }, [modal]);
 
   const {
     busca,
@@ -55,9 +70,31 @@ export default function GestaoCursosPage() {
   const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
   const pageIds = paginados.map((c) => c.id);
 
+  const abrirModal = () => setModal(true);
+  const fecharModal = () => setModal(false);
+
   const confirmarLote = async () => {
     await crud.confirmarLote((id) => gestaoApi.excluirCurso(id), { sucesso: "cursos excluídos" });
     carregar();
+  };
+
+  const criar = async (e) => {
+    e.preventDefault();
+    setSalvando(true);
+    setErro("");
+    try {
+      await gestaoApi.criarCurso({
+        titulo: form.titulo,
+        descricao: form.descricao,
+        setor: form.setor || null,
+      });
+      fecharModal();
+      carregar();
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -67,10 +104,10 @@ export default function GestaoCursosPage() {
         title="Cursos"
         subtitle="Gerencie e organize os cursos da plataforma"
       >
-        <Link to="/gestao/cursos/novo" className="btn btn-primary gestao-btn-cta">
+        <button type="button" className="btn btn-primary gestao-btn-cta" onClick={abrirModal}>
           <GestaoIcon name="mais" />
           Novo curso
-        </Link>
+        </button>
       </GestaoPageHeader>
 
       {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
@@ -99,9 +136,9 @@ export default function GestaoCursosPage() {
         emptyTitle="Nenhum curso encontrado"
         emptyMessage="Crie um novo curso ou ajuste os filtros de busca."
         emptyAction={(
-          <Link to="/gestao/cursos/novo" className="btn btn-primary btn-sm">
+          <button type="button" className="btn btn-primary btn-sm" onClick={abrirModal}>
             Criar primeiro curso
-          </Link>
+          </button>
         )}
         skeletonCols={6}
         footer={!vazio && !loading ? (
@@ -155,6 +192,51 @@ export default function GestaoCursosPage() {
           ))}
         </tbody>
       </GestaoDataTable>
+
+      <Modal
+        open={modal}
+        onClose={fecharModal}
+        title="Novo curso"
+        wide
+        footer={(
+          <>
+            <button type="button" className="btn btn-outline btn-sm" onClick={fecharModal}>Cancelar</button>
+            <button type="submit" form="form-curso" className="btn btn-primary btn-sm" disabled={salvando}>
+              {salvando ? "Criando..." : "Criar curso"}
+            </button>
+          </>
+        )}
+      >
+        {erro && <div className="modal-alert modal-alert--error">{erro}</div>}
+        <form id="form-curso" className="gestao-form gestao-form--modal" onSubmit={criar}>
+          <label className="gestao-field">
+            Título
+            <input
+              value={form.titulo}
+              onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+              required
+              autoFocus
+            />
+          </label>
+          <label className="gestao-field">
+            Descrição
+            <textarea
+              value={form.descricao}
+              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+              rows={4}
+            />
+          </label>
+          <label className="gestao-field">
+            Setor
+            <select value={form.setor} onChange={(e) => setForm({ ...form, setor: e.target.value })}>
+              <option value="">Selecione...</option>
+              {setores.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+          </label>
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={!!excluir}

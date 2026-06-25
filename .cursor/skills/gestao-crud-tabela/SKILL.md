@@ -11,7 +11,7 @@ Todo template de **Gestão** que exibe `<table>`, `GestaoDataTable` ou listagem 
 
 | Operação | Obrigatório |
 |----------|-------------|
-| **Criar** | Botão/modal/rota de criação |
+| **Criar** | Botão no header + **modal** com form POST |
 | **Ler** | Listagem com busca/filtros quando aplicável |
 | **Alterar** | Editar linha (modal ou rota) |
 | **Deletar** | Ação destrutiva por linha + **seleção em lote via checkbox** |
@@ -32,7 +32,15 @@ frontend/src/components/gestao/GestaoBulkActions.jsx    — barra "N selecionado
 const crud = useGestaoCrudTable();
 const pageIds = paginados.map((item) => item.id);
 
-<GestaoPageHeader ...>{/* CTA Criar */}</GestaoPageHeader>
+<GestaoPageHeader ...>
+  <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setModal({ open: true, item: null })}>
+    <GestaoIcon name="mais" /> Novo item
+  </button>
+</GestaoPageHeader>
+
+<Modal open={modal.open} onClose={fecharModal} title={modal.item ? "Editar X" : "Novo X"} footer={...}>
+  <form id="form-x" className="gestao-form gestao-form--modal" onSubmit={salvar}>...</form>
+</Modal>
 
 <GestaoToolbar
   bulkActions={
@@ -86,9 +94,13 @@ const pageIds = paginados.map((item) => item.id);
 
 | Cenário | Padrão |
 |---------|--------|
-| Entidade simples (tags, planos, comunicados) | Modal |
-| Entidade complexa (curso com módulos) | Rota dedicada (`/gestao/cursos/:id`) |
-| Criação rápida inline (trilha) | Form acima da tabela + editor em rota |
+| **Criação em listagem CRUD** | **Sempre modal** na mesma página (botão no header) |
+| Edição simples | Modal compartilhado (create + edit) |
+| Edição complexa (montar curso/trilha) | Rota editor (`/gestao/cursos/:id`, `/gestao/trilhas/:id`) |
+| Provas e atividades | Modais dedicados no editor (exceção) |
+| Config singleton (faixa landing) | Resumo read-only + modal para editar |
+
+**Proibido:** form inline acima da tabela, páginas dedicadas só para POST de criação (ex.: `/gestao/cursos/novo`).
 
 ## Exclusão em lote
 
@@ -112,7 +124,8 @@ Página modelo: `frontend/src/pages/gestao/GestaoCursosPage.jsx`
 
 ## Checklist antes de concluir
 
-- [ ] Criar, listar, editar e deletar (individual)
+- [ ] Criar via botão + modal (nunca inline nem rota dedicada)
+- [ ] Listar, editar e deletar (individual)
 - [ ] Coluna checkbox + selecionar todos (página)
 - [ ] Barra de ações em lote
 - [ ] ConfirmDialog individual + ConfirmDialog lote

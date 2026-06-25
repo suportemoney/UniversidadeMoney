@@ -54,7 +54,7 @@ export default function GestaoHomePage() {
       </div>
 
       <div className="gestao-quick-actions gestao-animate-in gestao-animate-in--delay-2">
-        <Link to="/gestao/cursos/novo" className="btn btn-primary gestao-btn-cta">
+        <Link to="/gestao/cursos" className="btn btn-primary gestao-btn-cta">
           <GestaoIcon name="mais" />
           Novo curso
         </Link>

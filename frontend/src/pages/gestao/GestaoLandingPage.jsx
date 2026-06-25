@@ -41,6 +41,8 @@ export default function GestaoLandingPage() {
   const [faixa, setFaixa] = useState(FAIXA_VAZIA);
   const [banners, setBanners] = useState([]);
   const [modal, setModal] = useState({ open: false, item: null });
+  const [faixaModal, setFaixaModal] = useState(false);
+  const [formFaixa, setFormFaixa] = useState(FAIXA_VAZIA);
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState(BANNER_VAZIO);
   const [gifFile, setGifFile] = useState(null);
@@ -73,19 +75,27 @@ export default function GestaoLandingPage() {
     setGifFile(null);
   }, [modal]);
 
+  useEffect(() => {
+    if (faixaModal) {
+      setFormFaixa({ ...faixa });
+      setErro("");
+    }
+  }, [faixaModal, faixa]);
+
   const salvarFaixa = async (e) => {
     e.preventDefault();
     setErro("");
     setMsg("");
     try {
       const payload = {
-        ...faixa,
-        data_fim_countdown: faixa.data_fim_countdown
-          ? new Date(faixa.data_fim_countdown).toISOString()
+        ...formFaixa,
+        data_fim_countdown: formFaixa.data_fim_countdown
+          ? new Date(formFaixa.data_fim_countdown).toISOString()
           : null,
       };
       await gestaoApi.atualizarFaixaLanding(payload);
       setMsg("Faixa salva.");
+      setFaixaModal(false);
       carregarFaixa();
     } catch (err) {
       setErro(err.message);
@@ -142,60 +152,34 @@ export default function GestaoLandingPage() {
       {msg && <div className="modal-alert" style={{ background: "#dcfce7", color: "#166534", marginBottom: "1rem" }}>{msg}</div>}
 
       {aba === "faixa" && (
-        <form className="gestao-form" onSubmit={salvarFaixa} style={{ maxWidth: 560 }}>
-          <label className="gestao-field">
-            Mensagem
-            <input
-              value={faixa.mensagem}
-              onChange={(e) => setFaixa({ ...faixa, mensagem: e.target.value })}
-              required
-              placeholder="Ex.: Novos treinamentos disponíveis!"
-            />
-          </label>
-          <label className="gestao-field">
-            Texto do botão
-            <input
-              value={faixa.texto_botao}
-              onChange={(e) => setFaixa({ ...faixa, texto_botao: e.target.value })}
-              placeholder="Ver planos"
-            />
-          </label>
-          <label className="gestao-field">
-            Link do botão
-            <input
-              value={faixa.url_botao}
-              onChange={(e) => setFaixa({ ...faixa, url_botao: e.target.value })}
-              placeholder="#planos ou https://..."
-            />
-          </label>
-          <label className="gestao-checkbox">
-            <input
-              type="checkbox"
-              checked={faixa.exibir_countdown}
-              onChange={(e) => setFaixa({ ...faixa, exibir_countdown: e.target.checked })}
-            />
-            Exibir contador regressivo
-          </label>
-          {faixa.exibir_countdown && (
-            <label className="gestao-field">
-              Data/hora fim do contador
-              <input
-                type="datetime-local"
-                value={faixa.data_fim_countdown}
-                onChange={(e) => setFaixa({ ...faixa, data_fim_countdown: e.target.value })}
-              />
-            </label>
-          )}
-          <label className="gestao-checkbox">
-            <input
-              type="checkbox"
-              checked={faixa.ativo}
-              onChange={(e) => setFaixa({ ...faixa, ativo: e.target.checked })}
-            />
-            Faixa ativa na landing
-          </label>
-          <button type="submit" className="btn btn-primary btn-sm">Salvar faixa</button>
-        </form>
+        <>
+          <div className="gestao-page-header" style={{ marginTop: 0 }}>
+            <p className="gestao-muted">Faixa promocional no topo da landing pública</p>
+            <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setFaixaModal(true)}>
+              <GestaoIcon name="editar" />
+              Editar faixa
+            </button>
+          </div>
+
+          <div className="gestao-form-card" style={{ maxWidth: 560 }}>
+            <p className="gestao-muted" style={{ margin: "0 0 0.5rem" }}>Mensagem</p>
+            <p style={{ margin: "0 0 1rem" }}>{faixa.mensagem || "—"}</p>
+            <p className="gestao-muted" style={{ margin: "0 0 0.5rem" }}>Botão</p>
+            <p style={{ margin: "0 0 1rem" }}>
+              {faixa.texto_botao || "—"}
+              {faixa.url_botao ? ` → ${faixa.url_botao}` : ""}
+            </p>
+            <p className="gestao-muted" style={{ margin: "0 0 0.5rem" }}>Status</p>
+            <p style={{ margin: 0 }}>
+              <StatusBadge status={faixa.ativo ? "ativo" : "inativo"} />
+              {faixa.exibir_countdown && faixa.data_fim_countdown && (
+                <span className="gestao-muted" style={{ marginLeft: "0.75rem" }}>
+                  Countdown até {new Date(faixa.data_fim_countdown).toLocaleString("pt-BR")}
+                </span>
+              )}
+            </p>
+          </div>
+        </>
       )}
 
       {aba === "banners" && (
@@ -272,6 +256,73 @@ export default function GestaoLandingPage() {
           </GestaoDataTable>
         </>
       )}
+
+      <Modal
+        open={faixaModal}
+        onClose={() => setFaixaModal(false)}
+        title="Editar faixa promocional"
+        wide
+        footer={(
+          <>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setFaixaModal(false)}>Cancelar</button>
+            <button type="submit" form="form-faixa" className="btn btn-primary btn-sm">Salvar faixa</button>
+          </>
+        )}
+      >
+        <form id="form-faixa" className="gestao-form gestao-form--modal" onSubmit={salvarFaixa}>
+          <label className="gestao-field">
+            Mensagem
+            <input
+              value={formFaixa.mensagem}
+              onChange={(e) => setFormFaixa({ ...formFaixa, mensagem: e.target.value })}
+              required
+              placeholder="Ex.: Novos treinamentos disponíveis!"
+            />
+          </label>
+          <label className="gestao-field">
+            Texto do botão
+            <input
+              value={formFaixa.texto_botao}
+              onChange={(e) => setFormFaixa({ ...formFaixa, texto_botao: e.target.value })}
+              placeholder="Ver planos"
+            />
+          </label>
+          <label className="gestao-field">
+            Link do botão
+            <input
+              value={formFaixa.url_botao}
+              onChange={(e) => setFormFaixa({ ...formFaixa, url_botao: e.target.value })}
+              placeholder="#planos ou https://..."
+            />
+          </label>
+          <label className="gestao-checkbox">
+            <input
+              type="checkbox"
+              checked={formFaixa.exibir_countdown}
+              onChange={(e) => setFormFaixa({ ...formFaixa, exibir_countdown: e.target.checked })}
+            />
+            Exibir contador regressivo
+          </label>
+          {formFaixa.exibir_countdown && (
+            <label className="gestao-field">
+              Data/hora fim do contador
+              <input
+                type="datetime-local"
+                value={formFaixa.data_fim_countdown}
+                onChange={(e) => setFormFaixa({ ...formFaixa, data_fim_countdown: e.target.value })}
+              />
+            </label>
+          )}
+          <label className="gestao-checkbox">
+            <input
+              type="checkbox"
+              checked={formFaixa.ativo}
+              onChange={(e) => setFormFaixa({ ...formFaixa, ativo: e.target.checked })}
+            />
+            Faixa ativa na landing
+          </label>
+        </form>
+      </Modal>
 
       <Modal
         open={modal.open}
