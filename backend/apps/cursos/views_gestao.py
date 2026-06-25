@@ -43,6 +43,8 @@ from .serializers_gestao import (
     TrilhaGestaoSerializer,
     TrilhaGestaoWriteSerializer,
     UsuarioEquipeSerializer,
+    UsuarioEquipeCreateSerializer,
+    UsuarioEquipeUpdateSerializer,
 )
 from .services import curso_pronto_publicar, recalcular_curso
 
@@ -74,16 +76,56 @@ class GestaoSetoresView(generics.ListAPIView):
     serializer_class = SetorSerializer
 
 
-class GestaoUsuariosView(generics.ListAPIView):
+class GestaoUsuariosView(generics.ListCreateAPIView):
     permission_classes = [IsSuperuserGestao]
-    serializer_class = UsuarioEquipeSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return UsuarioEquipeCreateSerializer
+        return UsuarioEquipeSerializer
 
     def get_queryset(self):
-        qs = User.objects.filter(is_active=True).select_related("profile").order_by("first_name")
+        qs = User.objects.filter(is_active=True).select_related("profile", "profile__setor").order_by("first_name")
         q = self.request.query_params.get("q", "").strip()
         if q:
             qs = qs.filter(Q(first_name__icontains=q) | Q(email__icontains=q))
         return qs
+
+    def create(self, request, *args, **kwargs):
+        serializer = UsuarioEquipeCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(UsuarioEquipeSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class GestaoUsuarioDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsSuperuserGestao]
+    lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return User.objects.filter(is_active=True).select_related("profile", "profile__setor")
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return UsuarioEquipeUpdateSerializer
+        return UsuarioEquipeSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = UsuarioEquipeUpdateSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(UsuarioEquipeSerializer(user).data)
+
+    def perform_destroy(self, instance):
+        if instance.is_superuser:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Não é possível inativar superuser.")
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+        if hasattr(instance, "profile"):
+            instance.profile.is_membro_equipe = False
+            instance.profile.save(update_fields=["is_membro_equipe"])
 
 
 class GestaoUsuarioEquipeView(APIView):

@@ -114,7 +114,7 @@ const pageIds = paginados.map((item) => item.id);
 | Página | "Deletar" significa |
 |--------|---------------------|
 | **Tokens** | Cancelar/inativar (`ativo: false`) — não há DELETE |
-| **Equipe** | Remover da equipe (`toggleEquipe(id, false)`) — não exclui usuário |
+| **Equipe** | Inativar conta (`is_active: false`) — não exclui registro do banco |
 | **Modais read-only** (usos de token) | Sem CRUD — somente leitura |
 | **Editores aninhados** (curso editor) | CRUD interno de módulos/aulas — padrão próprio |
 

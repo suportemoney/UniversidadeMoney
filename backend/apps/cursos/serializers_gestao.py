@@ -2,6 +2,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
+from apps.accounts.models import Profile
 from .models import (
     Atividade,
     AulaVideo,
@@ -171,10 +172,15 @@ class UsuarioEquipeSerializer(serializers.ModelSerializer):
     cpf = serializers.SerializerMethodField()
     is_membro_equipe = serializers.SerializerMethodField()
     cargo = serializers.SerializerMethodField()
+    setor = serializers.SerializerMethodField()
+    setor_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "cpf", "cargo", "is_membro_equipe", "is_superuser"]
+        fields = [
+            "id", "email", "first_name", "cpf", "cargo", "setor", "setor_nome",
+            "is_membro_equipe", "is_superuser",
+        ]
 
     def get_cpf(self, obj):
         return getattr(getattr(obj, "profile", None), "cpf", None)
@@ -184,6 +190,102 @@ class UsuarioEquipeSerializer(serializers.ModelSerializer):
 
     def get_cargo(self, obj):
         return getattr(getattr(obj, "profile", None), "cargo", "Colaborador")
+
+    def get_setor(self, obj):
+        profile = getattr(obj, "profile", None)
+        return profile.setor_id if profile and profile.setor_id else None
+
+    def get_setor_nome(self, obj):
+        profile = getattr(obj, "profile", None)
+        return profile.setor.nome if profile and profile.setor else None
+
+
+class UsuarioEquipeCreateSerializer(serializers.Serializer):
+    nome = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+    cpf = serializers.CharField(max_length=14)
+    password = serializers.CharField(min_length=8, write_only=True)
+    cargo = serializers.CharField(max_length=100, required=False, default="Colaborador")
+    setor = serializers.IntegerField(required=False, allow_null=True)
+    is_membro_equipe = serializers.BooleanField(default=True)
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if User.objects.filter(username=email).exists():
+            raise serializers.ValidationError("Este e-mail já está cadastrado.")
+        return email
+
+    def validate_cpf(self, value):
+        from apps.accounts.validators import cpf_valido, normalizar_cpf
+
+        cpf = normalizar_cpf(value)
+        if not cpf_valido(cpf):
+            raise serializers.ValidationError("CPF inválido.")
+        if Profile.objects.filter(cpf=cpf).exists():
+            raise serializers.ValidationError("Este CPF já está cadastrado.")
+        return cpf
+
+    def validate_setor(self, value):
+        if value is None:
+            return None
+        if not Setor.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("Setor inválido.")
+        return value
+
+    def create(self, validated_data):
+        email = validated_data["email"].strip().lower()
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=validated_data["password"],
+            first_name=validated_data["nome"].strip(),
+        )
+        Profile.objects.create(
+            user=user,
+            cpf=validated_data["cpf"],
+            cargo=validated_data.get("cargo") or "Colaborador",
+            setor_id=validated_data.get("setor"),
+            is_membro_equipe=validated_data.get("is_membro_equipe", True),
+        )
+        return User.objects.select_related("profile", "profile__setor").get(pk=user.pk)
+
+
+class UsuarioEquipeUpdateSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=150, required=False)
+    cargo = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    setor = serializers.IntegerField(required=False, allow_null=True)
+    is_membro_equipe = serializers.BooleanField(required=False)
+
+    def validate_setor(self, value):
+        if value is None:
+            return None
+        if not Setor.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("Setor inválido.")
+        return value
+
+    def update(self, instance, validated_data):
+        if instance.is_superuser:
+            raise serializers.ValidationError("Não é possível alterar superuser.")
+
+        if "first_name" in validated_data:
+            instance.first_name = validated_data["first_name"].strip()
+            instance.save(update_fields=["first_name"])
+
+        profile = instance.profile
+        campos = []
+        if "cargo" in validated_data:
+            profile.cargo = validated_data["cargo"] or "Colaborador"
+            campos.append("cargo")
+        if "setor" in validated_data:
+            profile.setor_id = validated_data["setor"]
+            campos.append("setor")
+        if "is_membro_equipe" in validated_data:
+            profile.is_membro_equipe = validated_data["is_membro_equipe"]
+            campos.append("is_membro_equipe")
+        if campos:
+            profile.save(update_fields=campos)
+
+        return User.objects.select_related("profile", "profile__setor").get(pk=instance.pk)
 
 
 class ComunicadoSerializer(serializers.ModelSerializer):

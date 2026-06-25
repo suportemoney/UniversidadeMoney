@@ -7,6 +7,11 @@ urlpatterns = [
     path("gestao/setores/", views_gestao.GestaoSetoresView.as_view(), name="gestao-setores"),
     path("gestao/usuarios/", views_gestao.GestaoUsuariosView.as_view(), name="gestao-usuarios"),
     path(
+        "gestao/usuarios/<int:user_id>/",
+        views_gestao.GestaoUsuarioDetailView.as_view(),
+        name="gestao-usuario-detail",
+    ),
+    path(
         "gestao/usuarios/<int:user_id>/equipe/",
         views_gestao.GestaoUsuarioEquipeView.as_view(),
         name="gestao-usuario-equipe",

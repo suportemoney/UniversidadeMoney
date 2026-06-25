@@ -33,6 +33,12 @@ export const gestaoApi = {
   resumo: () => gestaoFetch("/gestao/resumo/"),
   setores: () => gestaoFetch("/gestao/setores/"),
   usuarios: (q) => gestaoFetch(`/gestao/usuarios/${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  criarUsuarioEquipe: (data) =>
+    gestaoFetch("/gestao/usuarios/", { method: "POST", body: JSON.stringify(data) }),
+  atualizarUsuarioEquipe: (userId, data) =>
+    gestaoFetch(`/gestao/usuarios/${userId}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  inativarUsuarioEquipe: (userId) =>
+    gestaoFetch(`/gestao/usuarios/${userId}/`, { method: "DELETE" }),
   toggleEquipe: (userId, isMembro) =>
     gestaoFetch(`/gestao/usuarios/${userId}/equipe/`, {
       method: "PATCH",
