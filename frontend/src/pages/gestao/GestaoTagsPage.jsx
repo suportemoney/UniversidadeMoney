@@ -1,18 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
+import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import StatusBadge from "../../components/gestao/StatusBadge";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const FORM_VAZIO = { nome: "", slug: "", ativo: true };
 
 export default function GestaoTagsPage() {
   const [itens, setItens] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState(FORM_VAZIO);
   const [erro, setErro] = useState("");
 
-  const carregar = () => gestaoApi.listarTags().then(setItens);
+  const carregar = () => {
+    setLoading(true);
+    return gestaoApi.listarTags().then(setItens).finally(() => setLoading(false));
+  };
 
   useEffect(() => { carregar(); }, []);
 
@@ -24,6 +36,12 @@ export default function GestaoTagsPage() {
     }
     setErro("");
   }, [modal]);
+
+  const {
+    busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
+  } = usePaginatedList(itens, { searchKeys: ["nome", "slug"], pageSize: 8 });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
 
   const salvar = async (e) => {
     e.preventDefault();
@@ -45,39 +63,44 @@ export default function GestaoTagsPage() {
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Tags de curso</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setModal({ open: true, item: null })}>
+      <GestaoPageHeader
+        icon="tags"
+        title="Tags de curso"
+        subtitle="Tags categorizam cursos e definem quais conteúdos cada plano pode exibir"
+      >
+        <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setModal({ open: true, item: null })}>
+          <GestaoIcon name="mais" />
           Nova tag
         </button>
-      </div>
-      <p className="gestao-muted">
-        Tags categorizam cursos e definem quais conteúdos cada plano pode exibir ao aluno.
-      </p>
+      </GestaoPageHeader>
 
-      <table className="gestao-table">
+      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar tags..." />
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhuma tag cadastrada"
+        skeletonCols={4}
+        footer={!vazio && !loading ? (
+          <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
+        ) : null}
+      >
         <thead>
-          <tr><th>Nome</th><th>Slug</th><th>Status</th><th></th></tr>
+          <tr><th>Tag</th><th>Slug</th><th>Status</th><th>Ações</th></tr>
         </thead>
         <tbody>
-          {itens.map((t) => (
-            <tr key={t.id}>
-              <td>{t.nome}</td>
+          {paginados.map((t, i) => (
+            <GestaoTableRow key={t.id} index={i}>
+              <td><GestaoCellCurso titulo={t.nome} /></td>
               <td><code>{t.slug}</code></td>
-              <td>{t.ativo ? "Ativa" : "Inativa"}</td>
+              <td><StatusBadge status={t.ativo ? "ativo" : "inativo"} /></td>
               <td>
-                <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: t })}>
-                  Editar
-                </button>
-                {" · "}
-                <button type="button" className="btn-link" onClick={() => setExcluir(t)}>
-                  Excluir
-                </button>
+                <GestaoTableActions onEdit={() => setModal({ open: true, item: t })} onDelete={() => setExcluir(t)} />
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
 
       <Modal
         open={modal.open}
@@ -94,28 +117,14 @@ export default function GestaoTagsPage() {
         <form id="form-tag" className="gestao-form gestao-form--modal" onSubmit={salvar}>
           <label className="gestao-field">
             Nome
-            <input
-              value={form.nome}
-              onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              required
-              placeholder="Ex.: Vendas"
-            />
+            <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required placeholder="Ex.: Vendas" />
           </label>
           <label className="gestao-field">
             Slug
-            <input
-              value={form.slug}
-              onChange={(e) => setForm({ ...form, slug: e.target.value })}
-              required
-              placeholder="vendas"
-            />
+            <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required placeholder="vendas" />
           </label>
           <label className="gestao-checkbox">
-            <input
-              type="checkbox"
-              checked={form.ativo}
-              onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
-            />
+            <input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} />
             Tag ativa
           </label>
         </form>
@@ -126,7 +135,7 @@ export default function GestaoTagsPage() {
         onClose={() => setExcluir(null)}
         onConfirm={async () => { await gestaoApi.excluirTag(excluir.id); carregar(); }}
         title="Excluir tag"
-        message={`Excluir a tag "${excluir?.nome}"? Planos e cursos vinculados perderão essa associação.`}
+        message={`Excluir a tag "${excluir?.nome}"?`}
         confirmLabel="Excluir"
         danger
       />

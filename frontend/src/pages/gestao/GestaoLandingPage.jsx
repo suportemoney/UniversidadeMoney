@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoFilterTabs from "../../components/gestao/GestaoFilterTabs";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const FAIXA_VAZIA = {
@@ -106,26 +108,20 @@ export default function GestaoLandingPage() {
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Landing page</h1>
-      </div>
+      <GestaoPageHeader
+        icon="landing"
+        title="Landing page"
+        subtitle="Configure a faixa promocional e os banners da página pública"
+      />
 
-      <div className="gestao-tabs" style={{ marginBottom: "1.25rem", display: "flex", gap: "0.5rem" }}>
-        <button
-          type="button"
-          className={`btn btn-sm ${aba === "faixa" ? "btn-primary" : "btn-outline"}`}
-          onClick={() => setAba("faixa")}
-        >
-          Faixa promocional
-        </button>
-        <button
-          type="button"
-          className={`btn btn-sm ${aba === "banners" ? "btn-primary" : "btn-outline"}`}
-          onClick={() => setAba("banners")}
-        >
-          Banners GIF
-        </button>
-      </div>
+      <GestaoFilterTabs
+        options={[
+          { value: "faixa", label: "Faixa promocional" },
+          { value: "banners", label: "Banners GIF" },
+        ]}
+        value={aba}
+        onChange={setAba}
+      />
 
       {erro && <div className="modal-alert modal-alert--error">{erro}</div>}
       {msg && <div className="modal-alert" style={{ background: "#dcfce7", color: "#166534", marginBottom: "1rem" }}>{msg}</div>}

@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import NotificationPanel from "./dashboard/NotificationPanel";
 import SearchOverlay from "./dashboard/SearchOverlay";
 import { getComunicadosNaoLidos, getMe, logout } from "../services/api";
+import Logo from "./Logo";
 import "../styles/dashboard.css";
 
 const MENU = [
@@ -65,7 +66,7 @@ export default function DashboardLayout() {
   return (
     <div className="dash">
       <aside className="dash-sidebar">
-        <div className="dash-sidebar-brand">Universidade Money</div>
+        <Logo variant="sidebar" linkTo="/dashboard" className="dash-sidebar-brand" />
         <nav className="dash-nav">
           {MENU.filter((item) => itemMenuVisivel(item, user)).map((item) => (
             <NavLink

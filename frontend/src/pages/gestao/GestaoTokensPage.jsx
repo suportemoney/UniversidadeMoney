@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
+import GestaoDataTable, { GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import StatusBadge from "../../components/gestao/StatusBadge";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const FORM_VAZIO = {
@@ -14,6 +21,7 @@ const FORM_VAZIO = {
 export default function GestaoTokensPage() {
   const [tokens, setTokens] = useState([]);
   const [planos, setPlanos] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [usosModal, setUsosModal] = useState(null);
   const [usos, setUsos] = useState([]);
@@ -21,7 +29,10 @@ export default function GestaoTokensPage() {
   const [erro, setErro] = useState("");
   const [chaveCriada, setChaveCriada] = useState("");
 
-  const carregar = () => gestaoApi.listarTokens().then(setTokens);
+  const carregar = () => {
+    setLoading(true);
+    return gestaoApi.listarTokens().then(setTokens).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     carregar();
@@ -30,14 +41,17 @@ export default function GestaoTokensPage() {
 
   useEffect(() => {
     if (modal) {
-      setForm({
-        ...FORM_VAZIO,
-        plano: planos[0]?.id || "",
-      });
+      setForm({ ...FORM_VAZIO, plano: planos[0]?.id || "" });
       setErro("");
       setChaveCriada("");
     }
   }, [modal, planos]);
+
+  const {
+    busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
+  } = usePaginatedList(tokens, { searchKeys: ["chave", "plano_titulo"], pageSize: 8 });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
 
   const criar = async (e) => {
     e.preventDefault();
@@ -80,14 +94,24 @@ export default function GestaoTokensPage() {
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Tokens de plano</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setModal(true)}>
+      <GestaoPageHeader icon="tokens" title="Tokens de plano" subtitle="Gere chaves de ativação para novos alunos">
+        <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setModal(true)}>
+          <GestaoIcon name="mais" />
           Gerar token
         </button>
-      </div>
+      </GestaoPageHeader>
 
-      <table className="gestao-table">
+      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar tokens..." />
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhum token gerado"
+        skeletonCols={6}
+        footer={!vazio && !loading ? (
+          <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
+        ) : null}
+      >
         <thead>
           <tr>
             <th>Chave</th>
@@ -95,17 +119,15 @@ export default function GestaoTokensPage() {
             <th>Usos</th>
             <th>Expiração</th>
             <th>Status</th>
-            <th></th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
-          {tokens.map((t) => (
-            <tr key={t.id}>
+          {paginados.map((t, i) => (
+            <GestaoTableRow key={t.id} index={i}>
               <td>
                 <code>{t.chave}</code>{" "}
-                <button type="button" className="btn-link" onClick={() => copiarChave(t.chave)}>
-                  Copiar
-                </button>
+                <button type="button" className="btn-link" onClick={() => copiarChave(t.chave)}>Copiar</button>
               </td>
               <td>{t.plano_titulo}</td>
               <td>{t.usos_realizados} / {t.max_usos}</td>
@@ -114,7 +136,7 @@ export default function GestaoTokensPage() {
                   ? `Até ${t.data_fim ? new Date(t.data_fim).toLocaleDateString("pt-BR") : "—"}`
                   : `${t.duracao_dias || "—"} dias após resgate`}
               </td>
-              <td>{t.ativo ? "Ativo" : "Inativo"}</td>
+              <td><StatusBadge status={t.ativo ? "ativo" : "inativo"} /></td>
               <td>
                 <button type="button" className="btn-link" onClick={() => verUsos(t)}>Usos</button>
                 {" · "}
@@ -122,10 +144,10 @@ export default function GestaoTokensPage() {
                   {t.ativo ? "Desativar" : "Ativar"}
                 </button>
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
 
       <Modal
         open={modal}
@@ -133,17 +155,11 @@ export default function GestaoTokensPage() {
         title="Gerar token"
         wide
         footer={chaveCriada ? (
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => setModal(false)}>
-            Fechar
-          </button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => setModal(false)}>Fechar</button>
         ) : (
           <>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => setModal(false)}>
-              Cancelar
-            </button>
-            <button type="submit" form="form-token" className="btn btn-primary btn-sm">
-              Gerar token
-            </button>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setModal(false)}>Cancelar</button>
+            <button type="submit" form="form-token" className="btn btn-primary btn-sm">Gerar token</button>
           </>
         )}
       >
@@ -152,9 +168,7 @@ export default function GestaoTokensPage() {
             <div className="modal-success-icon" aria-hidden="true">✓</div>
             <p>Token criado com sucesso. Copie e envie ao aluno:</p>
             <code className="modal-token-chave">{chaveCriada}</code>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => copiarChave(chaveCriada)}>
-              Copiar chave
-            </button>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => copiarChave(chaveCriada)}>Copiar chave</button>
           </div>
         ) : (
           <>
@@ -162,33 +176,18 @@ export default function GestaoTokensPage() {
             <form id="form-token" className="gestao-form gestao-form--modal" onSubmit={criar}>
               <label className="gestao-field">
                 Plano
-                <select
-                  value={form.plano}
-                  onChange={(e) => setForm({ ...form, plano: e.target.value })}
-                  required
-                >
-                  {planos.map((p) => (
-                    <option key={p.id} value={p.id}>{p.titulo}</option>
-                  ))}
+                <select value={form.plano} onChange={(e) => setForm({ ...form, plano: e.target.value })} required>
+                  {planos.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
                 </select>
               </label>
               <div className="gestao-form-row gestao-form-row--2">
                 <label className="gestao-field">
                   Máximo de usos
-                  <input
-                    type="number"
-                    min={1}
-                    value={form.max_usos}
-                    onChange={(e) => setForm({ ...form, max_usos: e.target.value })}
-                    required
-                  />
+                  <input type="number" min={1} value={form.max_usos} onChange={(e) => setForm({ ...form, max_usos: e.target.value })} required />
                 </label>
                 <label className="gestao-field">
                   Tipo de expiração
-                  <select
-                    value={form.tipo_expiracao}
-                    onChange={(e) => setForm({ ...form, tipo_expiracao: e.target.value })}
-                  >
+                  <select value={form.tipo_expiracao} onChange={(e) => setForm({ ...form, tipo_expiracao: e.target.value })}>
                     <option value="duracao">Duração após resgate</option>
                     <option value="data_fixa">Data fixa de fim</option>
                   </select>
@@ -197,32 +196,17 @@ export default function GestaoTokensPage() {
               {form.tipo_expiracao === "duracao" ? (
                 <label className="gestao-field">
                   Duração (dias)
-                  <input
-                    type="number"
-                    min={1}
-                    value={form.duracao_dias}
-                    onChange={(e) => setForm({ ...form, duracao_dias: e.target.value })}
-                    required
-                  />
+                  <input type="number" min={1} value={form.duracao_dias} onChange={(e) => setForm({ ...form, duracao_dias: e.target.value })} required />
                 </label>
               ) : (
                 <label className="gestao-field">
                   Data fim do benefício
-                  <input
-                    type="date"
-                    value={form.data_fim}
-                    onChange={(e) => setForm({ ...form, data_fim: e.target.value })}
-                    required
-                  />
+                  <input type="date" value={form.data_fim} onChange={(e) => setForm({ ...form, data_fim: e.target.value })} required />
                 </label>
               )}
               <label className="gestao-field">
                 Válido para resgate até (opcional)
-                <input
-                  type="date"
-                  value={form.valido_ate_resgate}
-                  onChange={(e) => setForm({ ...form, valido_ate_resgate: e.target.value })}
-                />
+                <input type="date" value={form.valido_ate_resgate} onChange={(e) => setForm({ ...form, valido_ate_resgate: e.target.value })} />
               </label>
             </form>
           </>
@@ -238,7 +222,7 @@ export default function GestaoTokensPage() {
         {usos.length === 0 ? (
           <p>Nenhum resgate registrado.</p>
         ) : (
-          <table className="gestao-table">
+          <table className="gestao-table gestao-table--v2">
             <thead>
               <tr><th>Usuário</th><th>E-mail</th><th>Ativado em</th><th>Expira em</th></tr>
             </thead>

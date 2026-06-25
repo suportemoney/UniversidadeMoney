@@ -1,18 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoSearchInput from "../../components/gestao/GestaoSearchInput";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 export default function GestaoEquipePage() {
   const [usuarios, setUsuarios] = useState([]);
   const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
 
-  const carregar = () => {
-    gestaoApi.usuarios(q).then(setUsuarios).catch((e) => setErro(e.message));
+  const carregar = (termo = q) => {
+    setLoading(true);
+    return gestaoApi.usuarios(termo)
+      .then(setUsuarios)
+      .catch((e) => setErro(e.message))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    carregar();
+    carregar("");
   }, []);
+
+  const {
+    busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
+  } = usePaginatedList(usuarios, { searchKeys: ["first_name", "email", "cargo"], pageSize: 10 });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
 
   const toggle = async (user) => {
     try {
@@ -23,35 +39,53 @@ export default function GestaoEquipePage() {
     }
   };
 
+  const buscarApi = () => {
+    setQ(busca);
+    carregar(busca);
+  };
+
   return (
     <div>
-      <h1>Equipe de gestão</h1>
-      <p className="gestao-muted">Promova contas cadastradas para criar e editar conteúdo.</p>
-      {erro && <div className="alert alert-error">{erro}</div>}
-      <div className="gestao-search-row">
-        <input
-          type="search"
+      <GestaoPageHeader
+        icon="equipe"
+        title="Equipe de gestão"
+        subtitle="Promova contas cadastradas para criar e editar conteúdo"
+      />
+
+      {erro && <div className="modal-alert modal-alert--error">{erro}</div>}
+
+      <div className="gestao-toolbar gestao-animate-in gestao-animate-in--delay-1">
+        <GestaoSearchInput
+          value={busca}
+          onChange={setBusca}
           placeholder="Buscar por nome ou e-mail..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
         />
-        <button type="button" className="btn btn-outline btn-sm" onClick={carregar}>Buscar</button>
+        <button type="button" className="btn btn-primary btn-sm" onClick={buscarApi}>Buscar</button>
       </div>
-      <table className="gestao-table">
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhum usuário encontrado"
+        skeletonCols={4}
+        footer={!vazio && !loading ? (
+          <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
+        ) : null}
+      >
         <thead>
           <tr>
-            <th>Nome</th>
+            <th>Colaborador</th>
             <th>E-mail</th>
             <th>Cargo</th>
-            <th>Membro da equipe</th>
+            <th>Equipe</th>
           </tr>
         </thead>
         <tbody>
-          {usuarios.map((u) => (
-            <tr key={u.id}>
-              <td>{u.first_name}</td>
+          {paginados.map((u, i) => (
+            <GestaoTableRow key={u.id} index={i}>
+              <td><GestaoCellCurso titulo={u.first_name} /></td>
               <td>{u.email}</td>
-              <td>{u.cargo}</td>
+              <td>{u.cargo || "—"}</td>
               <td>
                 {u.is_superuser ? (
                   <span className="gestao-badge">Superuser</span>
@@ -65,10 +99,10 @@ export default function GestaoEquipePage() {
                   </button>
                 )}
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
     </div>
   );
 }

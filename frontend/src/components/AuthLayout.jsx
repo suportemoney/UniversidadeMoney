@@ -1,12 +1,11 @@
-import { Link, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import Logo from "./Logo";
 
 export default function AuthLayout() {
   return (
     <div className="auth-layout">
       <div className="auth-card">
-        <Link to="/" className="auth-logo">
-          UniversidadeMoney
-        </Link>
+        <Logo variant="auth" linkTo="/" />
         <Outlet />
       </div>
     </div>

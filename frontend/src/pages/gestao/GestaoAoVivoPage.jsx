@@ -1,28 +1,32 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
+import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const FORM_VAZIO = {
-  titulo: "",
-  data: "",
-  hora: "",
-  setor: "",
-  descricao: "",
-  tipo_plataforma: "meet",
-  link: "",
-  tag_ids: [],
+  titulo: "", data: "", hora: "", setor: "", descricao: "", tipo_plataforma: "meet", link: "", tag_ids: [],
 };
 
 export default function GestaoAoVivoPage() {
   const [itens, setItens] = useState([]);
   const [setores, setSetores] = useState([]);
   const [tags, setTags] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState(FORM_VAZIO);
 
-  const carregar = () => gestaoApi.listarAoVivo().then(setItens);
+  const carregar = () => {
+    setLoading(true);
+    return gestaoApi.listarAoVivo().then(setItens).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     carregar();
@@ -47,6 +51,12 @@ export default function GestaoAoVivoPage() {
       setForm(FORM_VAZIO);
     }
   }, [modal]);
+
+  const {
+    busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
+  } = usePaginatedList(itens, { searchKeys: ["titulo"], pageSize: 8 });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
 
   const salvar = async (e) => {
     e.preventDefault();
@@ -73,37 +83,51 @@ export default function GestaoAoVivoPage() {
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Treinamentos ao vivo</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setModal({ open: true, item: null })}>
+      <GestaoPageHeader
+        icon="aoVivo"
+        title="Treinamentos ao vivo"
+        subtitle="Links externos — Google Meet ou transmissão no YouTube"
+      >
+        <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setModal({ open: true, item: null })}>
+          <GestaoIcon name="mais" />
           Novo treinamento
         </button>
-      </div>
-      <p className="gestao-muted" style={{ marginBottom: "1rem" }}>
-        Por enquanto, todos os ao vivo são links externos — Google Meet ou transmissão no YouTube.
-      </p>
-      <table className="gestao-table">
+      </GestaoPageHeader>
+
+      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar treinamentos..." />
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhum treinamento ao vivo"
+        skeletonCols={6}
+        footer={!vazio && !loading ? (
+          <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
+        ) : null}
+      >
         <thead>
-          <tr><th>Título</th><th>Data</th><th>Hora</th><th>Plataforma</th><th>Setor</th><th>Tags</th><th></th></tr>
+          <tr><th>Treinamento</th><th>Data</th><th>Hora</th><th>Plataforma</th><th>Setor</th><th>Ações</th></tr>
         </thead>
         <tbody>
-          {itens.map((t) => (
-            <tr key={t.id}>
-              <td>{t.titulo}</td>
+          {paginados.map((t, i) => (
+            <GestaoTableRow key={t.id} index={i}>
+              <td>
+                <GestaoCellCurso
+                  titulo={t.titulo}
+                  descricao={t.tags?.map((tag) => tag.nome).join(", ") || "Sem tags"}
+                />
+              </td>
               <td>{new Date(t.data).toLocaleDateString("pt-BR")}</td>
               <td>{t.hora?.slice?.(0, 5) || t.hora}</td>
               <td>{labelPlataforma(t.tipo_plataforma)}</td>
               <td>{t.setor_nome || "—"}</td>
-              <td>{t.tags?.map((tag) => tag.nome).join(", ") || "—"}</td>
               <td>
-                <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: t })}>Editar</button>
-                {" · "}
-                <button type="button" className="btn-link" onClick={() => setExcluir(t)}>Excluir</button>
+                <GestaoTableActions onEdit={() => setModal({ open: true, item: t })} onDelete={() => setExcluir(t)} />
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
 
       <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })} title={modal.item ? "Editar" : "Novo treinamento"} wide>
         <form className="gestao-form gestao-form--modal" onSubmit={salvar}>
@@ -128,13 +152,7 @@ export default function GestaoAoVivoPage() {
           </div>
           <label className="gestao-field">
             Link da transmissão
-            <input
-              type="url"
-              value={form.link}
-              onChange={(e) => setForm({ ...form, link: e.target.value })}
-              placeholder={form.tipo_plataforma === "youtube" ? "https://www.youtube.com/live/..." : "https://meet.google.com/..."}
-              required
-            />
+            <input type="url" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} required />
           </label>
           <label className="gestao-field">Descrição<textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={3} /></label>
           <div className="gestao-form-section">

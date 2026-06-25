@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
+import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import StatusBadge from "../../components/gestao/StatusBadge";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const STATUS = [
@@ -10,61 +18,112 @@ const STATUS = [
   { value: "arquivado", label: "Arquivado" },
 ];
 
+const PAGE_SIZE = 8;
+
 export default function GestaoCursosPage() {
   const [cursos, setCursos] = useState([]);
   const [filtro, setFiltro] = useState("");
+  const [loading, setLoading] = useState(true);
   const [excluir, setExcluir] = useState(null);
 
-  const carregar = () => gestaoApi.listarCursos(filtro || undefined).then(setCursos);
+  const carregar = () => {
+    setLoading(true);
+    return gestaoApi.listarCursos(filtro || undefined)
+      .then(setCursos)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     carregar();
   }, [filtro]);
 
+  const {
+    busca,
+    setBusca,
+    page,
+    setPage,
+    paginados,
+    totalPages,
+    totalItems,
+    pageSize,
+  } = usePaginatedList(cursos, { searchKeys: ["titulo", "descricao"], pageSize: PAGE_SIZE });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Cursos</h1>
-        <Link to="/gestao/cursos/novo" className="btn btn-primary">Novo curso</Link>
-      </div>
-      <div className="gestao-filters">
-        {STATUS.map((s) => (
-          <button
-            key={s.value}
-            type="button"
-            className={`btn btn-sm ${filtro === s.value ? "btn-primary" : "btn-outline"}`}
-            onClick={() => setFiltro(s.value)}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-      <table className="gestao-table">
+      <GestaoPageHeader
+        icon="cursos"
+        title="Cursos"
+        subtitle="Gerencie e organize os cursos da plataforma"
+      >
+        <Link to="/gestao/cursos/novo" className="btn btn-primary gestao-btn-cta">
+          <GestaoIcon name="mais" />
+          Novo curso
+        </Link>
+      </GestaoPageHeader>
+
+      <GestaoToolbar
+        filterOptions={STATUS}
+        filterValue={filtro}
+        onFilterChange={(v) => { setFiltro(v); setPage(1); }}
+        searchValue={busca}
+        onSearchChange={setBusca}
+        searchPlaceholder="Buscar cursos..."
+      />
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhum curso encontrado"
+        emptyMessage="Crie um novo curso ou ajuste os filtros de busca."
+        emptyAction={(
+          <Link to="/gestao/cursos/novo" className="btn btn-primary btn-sm">
+            Criar primeiro curso
+          </Link>
+        )}
+        skeletonCols={5}
+        footer={!vazio && !loading ? (
+          <GestaoPagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+        ) : null}
+      >
         <thead>
           <tr>
-            <th>Título</th>
+            <th>Curso</th>
             <th>Status</th>
             <th>Setor</th>
             <th>Módulos</th>
-            <th></th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
-          {cursos.map((c) => (
-            <tr key={c.id}>
-              <td>{c.titulo}</td>
-              <td><span className={`gestao-status gestao-status--${c.status}`}>{c.status}</span></td>
+          {paginados.map((c, i) => (
+            <GestaoTableRow key={c.id} index={i}>
+              <td>
+                <GestaoCellCurso
+                  titulo={c.titulo}
+                  descricao={c.descricao || "Sem descrição"}
+                />
+              </td>
+              <td><StatusBadge status={c.status} /></td>
               <td>{c.setor_nome || "—"}</td>
               <td>{c.total_modulos}</td>
               <td>
-                <Link to={`/gestao/cursos/${c.id}`}>Editar</Link>
-                {" · "}
-                <button type="button" className="btn-link" onClick={() => setExcluir(c)}>Excluir</button>
+                <GestaoTableActions
+                  editTo={`/gestao/cursos/${c.id}`}
+                  onDelete={() => setExcluir(c)}
+                />
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
 
       <ConfirmDialog
         open={!!excluir}

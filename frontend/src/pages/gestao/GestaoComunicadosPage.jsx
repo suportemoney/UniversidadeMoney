@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
+import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import StatusBadge from "../../components/gestao/StatusBadge";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const TIPOS = [
@@ -11,11 +19,15 @@ const TIPOS = [
 
 export default function GestaoComunicadosPage() {
   const [itens, setItens] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState({ titulo: "", conteudo: "", tipo: "info" });
 
-  const carregar = () => gestaoApi.listarComunicados().then(setItens);
+  const carregar = () => {
+    setLoading(true);
+    return gestaoApi.listarComunicados().then(setItens).finally(() => setLoading(false));
+  };
 
   useEffect(() => { carregar(); }, []);
 
@@ -26,6 +38,12 @@ export default function GestaoComunicadosPage() {
       setForm({ titulo: "", conteudo: "", tipo: "info" });
     }
   }, [modal]);
+
+  const {
+    busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
+  } = usePaginatedList(itens, { searchKeys: ["titulo"], pageSize: 8 });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
 
   const salvar = async (e) => {
     e.preventDefault();
@@ -40,31 +58,40 @@ export default function GestaoComunicadosPage() {
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Comunicados</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setModal({ open: true, item: null })}>
+      <GestaoPageHeader icon="comunicados" title="Comunicados" subtitle="Envie avisos e novidades para os colaboradores">
+        <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setModal({ open: true, item: null })}>
+          <GestaoIcon name="mais" />
           Novo comunicado
         </button>
-      </div>
-      <table className="gestao-table">
+      </GestaoPageHeader>
+
+      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar comunicados..." />
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhum comunicado"
+        skeletonCols={4}
+        footer={!vazio && !loading ? (
+          <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
+        ) : null}
+      >
         <thead>
-          <tr><th>Título</th><th>Tipo</th><th>Data</th><th></th></tr>
+          <tr><th>Comunicado</th><th>Tipo</th><th>Data</th><th>Ações</th></tr>
         </thead>
         <tbody>
-          {itens.map((c) => (
-            <tr key={c.id}>
-              <td>{c.titulo}</td>
-              <td>{c.tipo}</td>
+          {paginados.map((c, i) => (
+            <GestaoTableRow key={c.id} index={i}>
+              <td><GestaoCellCurso titulo={c.titulo} descricao={c.conteudo?.slice(0, 80)} /></td>
+              <td><StatusBadge status={c.tipo} /></td>
               <td>{new Date(c.criado_em).toLocaleDateString("pt-BR")}</td>
               <td>
-                <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: c })}>Editar</button>
-                {" · "}
-                <button type="button" className="btn-link" onClick={() => setExcluir(c)}>Excluir</button>
+                <GestaoTableActions onEdit={() => setModal({ open: true, item: c })} onDelete={() => setExcluir(c)} />
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
 
       <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })} title={modal.item ? "Editar" : "Novo comunicado"}>
         <form className="gestao-form" onSubmit={salvar}>

@@ -34,10 +34,10 @@
 }
 
 .dash-sidebar-brand {
-  padding: 1.25rem 1rem;
-  font-weight: 700;
-  font-size: 0.95rem;
+  padding: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
 }
 
 .dash-nav {

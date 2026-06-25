@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Logo from "../Logo";
 
 const NAV = [
   { href: "#beneficios", label: "Benefícios" },
@@ -11,7 +12,7 @@ export default function LandingHeader() {
   return (
     <header className="landing-header">
       <div className="landing-container landing-header-inner">
-        <Link to="/" className="landing-logo">Universidade Money</Link>
+        <Logo variant="header" linkTo="/" className="landing-logo" />
 
         <nav className="landing-nav-pill" aria-label="Navegação principal">
           {NAV.map((item) => (

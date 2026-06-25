@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
+import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import StatusBadge from "../../components/gestao/StatusBadge";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const MODULOS_RESTRITOS = [
@@ -22,13 +30,17 @@ const FORM_VAZIO = {
 
 export default function GestaoPlanosPage() {
   const [itens, setItens] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [todasTags, setTodasTags] = useState([]);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState(FORM_VAZIO);
   const [erro, setErro] = useState("");
 
-  const carregar = () => gestaoApi.listarPlanos().then(setItens);
+  const carregar = () => {
+    setLoading(true);
+    return gestaoApi.listarPlanos().then(setItens).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     carregar();
@@ -91,32 +103,48 @@ export default function GestaoPlanosPage() {
 
   const fecharModal = () => setModal({ open: false, item: null });
 
+  const {
+    busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
+  } = usePaginatedList(itens, { searchKeys: ["titulo", "slug"], pageSize: 8 });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Planos</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setModal({ open: true, item: null })}>
+      <GestaoPageHeader icon="planos" title="Planos" subtitle="Configure planos de acesso e módulos liberados">
+        <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setModal({ open: true, item: null })}>
+          <GestaoIcon name="mais" />
           Novo plano
         </button>
-      </div>
+      </GestaoPageHeader>
 
-      <table className="gestao-table">
+      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar planos..." />
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhum plano cadastrado"
+        skeletonCols={6}
+        footer={!vazio && !loading ? (
+          <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
+        ) : null}
+      >
         <thead>
           <tr>
-            <th>Título</th>
+            <th>Plano</th>
             <th>Slug</th>
             <th>Status</th>
             <th>Módulos</th>
             <th>Tags</th>
-            <th></th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
-          {itens.map((p) => (
-            <tr key={p.id}>
-              <td>{p.titulo}</td>
+          {paginados.map((p, i) => (
+            <GestaoTableRow key={p.id} index={i}>
+              <td><GestaoCellCurso titulo={p.titulo} descricao={p.descricao} /></td>
               <td><code>{p.slug}</code></td>
-              <td>{p.ativo ? "Ativo" : "Inativo"}</td>
+              <td><StatusBadge status={p.ativo ? "ativo" : "inativo"} /></td>
               <td>
                 {MODULOS_RESTRITOS.filter((f) => p[f.key]).map((f) => f.label).join(", ") || "—"}
               </td>
@@ -126,18 +154,15 @@ export default function GestaoPlanosPage() {
                   : "Todos"}
               </td>
               <td>
-                <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: p })}>
-                  Editar
-                </button>
-                {" · "}
-                <button type="button" className="btn-link" onClick={() => setExcluir(p)}>
-                  Excluir
-                </button>
+                <GestaoTableActions
+                  onEdit={() => setModal({ open: true, item: p })}
+                  onDelete={() => setExcluir(p)}
+                />
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
 
       <Modal
         open={modal.open}

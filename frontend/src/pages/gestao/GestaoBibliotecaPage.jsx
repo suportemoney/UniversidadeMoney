@@ -1,17 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoDataTable, { GestaoCellCurso, GestaoTableRow } from "../../components/gestao/GestaoDataTable";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoPagination from "../../components/gestao/GestaoPagination";
+import GestaoTableActions from "../../components/gestao/GestaoTableActions";
+import GestaoToolbar from "../../components/gestao/GestaoToolbar";
+import StatusBadge from "../../components/gestao/StatusBadge";
+import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
 
 export default function GestaoBibliotecaPage() {
   const [itens, setItens] = useState([]);
   const [setores, setSetores] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, item: null });
   const [excluir, setExcluir] = useState(null);
   const [form, setForm] = useState({ titulo: "", descricao: "", setor: "", publicado: true });
   const [pdfId, setPdfId] = useState(null);
 
-  const carregar = () => gestaoApi.listarBiblioteca().then(setItens);
+  const carregar = () => {
+    setLoading(true);
+    return gestaoApi.listarBiblioteca().then(setItens).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     carregar();
@@ -31,46 +43,59 @@ export default function GestaoBibliotecaPage() {
     }
   }, [modal]);
 
+  const {
+    busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
+  } = usePaginatedList(itens, { searchKeys: ["titulo"], pageSize: 8 });
+
+  const vazio = useMemo(() => !loading && totalItems === 0, [loading, totalItems]);
+
   const salvar = async (e) => {
     e.preventDefault();
-    const payload = {
-      ...form,
-      setor: form.setor ? Number(form.setor) : null,
-    };
-    let criado;
+    const payload = { ...form, setor: form.setor ? Number(form.setor) : null };
     if (modal.item) {
-      criado = await gestaoApi.atualizarBiblioteca(modal.item.id, payload);
+      await gestaoApi.atualizarBiblioteca(modal.item.id, payload);
     } else {
-      criado = await gestaoApi.criarBiblioteca(payload);
+      await gestaoApi.criarBiblioteca(payload);
     }
     setModal({ open: false, item: null });
     carregar();
-    return criado;
   };
 
   const uploadPdf = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !pdfId) return;
     await gestaoApi.uploadPdfBiblioteca(pdfId, file);
+    setPdfId(null);
     carregar();
   };
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>Biblioteca (PDF)</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setModal({ open: true, item: null })}>
+      <GestaoPageHeader icon="biblioteca" title="Biblioteca (PDF)" subtitle="Materiais em PDF para download dos colaboradores">
+        <button type="button" className="btn btn-primary gestao-btn-cta" onClick={() => setModal({ open: true, item: null })}>
+          <GestaoIcon name="mais" />
           Novo material
         </button>
-      </div>
-      <table className="gestao-table">
+      </GestaoPageHeader>
+
+      <GestaoToolbar searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar materiais..." />
+
+      <GestaoDataTable
+        loading={loading}
+        empty={vazio}
+        emptyTitle="Nenhum material na biblioteca"
+        skeletonCols={5}
+        footer={!vazio && !loading ? (
+          <GestaoPagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setPage} />
+        ) : null}
+      >
         <thead>
-          <tr><th>Título</th><th>Setor</th><th>PDF</th><th>Publicado</th><th></th></tr>
+          <tr><th>Material</th><th>Setor</th><th>PDF</th><th>Status</th><th>Ações</th></tr>
         </thead>
         <tbody>
-          {itens.map((m) => (
-            <tr key={m.id}>
-              <td>{m.titulo}</td>
+          {paginados.map((m, i) => (
+            <GestaoTableRow key={m.id} index={i}>
+              <td><GestaoCellCurso titulo={m.titulo} descricao={m.descricao} /></td>
               <td>{m.setor_nome || "—"}</td>
               <td>
                 {m.arquivo_url ? (
@@ -79,26 +104,24 @@ export default function GestaoBibliotecaPage() {
                   <button type="button" className="btn-link" onClick={() => setPdfId(m.id)}>Enviar PDF</button>
                 )}
               </td>
-              <td>{m.publicado ? "Sim" : "Não"}</td>
+              <td><StatusBadge status={m.publicado ? "publicado" : "rascunho"} label={m.publicado ? "Publicado" : "Rascunho"} /></td>
               <td>
-                <button type="button" className="btn-link" onClick={() => setModal({ open: true, item: m })}>Editar</button>
-                {" · "}
-                <button type="button" className="btn-link" onClick={() => setExcluir(m)}>Excluir</button>
+                <GestaoTableActions onEdit={() => setModal({ open: true, item: m })} onDelete={() => setExcluir(m)} />
               </td>
-            </tr>
+            </GestaoTableRow>
           ))}
         </tbody>
-      </table>
+      </GestaoDataTable>
 
       {pdfId && (
-        <label className="btn btn-outline btn-sm" style={{ marginTop: "1rem" }}>
+        <label className="btn btn-outline btn-sm gestao-form-card" style={{ marginTop: "1rem", cursor: "pointer" }}>
           Selecionar PDF
           <input type="file" accept="application/pdf" hidden onChange={uploadPdf} />
         </label>
       )}
 
       <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })} title={modal.item ? "Editar material" : "Novo material"}>
-        <form className="gestao-form" onSubmit={async (e) => { e.preventDefault(); await salvar(e); }}>
+        <form className="gestao-form" onSubmit={salvar}>
           <label>Título<input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required /></label>
           <label>Descrição<textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={3} /></label>
           <label>Setor

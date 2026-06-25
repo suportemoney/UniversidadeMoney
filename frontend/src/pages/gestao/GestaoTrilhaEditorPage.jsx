@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import { gestaoApi } from "../../services/gestaoApi";
 
 export default function GestaoTrilhaEditorPage() {
@@ -68,19 +69,18 @@ export default function GestaoTrilhaEditorPage() {
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>{trilha.titulo}</h1>
-        <div>
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditOpen(true)}>Editar info</button>
-          {" "}
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setConfirmExcluir(true)}>Excluir trilha</button>
-          {" "}
-          <Link to="/gestao/trilhas" className="btn btn-outline btn-sm">← Voltar</Link>
-        </div>
-      </div>
-      {msg && <div className="alert alert-success">{msg}</div>}
+      <GestaoPageHeader
+        icon="trilhas"
+        title={trilha.titulo}
+        subtitle="Selecione e ordene os cursos desta trilha"
+      >
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditOpen(true)}>Editar info</button>
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => setConfirmExcluir(true)}>Excluir trilha</button>
+        <Link to="/gestao/trilhas" className="btn btn-outline btn-sm">← Voltar</Link>
+      </GestaoPageHeader>
+      {msg && <div className="modal-alert modal-alert--success">{msg}</div>}
 
-      <h2>Cursos publicados disponíveis</h2>
+      <h2 className="gestao-page-title" style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>Cursos publicados disponíveis</h2>
       <div className="gestao-trilha-disponiveis">
         {disponiveis.map((c) => (
           <label key={c.id} className="gestao-check">

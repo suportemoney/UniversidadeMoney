@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import { gestaoApi } from "../../services/gestaoApi";
 
 export default function GestaoCursoNovoPage() {
@@ -35,9 +36,13 @@ export default function GestaoCursoNovoPage() {
 
   return (
     <div>
-      <h1>Novo curso</h1>
-      {erro && <div className="alert alert-error">{erro}</div>}
-      <form className="gestao-form" onSubmit={handleSubmit}>
+      <GestaoPageHeader
+        icon="cursos"
+        title="Novo curso"
+        subtitle="Preencha as informações básicas para começar a montar o conteúdo"
+      />
+      {erro && <div className="modal-alert modal-alert--error">{erro}</div>}
+      <form className="gestao-form gestao-form-card" onSubmit={handleSubmit}>
         <label>
           Título
           <input value={titulo} onChange={(e) => setTitulo(e.target.value)} required />

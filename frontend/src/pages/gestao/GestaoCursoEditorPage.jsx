@@ -7,6 +7,7 @@ import QuestaoEditor from "../../components/gestao/QuestaoEditor";
 import ThumbnailUploadField from "../../components/gestao/ThumbnailUploadField";
 import VideoUploadField from "../../components/gestao/VideoUploadField";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const ABAS = [
@@ -122,13 +123,16 @@ export default function GestaoCursoEditorPage() {
 
   return (
     <div>
-      <div className="gestao-page-header">
-        <h1>{curso.titulo}</h1>
+      <GestaoPageHeader
+        icon="cursos"
+        title={curso.titulo}
+        subtitle="Editor de curso — módulos, aulas e publicação"
+      >
         <Link to="/gestao/cursos" className="btn btn-outline btn-sm">← Voltar</Link>
-      </div>
+      </GestaoPageHeader>
 
-      {erro && <div className="alert alert-error">{erro}</div>}
-      {msg && <div className="alert alert-success">{msg}</div>}
+      {erro && <div className="modal-alert modal-alert--error">{erro}</div>}
+      {msg && <div className="modal-alert modal-alert--success">{msg}</div>}
 
       <div className="gestao-tabs">
         {ABAS.map((a) => (
