@@ -4,10 +4,14 @@ import os
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.accounts.models import Profile
+from apps.planos.models import AssinaturaUsuario, Plano, TokenPlano
 
 from .models import (
     Atividade,
@@ -15,6 +19,7 @@ from .models import (
     Comunicado,
     Curso,
     MaterialBiblioteca,
+    Matricula,
     Modulo,
     ProvaFinal,
     Questao,
@@ -59,13 +64,82 @@ class GestaoResumoView(APIView):
     permission_classes = [IsGestor]
 
     def get(self, request):
+        hoje = timezone.localdate()
+
+        cursos_publicados = Curso.objects.filter(status=Curso.STATUS_PUBLICADO).count()
+        cursos_rascunho = Curso.objects.filter(status=Curso.STATUS_RASCUNHO).count()
+        cursos_arquivados = Curso.objects.filter(status=Curso.STATUS_ARQUIVADO).count()
+
+        biblioteca_total = MaterialBiblioteca.objects.count()
+        biblioteca_publicados = MaterialBiblioteca.objects.filter(publicado=True).count()
+        ao_vivo_total = TreinamentoAoVivo.objects.count()
+        ao_vivo_proximos = TreinamentoAoVivo.objects.filter(data__gte=hoje).count()
+
+        ultimos_cursos = [
+            {
+                "id": c.id,
+                "titulo": c.titulo,
+                "status": c.status,
+                "criado_em": c.criado_em.isoformat(),
+            }
+            for c in Curso.objects.order_by("-criado_em")[:5]
+        ]
+
+        proximos_ao_vivo = [
+            {
+                "id": t.id,
+                "titulo": t.titulo,
+                "data": t.data.isoformat(),
+                "hora": t.hora.strftime("%H:%M"),
+            }
+            for t in TreinamentoAoVivo.objects.filter(data__gte=hoje).order_by("data", "hora")[:5]
+        ]
+
+        ultimos_comunicados = [
+            {
+                "id": c.id,
+                "titulo": c.titulo,
+                "tipo": c.tipo,
+                "criado_em": c.criado_em.isoformat(),
+            }
+            for c in Comunicado.objects.order_by("-criado_em")[:5]
+        ]
+
         return Response(
             {
-                "cursos_rascunho": Curso.objects.filter(status=Curso.STATUS_RASCUNHO).count(),
-                "cursos_publicados": Curso.objects.filter(status=Curso.STATUS_PUBLICADO).count(),
-                "cursos_arquivados": Curso.objects.filter(status=Curso.STATUS_ARQUIVADO).count(),
-                "trilhas": Trilha.objects.count(),
-                "setores": Setor.objects.count(),
+                "kpis": {
+                    "cursos_publicados": cursos_publicados,
+                    "cursos_rascunho": cursos_rascunho,
+                    "cursos_arquivados": cursos_arquivados,
+                    "trilhas": Trilha.objects.count(),
+                    "comunicados": Comunicado.objects.count(),
+                    "biblioteca_total": biblioteca_total,
+                    "biblioteca_publicados": biblioteca_publicados,
+                    "ao_vivo_total": ao_vivo_total,
+                    "ao_vivo_proximos": ao_vivo_proximos,
+                    "tags_ativas": TagCurso.objects.filter(ativo=True).count(),
+                    "setores": Setor.objects.count(),
+                    "colaboradores_ativos": User.objects.filter(is_active=True).count(),
+                    "matriculas": Matricula.objects.count(),
+                    "assinaturas_ativas": AssinaturaUsuario.objects.filter(
+                        status=AssinaturaUsuario.STATUS_ATIVA
+                    ).count(),
+                    "membros_equipe": Profile.objects.filter(is_membro_equipe=True).count(),
+                    "planos_ativos": Plano.objects.filter(ativo=True).count(),
+                    "tokens_ativos": TokenPlano.objects.filter(ativo=True).count(),
+                },
+                "cursos_por_status": [
+                    {"status": "publicado", "label": "Publicados", "total": cursos_publicados},
+                    {"status": "rascunho", "label": "Rascunhos", "total": cursos_rascunho},
+                    {"status": "arquivado", "label": "Arquivados", "total": cursos_arquivados},
+                ],
+                "ultimos_cursos": ultimos_cursos,
+                "proximos_ao_vivo": proximos_ao_vivo,
+                "ultimos_comunicados": ultimos_comunicados,
+                "alertas": {
+                    "rascunhos_pendentes": cursos_rascunho,
+                    "materiais_nao_publicados": biblioteca_total - biblioteca_publicados,
+                },
             }
         )
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import GestaoIcon from "./GestaoIcons";
 
-export default function GestaoKpiCard({ icon, value, label, to, delay = 0 }) {
+export default function GestaoKpiCard({ icon, value, label, hint, to, delay = 0 }) {
   const [display, setDisplay] = useState(0);
   const num = Number(value) || 0;
 
@@ -33,6 +33,7 @@ export default function GestaoKpiCard({ icon, value, label, to, delay = 0 }) {
     </div>
     <strong className="gestao-kpi-value">{display}</strong>
     <span className="gestao-kpi-label">{label}</span>
+    {hint && <span className="gestao-kpi-hint">{hint}</span>}
   </>
   );
 
