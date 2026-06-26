@@ -10,6 +10,7 @@ import QuestaoEditor from "../../components/gestao/QuestaoEditor";
 import ThumbnailUploadField from "../../components/gestao/ThumbnailUploadField";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import GestaoPageHeader from "../../components/gestao/GestaoPageHeader";
+import GestaoIcon from "../../components/gestao/GestaoIcons";
 import { gestaoApi } from "../../services/gestaoApi";
 
 const ABAS = [
@@ -306,30 +307,48 @@ export default function GestaoCursoEditorPage() {
       )}
 
       {aba === "modulos" && (
-        <div>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => setModuloModal({ open: true, modulo: null })}
-          >
-            + Módulo
-          </button>
-          {curso.modulos?.map((mod, idx) => (
-            <GestaoModuloCard
-              key={mod.id}
-              mod={mod}
-              idx={idx}
-              onReordenar={reordenarModulo}
-              onEditarModulo={(m) => setModuloModal({ open: true, modulo: m })}
-              onExcluirModulo={(m) => setConfirm({ open: true, tipo: "modulo", alvo: m })}
-              onAddAula={(moduloId) => setAulaModal({ open: true, aula: null, moduloId })}
-              onEditAula={(aula, moduloId) => setAulaModal({ open: true, aula, moduloId })}
-              onExcluirAula={(aula) => setConfirm({ open: true, tipo: "aula", alvo: aula })}
-              onAddArquivo={(moduloId) => setArquivoModal({ open: true, moduloId })}
-              onExcluirArquivo={(arq) => setConfirm({ open: true, tipo: "arquivo", alvo: arq })}
-              onRecarregar={carregar}
-            />
-          ))}
+        <div className="gestao-modulos-panel">
+          <div className="gestao-modulos-toolbar">
+            <div>
+              <h2 className="gestao-modulos-title">Estrutura do curso</h2>
+              <p className="gestao-muted">Organize módulos de texto, apostilas ou videoaulas na ordem desejada.</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary gestao-btn-cta"
+              onClick={() => setModuloModal({ open: true, modulo: null })}
+            >
+              <GestaoIcon name="mais" />
+              Novo módulo
+            </button>
+          </div>
+          <div className="gestao-modulos-list">
+            {curso.modulos?.length === 0 && (
+              <div className="gestao-modulo-empty gestao-modulo-empty--page">
+                <span className="gestao-modulo-empty-icon" aria-hidden>📚</span>
+                <p>Nenhum módulo criado ainda.</p>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setModuloModal({ open: true, modulo: null })}>
+                  Criar primeiro módulo
+                </button>
+              </div>
+            )}
+            {curso.modulos?.map((mod, idx) => (
+              <GestaoModuloCard
+                key={mod.id}
+                mod={mod}
+                idx={idx}
+                onReordenar={reordenarModulo}
+                onEditarModulo={(m) => setModuloModal({ open: true, modulo: m })}
+                onExcluirModulo={(m) => setConfirm({ open: true, tipo: "modulo", alvo: m })}
+                onAddAula={(moduloId) => setAulaModal({ open: true, aula: null, moduloId })}
+                onEditAula={(aula, moduloId) => setAulaModal({ open: true, aula, moduloId })}
+                onExcluirAula={(aula) => setConfirm({ open: true, tipo: "aula", alvo: aula })}
+                onAddArquivo={(moduloId) => setArquivoModal({ open: true, moduloId })}
+                onExcluirArquivo={(arq) => setConfirm({ open: true, tipo: "arquivo", alvo: arq })}
+                onRecarregar={carregar}
+              />
+            ))}
+          </div>
         </div>
       )}
 
