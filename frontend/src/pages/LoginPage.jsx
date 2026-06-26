@@ -6,6 +6,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const successMsg = location.state?.message;
+  const sessaoExpirada = location.state?.sessaoExpirada;
 
   const [identificador, setIdentificador] = useState("");
   const [password, setPassword] = useState("");
@@ -38,6 +39,9 @@ export default function LoginPage() {
       <p className="auth-subtitle">Acesse sua conta na UniversidadeMoney</p>
 
       {successMsg && <div className="alert alert-success">{successMsg}</div>}
+      {sessaoExpirada && (
+        <div className="alert alert-error">Sessão expirada. Faça login novamente.</div>
+      )}
       {erro && <div className="alert alert-error">{erro}</div>}
 
       <form onSubmit={handleSubmit} className="auth-form">

@@ -580,7 +580,13 @@ class GestaoProvaView(APIView):
         try:
             prova = ProvaFinal.objects.prefetch_related("questoes").get(curso_id=curso_id)
         except ProvaFinal.DoesNotExist:
-            return Response({"detail": "Prova não configurada."}, status=404)
+            return Response({
+                "titulo": "Prova final",
+                "nota_minima": 70,
+                "tentativas_max": 3,
+                "tempo_limite_min": None,
+                "questoes": [],
+            })
         return Response(ProvaFinalSerializer(prova).data)
 
     def post(self, request, curso_id):

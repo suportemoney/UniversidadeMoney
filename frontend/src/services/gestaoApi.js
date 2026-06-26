@@ -1,154 +1,125 @@
-import { getAccessToken } from "./api";
-
-const API_URL = import.meta.env.VITE_API_URL || "/api";
-
-async function parseResponse(res) {
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg =
-      data.detail ||
-      data.message ||
-      (data.erros && data.erros.join(" ")) ||
-      Object.values(data).flat().join(" ") ||
-      `Erro HTTP ${res.status}`;
-    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
-  }
-  return data;
-}
-
-async function gestaoFetch(path, options = {}) {
-  const headers = { ...options.headers };
-  const token = getAccessToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  if (!(options.body instanceof FormData)) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
-  return parseResponse(res);
-}
+import { apiFetch } from "./api";
 
 export const gestaoApi = {
-  resumo: () => gestaoFetch("/gestao/resumo/"),
-  setores: () => gestaoFetch("/gestao/setores/"),
-  listarSetores: () => gestaoFetch("/gestao/setores/"),
+  resumo: () => apiFetch("/gestao/resumo/"),
+  setores: () => apiFetch("/gestao/setores/"),
+  listarSetores: () => apiFetch("/gestao/setores/"),
   criarSetor: (data) =>
-    gestaoFetch("/gestao/setores/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/setores/", { method: "POST", body: JSON.stringify(data) }),
   atualizarSetor: (id, data) =>
-    gestaoFetch(`/gestao/setores/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirSetor: (id) => gestaoFetch(`/gestao/setores/${id}/`, { method: "DELETE" }),
-  usuarios: (q) => gestaoFetch(`/gestao/usuarios/${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+    apiFetch(`/gestao/setores/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirSetor: (id) => apiFetch(`/gestao/setores/${id}/`, { method: "DELETE" }),
+  usuarios: (q) => apiFetch(`/gestao/usuarios/${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   criarUsuarioEquipe: (data) =>
-    gestaoFetch("/gestao/usuarios/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/usuarios/", { method: "POST", body: JSON.stringify(data) }),
   atualizarUsuarioEquipe: (userId, data) =>
-    gestaoFetch(`/gestao/usuarios/${userId}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    apiFetch(`/gestao/usuarios/${userId}/`, { method: "PATCH", body: JSON.stringify(data) }),
   inativarUsuarioEquipe: (userId) =>
-    gestaoFetch(`/gestao/usuarios/${userId}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/usuarios/${userId}/`, { method: "DELETE" }),
   toggleEquipe: (userId, isMembro) =>
-    gestaoFetch(`/gestao/usuarios/${userId}/equipe/`, {
+    apiFetch(`/gestao/usuarios/${userId}/equipe/`, {
       method: "PATCH",
       body: JSON.stringify({ is_membro_equipe: isMembro }),
     }),
 
   listarCursos: (status) =>
-    gestaoFetch(`/gestao/cursos/${status ? `?status=${status}` : ""}`),
-  cursosDisponiveis: () => gestaoFetch("/gestao/cursos/disponiveis/"),
-  obterCurso: (id) => gestaoFetch(`/gestao/cursos/${id}/`),
+    apiFetch(`/gestao/cursos/${status ? `?status=${status}` : ""}`),
+  cursosDisponiveis: () => apiFetch("/gestao/cursos/disponiveis/"),
+  obterCurso: (id) => apiFetch(`/gestao/cursos/${id}/`),
   criarCurso: (data) =>
-    gestaoFetch("/gestao/cursos/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/cursos/", { method: "POST", body: JSON.stringify(data) }),
   atualizarCurso: (id, data) =>
-    gestaoFetch(`/gestao/cursos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirCurso: (id) => gestaoFetch(`/gestao/cursos/${id}/`, { method: "DELETE" }),
-  publicarCurso: (id) => gestaoFetch(`/gestao/cursos/${id}/publicar/`, { method: "POST" }),
-  arquivarCurso: (id) => gestaoFetch(`/gestao/cursos/${id}/arquivar/`, { method: "POST" }),
+    apiFetch(`/gestao/cursos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirCurso: (id) => apiFetch(`/gestao/cursos/${id}/`, { method: "DELETE" }),
+  publicarCurso: (id) => apiFetch(`/gestao/cursos/${id}/publicar/`, { method: "POST" }),
+  arquivarCurso: (id) => apiFetch(`/gestao/cursos/${id}/arquivar/`, { method: "POST" }),
 
-  listarModulos: (cursoId) => gestaoFetch(`/gestao/cursos/${cursoId}/modulos/`),
+  listarModulos: (cursoId) => apiFetch(`/gestao/cursos/${cursoId}/modulos/`),
   criarModulo: (cursoId, data) =>
-    gestaoFetch(`/gestao/cursos/${cursoId}/modulos/`, {
+    apiFetch(`/gestao/cursos/${cursoId}/modulos/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
   atualizarModulo: (id, data) =>
-    gestaoFetch(`/gestao/modulos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirModulo: (id) => gestaoFetch(`/gestao/modulos/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/modulos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirModulo: (id) => apiFetch(`/gestao/modulos/${id}/`, { method: "DELETE" }),
   reordenarModulos: (cursoId, ordem) =>
-    gestaoFetch(`/gestao/cursos/${cursoId}/modulos/reordenar/`, {
+    apiFetch(`/gestao/cursos/${cursoId}/modulos/reordenar/`, {
       method: "POST",
       body: JSON.stringify({ ordem }),
     }),
 
-  listarParticipantes: (cursoId) => gestaoFetch(`/gestao/cursos/${cursoId}/participantes/`),
+  listarParticipantes: (cursoId) => apiFetch(`/gestao/cursos/${cursoId}/participantes/`),
   criarParticipante: (cursoId, data) =>
-    gestaoFetch(`/gestao/cursos/${cursoId}/participantes/`, {
+    apiFetch(`/gestao/cursos/${cursoId}/participantes/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
   atualizarParticipante: (id, data) =>
-    gestaoFetch(`/gestao/participantes/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirParticipante: (id) => gestaoFetch(`/gestao/participantes/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/participantes/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirParticipante: (id) => apiFetch(`/gestao/participantes/${id}/`, { method: "DELETE" }),
 
   uploadModuloArquivo: (moduloId, file, titulo, tipo) => {
     const fd = new FormData();
     fd.append("arquivo", file);
     fd.append("titulo", titulo);
     fd.append("tipo", tipo);
-    return gestaoFetch(`/gestao/modulos/${moduloId}/arquivos/`, { method: "POST", body: fd });
+    return apiFetch(`/gestao/modulos/${moduloId}/arquivos/`, { method: "POST", body: fd });
   },
   excluirModuloArquivo: (id) =>
-    gestaoFetch(`/gestao/modulos/arquivos/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/modulos/arquivos/${id}/`, { method: "DELETE" }),
 
   criarAula: (moduloId, data) =>
-    gestaoFetch(`/gestao/modulos/${moduloId}/aulas/`, {
+    apiFetch(`/gestao/modulos/${moduloId}/aulas/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
   atualizarAula: (id, data) =>
-    gestaoFetch(`/gestao/aulas/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirAula: (id) => gestaoFetch(`/gestao/aulas/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/aulas/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirAula: (id) => apiFetch(`/gestao/aulas/${id}/`, { method: "DELETE" }),
   uploadVideo: (aulaId, file, duracaoSegundos) => {
     const fd = new FormData();
     fd.append("video", file);
     if (duracaoSegundos) fd.append("duracao_segundos", duracaoSegundos);
-    return gestaoFetch(`/gestao/aulas/${aulaId}/upload-video/`, { method: "POST", body: fd });
+    return apiFetch(`/gestao/aulas/${aulaId}/upload-video/`, { method: "POST", body: fd });
   },
   removerVideo: (aulaId) =>
-    gestaoFetch(`/gestao/aulas/${aulaId}/video/`, { method: "DELETE" }),
+    apiFetch(`/gestao/aulas/${aulaId}/video/`, { method: "DELETE" }),
 
   criarAtividade: (moduloId, data) =>
-    gestaoFetch(`/gestao/modulos/${moduloId}/atividades/`, {
+    apiFetch(`/gestao/modulos/${moduloId}/atividades/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  excluirAtividade: (id) => gestaoFetch(`/gestao/atividades/${id}/`, { method: "DELETE" }),
+  excluirAtividade: (id) => apiFetch(`/gestao/atividades/${id}/`, { method: "DELETE" }),
   criarQuestaoAtividade: (atividadeId, data) =>
-    gestaoFetch(`/gestao/atividades/${atividadeId}/questoes/`, {
+    apiFetch(`/gestao/atividades/${atividadeId}/questoes/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  excluirQuestao: (id) => gestaoFetch(`/gestao/questoes/${id}/`, { method: "DELETE" }),
+  excluirQuestao: (id) => apiFetch(`/gestao/questoes/${id}/`, { method: "DELETE" }),
 
-  obterProva: (cursoId) => gestaoFetch(`/gestao/cursos/${cursoId}/prova/`),
+  obterProva: (cursoId) => apiFetch(`/gestao/cursos/${cursoId}/prova/`),
   salvarProva: (cursoId, data) =>
-    gestaoFetch(`/gestao/cursos/${cursoId}/prova/`, {
+    apiFetch(`/gestao/cursos/${cursoId}/prova/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
   criarQuestaoProva: (provaId, data) =>
-    gestaoFetch(`/gestao/provas/${provaId}/questoes/`, {
+    apiFetch(`/gestao/provas/${provaId}/questoes/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  listarTrilhas: () => gestaoFetch("/gestao/trilhas/"),
-  obterTrilha: (id) => gestaoFetch(`/gestao/trilhas/${id}/`),
+  listarTrilhas: () => apiFetch("/gestao/trilhas/"),
+  obterTrilha: (id) => apiFetch(`/gestao/trilhas/${id}/`),
   criarTrilha: (data) =>
-    gestaoFetch("/gestao/trilhas/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/trilhas/", { method: "POST", body: JSON.stringify(data) }),
   atualizarTrilha: (id, data) =>
-    gestaoFetch(`/gestao/trilhas/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirTrilha: (id) => gestaoFetch(`/gestao/trilhas/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/trilhas/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirTrilha: (id) => apiFetch(`/gestao/trilhas/${id}/`, { method: "DELETE" }),
   definirCursosTrilha: (trilhaId, cursoIds) =>
-    gestaoFetch(`/gestao/trilhas/${trilhaId}/cursos/`, {
+    apiFetch(`/gestao/trilhas/${trilhaId}/cursos/`, {
       method: "POST",
       body: JSON.stringify({ curso_ids: cursoIds }),
     }),
@@ -156,72 +127,72 @@ export const gestaoApi = {
   uploadThumbnail: (cursoId, file) => {
     const fd = new FormData();
     fd.append("thumbnail", file);
-    return gestaoFetch(`/gestao/cursos/${cursoId}/upload-thumbnail/`, { method: "POST", body: fd });
+    return apiFetch(`/gestao/cursos/${cursoId}/upload-thumbnail/`, { method: "POST", body: fd });
   },
 
   atualizarQuestao: (id, data) =>
-    gestaoFetch(`/gestao/questoes/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    apiFetch(`/gestao/questoes/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
 
-  listarComunicados: () => gestaoFetch("/gestao/comunicados/"),
+  listarComunicados: () => apiFetch("/gestao/comunicados/"),
   criarComunicado: (data) =>
-    gestaoFetch("/gestao/comunicados/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/comunicados/", { method: "POST", body: JSON.stringify(data) }),
   atualizarComunicado: (id, data) =>
-    gestaoFetch(`/gestao/comunicados/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirComunicado: (id) => gestaoFetch(`/gestao/comunicados/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/comunicados/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirComunicado: (id) => apiFetch(`/gestao/comunicados/${id}/`, { method: "DELETE" }),
 
-  listarAoVivo: () => gestaoFetch("/gestao/ao-vivo/"),
+  listarAoVivo: () => apiFetch("/gestao/ao-vivo/"),
   criarAoVivo: (data) =>
-    gestaoFetch("/gestao/ao-vivo/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/ao-vivo/", { method: "POST", body: JSON.stringify(data) }),
   atualizarAoVivo: (id, data) =>
-    gestaoFetch(`/gestao/ao-vivo/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirAoVivo: (id) => gestaoFetch(`/gestao/ao-vivo/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/ao-vivo/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirAoVivo: (id) => apiFetch(`/gestao/ao-vivo/${id}/`, { method: "DELETE" }),
 
-  listarBiblioteca: () => gestaoFetch("/gestao/biblioteca/"),
+  listarBiblioteca: () => apiFetch("/gestao/biblioteca/"),
   criarBiblioteca: (data) =>
-    gestaoFetch("/gestao/biblioteca/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/biblioteca/", { method: "POST", body: JSON.stringify(data) }),
   atualizarBiblioteca: (id, data) =>
-    gestaoFetch(`/gestao/biblioteca/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirBiblioteca: (id) => gestaoFetch(`/gestao/biblioteca/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/biblioteca/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirBiblioteca: (id) => apiFetch(`/gestao/biblioteca/${id}/`, { method: "DELETE" }),
   uploadPdfBiblioteca: (id, file) => {
     const fd = new FormData();
     fd.append("pdf", file);
-    return gestaoFetch(`/gestao/biblioteca/${id}/upload-pdf/`, { method: "POST", body: fd });
+    return apiFetch(`/gestao/biblioteca/${id}/upload-pdf/`, { method: "POST", body: fd });
   },
 
-  listarPlanos: () => gestaoFetch("/gestao/planos/"),
+  listarPlanos: () => apiFetch("/gestao/planos/"),
   criarPlano: (data) =>
-    gestaoFetch("/gestao/planos/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/planos/", { method: "POST", body: JSON.stringify(data) }),
   atualizarPlano: (id, data) =>
-    gestaoFetch(`/gestao/planos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirPlano: (id) => gestaoFetch(`/gestao/planos/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/planos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirPlano: (id) => apiFetch(`/gestao/planos/${id}/`, { method: "DELETE" }),
 
-  listarTokens: () => gestaoFetch("/gestao/tokens/"),
+  listarTokens: () => apiFetch("/gestao/tokens/"),
   criarToken: (data) =>
-    gestaoFetch("/gestao/tokens/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/tokens/", { method: "POST", body: JSON.stringify(data) }),
   atualizarToken: (id, data) =>
-    gestaoFetch(`/gestao/tokens/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  listarTokenUsos: (id) => gestaoFetch(`/gestao/tokens/${id}/usos/`),
+    apiFetch(`/gestao/tokens/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  listarTokenUsos: (id) => apiFetch(`/gestao/tokens/${id}/usos/`),
 
-  listarTags: () => gestaoFetch("/gestao/tags/"),
+  listarTags: () => apiFetch("/gestao/tags/"),
   criarTag: (data) =>
-    gestaoFetch("/gestao/tags/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/tags/", { method: "POST", body: JSON.stringify(data) }),
   atualizarTag: (id, data) =>
-    gestaoFetch(`/gestao/tags/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirTag: (id) => gestaoFetch(`/gestao/tags/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/tags/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  excluirTag: (id) => apiFetch(`/gestao/tags/${id}/`, { method: "DELETE" }),
 
-  obterFaixaLanding: () => gestaoFetch("/gestao/landing/faixa/"),
+  obterFaixaLanding: () => apiFetch("/gestao/landing/faixa/"),
   atualizarFaixaLanding: (data) =>
-    gestaoFetch("/gestao/landing/faixa/", { method: "PATCH", body: JSON.stringify(data) }),
-  listarBannersLanding: () => gestaoFetch("/gestao/landing/banners/"),
+    apiFetch("/gestao/landing/faixa/", { method: "PATCH", body: JSON.stringify(data) }),
+  listarBannersLanding: () => apiFetch("/gestao/landing/banners/"),
   criarBannerLanding: (data) =>
-    gestaoFetch("/gestao/landing/banners/", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch("/gestao/landing/banners/", { method: "POST", body: JSON.stringify(data) }),
   atualizarBannerLanding: (id, data) =>
-    gestaoFetch(`/gestao/landing/banners/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    apiFetch(`/gestao/landing/banners/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
   excluirBannerLanding: (id) =>
-    gestaoFetch(`/gestao/landing/banners/${id}/`, { method: "DELETE" }),
+    apiFetch(`/gestao/landing/banners/${id}/`, { method: "DELETE" }),
   uploadBannerGif: (id, file) => {
     const fd = new FormData();
     fd.append("gif", file);
-    return gestaoFetch(`/gestao/landing/banners/${id}/upload-gif/`, { method: "POST", body: fd });
+    return apiFetch(`/gestao/landing/banners/${id}/upload-gif/`, { method: "POST", body: fd });
   },
 };

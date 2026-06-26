@@ -7,9 +7,15 @@ export function getAccessToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_KEY);
+}
+
 export function setTokens(access, refresh) {
   localStorage.setItem(TOKEN_KEY, access);
-  localStorage.setItem(REFRESH_KEY, refresh);
+  if (refresh) {
+    localStorage.setItem(REFRESH_KEY, refresh);
+  }
 }
 
 export function clearTokens() {
@@ -21,21 +27,59 @@ export function isAuthenticated() {
   return !!getAccessToken();
 }
 
+function mensagemErro(data, status) {
+  if (status === 401) {
+    return "Sessão expirada. Faça login novamente.";
+  }
+  const msg =
+    data.detail ||
+    data.message ||
+    (data.erros && data.erros.join(" ")) ||
+    Object.values(data).flat().join(" ") ||
+    `Erro HTTP ${status}`;
+  if (typeof msg === "string" && msg.includes("token not valid")) {
+    return "Sessão expirada. Faça login novamente.";
+  }
+  return typeof msg === "string" ? msg : JSON.stringify(msg);
+}
+
 async function parseResponse(res) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg =
-      data.detail ||
-      data.message ||
-      (data.erros && data.erros.join(" ")) ||
-      Object.values(data).flat().join(" ") ||
-      `Erro HTTP ${res.status}`;
-    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+    throw new Error(mensagemErro(data, res.status));
   }
   return data;
 }
 
-export async function apiFetch(path, options = {}) {
+let refreshEmAndamento = null;
+
+async function renovarAccessToken() {
+  if (!refreshEmAndamento) {
+    refreshEmAndamento = (async () => {
+      const refresh = getRefreshToken();
+      if (!refresh) {
+        throw new Error("Sessão expirada. Faça login novamente.");
+      }
+      const res = await fetch(`${API_URL}/auth/refresh/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        clearTokens();
+        throw new Error("Sessão expirada. Faça login novamente.");
+      }
+      setTokens(data.access, data.refresh || refresh);
+      return data.access;
+    })().finally(() => {
+      refreshEmAndamento = null;
+    });
+  }
+  return refreshEmAndamento;
+}
+
+export async function apiFetch(path, options = {}, jaRenovou = false) {
   const headers = { ...options.headers };
 
   if (!(options.body instanceof FormData)) {
@@ -48,6 +92,18 @@ export async function apiFetch(path, options = {}) {
   }
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+
+  const rotaAuth = path.startsWith("/auth/login/") || path.startsWith("/auth/register/");
+  if (res.status === 401 && !jaRenovou && !rotaAuth && token && getRefreshToken()) {
+    try {
+      await renovarAccessToken();
+      return apiFetch(path, options, true);
+    } catch (err) {
+      clearTokens();
+      throw err;
+    }
+  }
+
   return parseResponse(res);
 }
 
