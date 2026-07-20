@@ -90,6 +90,13 @@ fi
 
 mkdir -p "$BASE/static" "$BASE/media" "$BASE/static-hml" "$BASE/media-hml"
 
+# Libera 7101/7102 do gunicorn legado (systemd) — NÃO mexe no nginx do host
+if systemctl list-unit-files 2>/dev/null | grep -q universidade-backend; then
+  echo "==> Parando gunicorn legado (universidade-backend) para liberar 7101..."
+  sudo systemctl stop universidade-backend 2>/dev/null || true
+  sudo systemctl disable universidade-backend 2>/dev/null || true
+fi
+
 echo "==> Build e up containers ($TARGET) — só 127.0.0.1..."
 docker compose \
   -f compose.yml \
