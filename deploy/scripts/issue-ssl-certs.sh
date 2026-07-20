@@ -11,6 +11,28 @@ REPO="${DEPLOY_REPO:-/var/www/universidade/repo}"
 cd "$REPO"
 
 ENV_FILE=".env.production"
+COMPOSE_ENV=".env.production"
+
+if [ ! -f "$REPO/$COMPOSE_ENV" ]; then
+  echo "ERRO: faltando $REPO/$COMPOSE_ENV (copie de .env.production.example)"
+  exit 1
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "ERRO: Docker não está instalado nesta VPS."
+  echo "Instale com:"
+  echo "  bash deploy/scripts/install-docker-vps.sh"
+  echo "Depois rode de novo:"
+  echo "  bash deploy/scripts/issue-ssl-certs.sh prod"
+  exit 1
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "ERRO: plugin 'docker compose' não encontrado."
+  echo "Instale com: bash deploy/scripts/install-docker-vps.sh"
+  exit 1
+fi
+
 if [ -f "$ENV_FILE" ]; then
   set -a
   # shellcheck disable=SC1090
@@ -53,21 +75,19 @@ if [ -f /etc/nginx/sites-enabled/universidade ]; then
   echo "    removido sites-enabled/universidade"
 fi
 if systemctl is-active --quiet nginx 2>/dev/null; then
-  # Se o nginx do host ainda escuta 80/443, para para o Docker assumir
   if sudo ss -tulpn 2>/dev/null | grep -E ':80 |:443 ' | grep -q nginx; then
     echo "    parando nginx do host (portas 80/443 em uso)"
     sudo systemctl stop nginx || true
   fi
 fi
 
-COMPOSE=(docker compose -f compose.yml -f compose.vps.yml --env-file .env.production)
+COMPOSE=(docker compose -f compose.yml -f compose.vps.yml --env-file "$COMPOSE_ENV")
 
 echo "==> Subindo gateway (bootstrap HTTP se ainda sem certs)..."
 "${COMPOSE[@]}" up -d --build gateway db certbot \
   frontend-interno-prod frontend-plataforma-prod frontend-painel-prod \
   backend-prod 2>/dev/null || "${COMPOSE[@]}" up -d gateway
 
-# Garante volume ACME gravável
 "${COMPOSE[@]}" exec -T gateway sh -c 'mkdir -p /var/www/certbot && chmod -R 755 /var/www/certbot' 2>/dev/null || true
 
 echo "==> Emitindo certificados..."
