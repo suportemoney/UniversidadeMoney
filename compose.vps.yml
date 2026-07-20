@@ -1,0 +1,159 @@
+# VPS: produção + homologação + gateway nginx + certbot
+# Uso (primeira vez e atualizações):
+#   docker compose -f compose.yml -f compose.vps.yml --env-file .env.production up -d --build
+#
+# Deploy seletivo (Actions):
+#   docker compose -f compose.yml -f compose.vps.yml --env-file .env.production up -d --build backend-prod frontend-prod
+#   docker compose -f compose.yml -f compose.vps.yml --env-file .env.homolog up -d --build backend-hml frontend-hml
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-universidade_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-universidade_money}
+      POSTGRES_MULTIPLE_DATABASES: universidade_money_hml
+    volumes:
+      - pgdata_vps:/var/lib/postgresql/data
+      - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
+    networks:
+      - universidade
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-universidade_user} -d ${POSTGRES_DB:-universidade_money}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  backend-prod:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    env_file:
+      - .env.production
+    environment:
+      APP_ENV: production
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME_PROD:-universidade_money}
+      STATIC_ROOT: /data/static
+      MEDIA_ROOT: /data/media
+    volumes:
+      - static_prod:/data/static
+      - media_prod:/data/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  backend-hml:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    env_file:
+      - .env.homolog
+    environment:
+      APP_ENV: homologation
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME_HML:-universidade_money_hml}
+      STATIC_ROOT: /data/static
+      MEDIA_ROOT: /data/media
+    volumes:
+      - static_hml:/data/static
+      - media_hml:/data/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  frontend-prod:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL_PROD:-https://universidade.moneypromotora.com.br/api}
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  frontend-hml:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL_HML:-https://universidade-hml.moneypromotora.com.br/api}
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile.gateway
+    environment:
+      DOMAIN_PROD: ${DOMAIN_PROD:-universidade.moneypromotora.com.br}
+      DOMAIN_HML: ${DOMAIN_HML:-universidade-hml.moneypromotora.com.br}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_prod:/data/prod/static:ro
+      - media_prod:/data/prod/media:ro
+      - static_hml:/data/hml/static:ro
+      - media_hml:/data/hml/media:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    depends_on:
+      - backend-prod
+      - backend-hml
+      - frontend-prod
+      - frontend-hml
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        trap exit TERM
+        while :; do
+          certbot renew --webroot -w /var/www/certbot --quiet || true
+          sleep 12h
+        done
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  # Uso único: emitir certificados iniciais
+  # docker compose -f compose.yml -f compose.vps.yml --env-file .env.production --profile init run --rm certbot-init
+  certbot-init:
+    image: certbot/certbot:latest
+    profiles: ["init"]
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+      - ./docker/certbot/init-certs.sh:/init-certs.sh:ro
+    environment:
+      DOMAIN_PROD: ${DOMAIN_PROD:-universidade.moneypromotora.com.br}
+      DOMAIN_HML: ${DOMAIN_HML:-universidade-hml.moneypromotora.com.br}
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL:-admin@moneypromotora.com.br}
+    entrypoint: /bin/sh
+    command: ["-c", "sed -i 's/\\r$//' /init-certs.sh && chmod +x /init-certs.sh && /init-certs.sh"]
+    networks:
+      - universidade
+    depends_on:
+      - gateway

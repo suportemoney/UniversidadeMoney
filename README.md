@@ -1,62 +1,59 @@
 # UniversidadeMoney
 
-Sistema desenvolvido em monorepo: **Django + DRF** (backend) e **React + Vite** (frontend).
-
-A execução em produção ocorre na VPS; o ambiente local é usado para edição de código.
+Monorepo **Django + DRF** (backend) e **React + Vite** (frontend), executado com **Docker** em três ambientes: desenvolvimento, homologação e produção.
 
 ## Stack
 
-- PostgreSQL
-- Python + Django + Django REST Framework
-- React + Vite (build estático)
-- nginx + gunicorn + systemd (VPS)
+- PostgreSQL (container)
+- Python + Django + DRF + Gunicorn
+- React + Vite
+- nginx + certbot (VPS)
+
+## Ambientes
+
+| Ambiente | Como sobe | Domínio |
+|----------|-----------|---------|
+| development | `compose.dev.yml` no Windows | localhost |
+| homologation | `compose.vps.yml` + branch `homolog` | `universidade-hml.moneypromotora.com.br` |
+| production | `compose.vps.yml` + branch `main` | `universidade.moneypromotora.com.br` |
+
+Bancos separados: `universidade_money_dev` / `universidade_money_hml` / `universidade_money`.
 
 ## Estrutura
 
 ```
 backend/          # API Django + DRF
 frontend/         # SPA React (Vite)
-deploy/           # nginx, systemd e scripts de deploy
-docs/             # guias operacionais da VPS
-.github/          # CI/CD (deploy na main)
-ARCHITECTURE.md   # visão geral da arquitetura
+docker/           # imagens, nginx, entrypoints
+compose*.yml      # orquestração por ambiente
+deploy/           # scripts de deploy
+docs/             # guias operacionais
 ```
 
-## Documentação
+## Desenvolvimento local (Windows)
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — arquitetura e portas (gunicorn **7101**)
-- [docs/README.md](docs/README.md) — guias da VPS (PostgreSQL, backend, frontend, nginx, deploy)
+```bash
+cp .env.development.example .env.development
+docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up --build
+```
+
+- Front: http://localhost:5173  
+- API (direto): http://localhost:8000  
+- Proxy nginx opcional: http://localhost:8080  
 
 ## Variáveis de ambiente
 
-Modelos (sem segredos):
+Modelos no Git (sem segredos):
 
-- `backend/.env.example`
-- `frontend/.env.example`
+- `.env.development.example`
+- `.env.homolog.example`
+- `.env.production.example`
 
-O `.env` real fica **somente na VPS** (`/var/www/universidade/.env`).
+Na VPS: copiar para `.env.homolog` e `.env.production` dentro do clone do repositório.
 
 ## Deploy
 
-Push na branch `main` dispara deploy via GitHub Actions (SSH na VPS).
+- Push `main` → produção (Docker)
+- Push `homolog` → homologação (Docker)
 
-- Script manual: `deploy/scripts/deploy.sh`
-- Configurar CI/CD: [docs/github-actions-vps.md](docs/github-actions-vps.md)
-
-Domínio: `https://universidade.moneypromotora.com.br`
-
-## Checklist pós-deploy inicial
-
-- [x] VPS: PostgreSQL, backend, frontend, nginx
-- [ ] Commitar `frontend/package-lock.json` (habilita `npm ci` no deploy)
-- [ ] Configurar secrets no GitHub (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`)
-- [ ] `chmod +x deploy/scripts/deploy.sh` na VPS
-- [ ] Reboot opcional da VPS (kernel pendente)
-- [ ] Desenvolver features (models, API, telas)
-
-## Próximos passos na VPS
-
-1. Criar banco PostgreSQL — [docs/postgresql-vps.md](docs/postgresql-vps.md)
-2. Configurar backend — [docs/backend-vps.md](docs/backend-vps.md)
-3. Build do frontend — [docs/frontend-vps.md](docs/frontend-vps.md)
-4. Configurar nginx — [docs/nginx-vps.md](docs/nginx-vps.md)
+Guia: [docs/docker.md](docs/docker.md) · Arquitetura: [ARCHITECTURE.md](ARCHITECTURE.md)

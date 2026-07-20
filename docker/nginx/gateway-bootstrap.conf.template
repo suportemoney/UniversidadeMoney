@@ -1,0 +1,77 @@
+# Gateway sem SSL (primeira subida / emissão de certificados)
+
+server {
+    listen 80;
+    server_name ${DOMAIN_PROD};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location /api/ {
+        proxy_pass http://backend-prod:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /admin/ {
+        proxy_pass http://backend-prod:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static/ {
+        alias /data/prod/static/;
+    }
+
+    location /media/ {
+        alias /data/prod/media/;
+    }
+
+    location / {
+        proxy_pass http://frontend-prod:80;
+        proxy_set_header Host $host;
+    }
+}
+
+server {
+    listen 80;
+    server_name ${DOMAIN_HML};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location /api/ {
+        proxy_pass http://backend-hml:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /admin/ {
+        proxy_pass http://backend-hml:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static/ {
+        alias /data/hml/static/;
+    }
+
+    location /media/ {
+        alias /data/hml/media/;
+    }
+
+    location / {
+        proxy_pass http://frontend-hml:80;
+        proxy_set_header Host $host;
+    }
+}

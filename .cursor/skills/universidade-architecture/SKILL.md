@@ -1,72 +1,55 @@
 ---
 name: universidade-architecture
-description: Mantém o contexto da arquitetura do sistema UniversidadeMoney (Django+DRF, React, deploy em VPS com nginx/systemd/PostgreSQL). Use quando estruturar pastas, configurar settings/env, ou explicar como front/back/deploy se conectam.
+description: Mantém o contexto da arquitetura Docker do UniversidadeMoney (dev/homolog/prod, Django+DRF, React, Compose). Use ao estruturar pastas, settings/env ou explicar front/back/deploy.
 disable-model-invocation: true
 ---
 
-# UniversidadeMoney — Arquitetura (Contexto do Projeto)
+# UniversidadeMoney — Arquitetura (Docker)
 
 ## Objetivo
 
-- Código é desenvolvido localmente e versionado no Git.
-- A execução “de verdade” acontece na VPS (serviços, banco, domínio).
-- O repositório deve carregar **configuração de produção** (ex.: variáveis e templates), mas **segredos** ficam fora do Git.
+- Código local (Windows) sobe com `compose.dev.yml`.
+- VPS sobe prod + homolog com `compose.vps.yml`.
+- Segredos só em `.env.development` / `.env.homolog` / `.env.production` (não versionados).
 
-## Stack (padrão)
+## Stack
 
-- **Banco**: PostgreSQL (na VPS).
-- **Back-end**: Python + Django + Django REST Framework (API).
-- **Front-end**: React (SPA) com tooling via Node.js (build).
-- **Edge**: nginx como reverse proxy + static hosting.
-- **Process manager**: systemd (`.service`) para o backend (gunicorn).
+- PostgreSQL (container)
+- Django + DRF + Gunicorn
+- React + Vite (HMR no dev; build estático no VPS)
+- nginx gateway + certbot na VPS
 
-## Estrutura sugerida do repositório
+## Ambientes
 
-Preferir monorepo:
+| APP_ENV | Compose | Banco |
+|---------|---------|-------|
+| development | compose.dev.yml | universidade_money_dev |
+| homologation | compose.vps.yml (backend-hml) | universidade_money_hml |
+| production | compose.vps.yml (backend-prod) | universidade_money |
+
+## Estrutura
 
 ```
-backend/        # Django + DRF
-frontend/       # React (build estático)
-deploy/         # nginx + systemd + scripts (somente VPS)
-.github/        # workflow de deploy (push main -> VPS)
-ARCHITECTURE.md # documentação de arquitetura
+backend/
+frontend/
+docker/
+compose.yml
+compose.dev.yml
+compose.vps.yml
+.env.*.example
+deploy/scripts/deploy-docker.sh
+.github/workflows/
+ARCHITECTURE.md
 ```
 
-## Portas (UniversidadeMoney na VPS)
+## Contratos
 
-Faixa reservada: **7101+**. Não reutilizar portas de outros projetos (ex.: gunicorn **9001**).
+- `/api/`, `/admin/` → backend do ambiente
+- `/` → frontend do ambiente
+- `/static/`, `/media/` → volumes Docker
 
-| Porta | Uso |
-|-------|-----|
-| **7101** | Gunicorn Django (`127.0.0.1:7101`) |
-| **7102** | Reservada (expansão futura) |
-| **5432** | PostgreSQL compartilhado (`127.0.0.1`); banco `universidade_money` |
-| **80/443** | nginx (compartilhado, roteia por subdomínio) |
+## Deploy
 
-React em produção: build estático, **sem porta** (nginx serve).
+- `main` → prod | `homolog` → hml
 
-## Contratos de integração
-
-- **API**: prefixo `/api/` (nginx encaminha para `127.0.0.1:7101`).
-- **Admin**: `/admin/` (nginx encaminha para `127.0.0.1:7101`).
-- **SPA**: nginx serve `index.html` e assets; fallback `try_files ... /index.html`.
-- **Static/media Django**: `STATIC_ROOT` e `MEDIA_ROOT` fora do repo e servidos pelo nginx.
-
-## Configuração por ambiente (regras)
-
-- `*.env` reais: **somente VPS**.
-- No Git: apenas `*.env.example` (sem segredos).
-- Django settings: preferir split (`base.py`, `production.py`, opcional `local.py`).
-
-## Padrão de deploy (alto nível)
-
-- Push na `main` aciona deploy (ex.: GitHub Actions + SSH).
-- Na VPS o deploy faz:
-  - `git pull`
-  - backend: instalar deps, `migrate`, `collectstatic`, restart service
-  - frontend: `npm ci`, `npm run build`, publicar `dist/`, reload nginx
-
-## O que evitar
-
-- Rodar serviços “de produção” na máquina local como requisito (o local é para editar/testar, não para hospedar).
-- Commitar `.env` real, chaves, senhas, tokens.
+Detalhes: `ARCHITECTURE.md` e `docs/docker.md`.

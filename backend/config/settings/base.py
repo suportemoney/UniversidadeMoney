@@ -6,9 +6,12 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Carrega .env da raiz do backend ou da VPS (/var/www/universidade/.env via systemd)
+# Carrega .env: backend local, container (/app/.env) e legado VPS systemd
 load_dotenv(BASE_DIR / ".env")
+load_dotenv("/app/.env", override=False)
 load_dotenv("/var/www/universidade/.env", override=False)
+
+APP_ENV = os.getenv("APP_ENV", "production")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-inseguro-trocar-na-vps")
 

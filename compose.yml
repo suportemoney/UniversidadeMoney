@@ -1,0 +1,18 @@
+# Serviços base compartilhados (referência / âncora de rede)
+# Uso real: combine com compose.dev.yml ou compose.vps.yml
+
+name: universidade-money
+
+networks:
+  universidade:
+    driver: bridge
+
+volumes:
+  pgdata_dev:
+  pgdata_vps:
+  static_prod:
+  media_prod:
+  static_hml:
+  media_hml:
+  certbot_www:
+  certbot_certs:

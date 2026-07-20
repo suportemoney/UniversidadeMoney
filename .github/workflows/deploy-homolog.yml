@@ -1,14 +1,14 @@
-name: Deploy VPS Produção
+name: Deploy VPS Homologação
 
 on:
   push:
-    branches: [main]
+    branches: [homolog]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy produção via SSH
+      - name: Deploy homologação via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -16,11 +16,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /var/www/universidade/repo
-            git fetch origin main
-            git checkout main
-            git reset --hard origin/main
+            git fetch origin homolog
+            git checkout homolog
+            git reset --hard origin/homolog
             sed -i 's/\r$//' deploy/scripts/deploy-docker.sh 2>/dev/null || true
-            bash deploy/scripts/deploy-docker.sh prod
+            bash deploy/scripts/deploy-docker.sh hml
 
-# Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY
-# Na VPS: .env.production e .env.homolog em /var/www/universidade/repo/
+# Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY (mesmos da produção)
+# Branch homolog + arquivo .env.homolog na VPS

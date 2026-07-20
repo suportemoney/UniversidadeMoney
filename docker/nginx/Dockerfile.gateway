@@ -1,0 +1,14 @@
+FROM nginx:1.27-alpine
+
+RUN apk add --no-cache openssl bash gettext
+
+COPY docker/nginx/gateway.conf.template /etc/nginx/templates/default.conf.template
+COPY docker/nginx/gateway-bootstrap.conf.template /etc/nginx/templates/gateway-bootstrap.conf.template
+COPY docker/nginx/gateway-entrypoint.sh /gateway-entrypoint.sh
+
+RUN sed -i 's/\r$//' /gateway-entrypoint.sh \
+    && chmod +x /gateway-entrypoint.sh \
+    && mkdir -p /var/www/certbot
+
+ENTRYPOINT ["/gateway-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

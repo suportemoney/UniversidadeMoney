@@ -1,13 +1,29 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+// Em Docker, VITE_PROXY_TARGET aponta para o serviço backend na rede compose
+const proxyTarget = process.env.VITE_PROXY_TARGET || "http://127.0.0.1:8000";
+
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true,
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:7101",
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      "/admin": {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      "/static": {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      "/media": {
+        target: proxyTarget,
         changeOrigin: true,
       },
     },
