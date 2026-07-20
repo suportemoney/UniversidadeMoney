@@ -26,6 +26,9 @@ PY
 echo "==> Aplicando migrations..."
 python manage.py migrate --noinput
 
+echo "==> Garantindo superuser (se SUPERUSER_* definido)..."
+python manage.py ensure_superuser
+
 echo "==> Collectstatic..."
 python manage.py collectstatic --noinput
 

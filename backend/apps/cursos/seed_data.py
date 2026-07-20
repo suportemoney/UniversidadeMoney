@@ -73,21 +73,19 @@ def seed_dados(apps, schema_editor):
     )
 
     hoje = date.today()
+    # Campos tipo_plataforma/link só existem após migration 0008;
+    # este seed roda na 0002 com modelo histórico.
     TreinamentoAoVivo.objects.create(
         titulo="Workshop de Vendas Consultivas",
         data=hoje + timedelta(days=3),
         hora=time(14, 0),
         setor=setores["vendas"],
-        tipo_plataforma="meet",
-        link="https://meet.google.com/abc-defg-hij",
     )
     TreinamentoAoVivo.objects.create(
         titulo="LGPD na Prática",
         data=hoje + timedelta(days=7),
         hora=time(10, 0),
         setor=setores["administrativo"],
-        tipo_plataforma="youtube",
-        link="https://www.youtube.com/live/exemplo",
     )
 
 

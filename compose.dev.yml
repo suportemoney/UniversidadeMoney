@@ -34,6 +34,9 @@ services:
       DB_PORT: "5432"
       STATIC_ROOT: /data/static
       MEDIA_ROOT: /data/media
+      SUPERUSER_USERNAME: ${SUPERUSER_USERNAME:-admin}
+      SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-admin@localhost}
+      SUPERUSER_PASSWORD: ${SUPERUSER_PASSWORD:-admin123}
     volumes:
       - ./backend:/app
       - static_prod:/data/static
