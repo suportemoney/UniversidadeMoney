@@ -50,6 +50,11 @@ if [ -f "$REPO/deploy/nginx/universidade.conf" ]; then
   sudo ln -sf "$NGINX_SITE" /etc/nginx/sites-enabled/universidade 2>/dev/null || true
 fi
 sudo nginx -t
-sudo systemctl reload nginx
+# Se o serviço estiver parado (ex.: após liberar 443 para Docker), sobe de novo
+if systemctl is-active --quiet nginx; then
+  sudo systemctl reload nginx
+else
+  sudo systemctl start nginx
+fi
 
 echo "Deploy legado concluído. Migre para deploy-docker.sh quando possível."
