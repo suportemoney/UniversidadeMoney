@@ -1,36 +1,30 @@
 ## Arquitetura — UniversidadeMoney
 
-### Ambientes e superfícies
+### Edge (importante)
 
-| Superfície | Host produção | App |
-|------------|---------------|-----|
-| Interno (token-key) | `interno.moneypromotora.com.br` | `frontend-plataforma` modo `interno` |
-| Plataforma | `plataforma.moneypromotora.com.br` | `frontend-plataforma` modo `plataforma` |
-| Painel | `painel-interno.moneypromotora.com.br` | `frontend-painel` |
+**nginx do HOST** escuta 80/443 e serve **todos** os sites da VPS.  
+Docker **não** ocupa 80/443 — só `127.0.0.1` (faixa 7101+).
 
-Homolog: `*-hml.moneypromotora.com.br`.
+| Porta local | Serviço |
+|-------------|---------|
+| 7101 | backend-prod |
+| 7102 | backend-hml |
+| 7110 | frontend-interno-prod |
+| 7111 | frontend-plataforma-prod |
+| 7112 | frontend-painel-prod |
+
+### Subdomínios
+
+| Host | Upstream |
+|------|----------|
+| `interno.moneypromotora.com.br` | 127.0.0.1:7110 |
+| `plataforma.moneypromotora.com.br` | 127.0.0.1:7111 + API 7101 |
+| `painel-interno.moneypromotora.com.br` | 127.0.0.1:7112 + API 7101 |
 
 ### Fluxo TokenAcesso
 
-1. Painel cria colaborador + `TokenAcesso` (senha inicial `123456`)
-2. Colaborador abre **interno** e informa token-key
-3. API valida via ORM (sem SQL raw), mostra username + senha padrão
-4. Colaborador redefine senha + CPF
-5. Redirect para **plataforma** (login CPF + senha)
+1. Painel cria colaborador + token  
+2. Interno valida token → setup senha/CPF  
+3. Plataforma: login CPF + senha  
 
-### Stack Docker
-
-- PostgreSQL, Django/Gunicorn, 3 frontends nginx por ambiente, gateway + certbot
-- Dev: `compose.dev.yml` (portas 5173 plataforma, 5174 painel, 5175 interno)
-
-### Estrutura
-
-```
-backend/
-frontend-plataforma/
-frontend-painel/
-docker/
-compose.yml / compose.dev.yml / compose.vps.yml
-```
-
-Detalhes: [docs/docker.md](docs/docker.md) · [README.md](README.md)
+Detalhes: [docs/docker.md](docs/docker.md)

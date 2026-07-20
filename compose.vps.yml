@@ -1,4 +1,5 @@
-# VPS: produção + homologação (3 frontends cada) + gateway + certbot
+# VPS: Docker NÃO ocupa 80/443 — nginx do HOST faz o edge (outros sites compartilham).
+# Containers só em 127.0.0.1 (faixa 7101+).
 
 services:
   db:
@@ -35,8 +36,10 @@ services:
       STATIC_ROOT: /data/static
       MEDIA_ROOT: /data/media
     volumes:
-      - static_prod:/data/static
-      - media_prod:/data/media
+      - /var/www/universidade/static:/data/static
+      - /var/www/universidade/media:/data/media
+    ports:
+      - "127.0.0.1:7101:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -59,8 +62,10 @@ services:
       STATIC_ROOT: /data/static
       MEDIA_ROOT: /data/media
     volumes:
-      - static_hml:/data/static
-      - media_hml:/data/media
+      - /var/www/universidade/static-hml:/data/static
+      - /var/www/universidade/media-hml:/data/media
+    ports:
+      - "127.0.0.1:7102:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -78,6 +83,8 @@ services:
         VITE_SURFACE: interno
         VITE_API_URL: https://${DOMAIN_INTERNO:-interno.moneypromotora.com.br}/api
         VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}/login
+    ports:
+      - "127.0.0.1:7110:80"
     networks:
       - universidade
     restart: unless-stopped
@@ -93,6 +100,8 @@ services:
         VITE_API_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}/api
         VITE_INTERNO_URL: https://${DOMAIN_INTERNO:-interno.moneypromotora.com.br}
         VITE_PAINEL_URL: https://${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}
+    ports:
+      - "127.0.0.1:7111:80"
     networks:
       - universidade
     restart: unless-stopped
@@ -106,6 +115,8 @@ services:
         BUILD_COMMAND: npm run build
         VITE_API_URL: https://${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}/api
         VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}
+    ports:
+      - "127.0.0.1:7112:80"
     networks:
       - universidade
     restart: unless-stopped
@@ -120,6 +131,8 @@ services:
         VITE_SURFACE: interno
         VITE_API_URL: https://${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}/api
         VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}/login
+    ports:
+      - "127.0.0.1:7120:80"
     networks:
       - universidade
     restart: unless-stopped
@@ -135,6 +148,8 @@ services:
         VITE_API_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}/api
         VITE_INTERNO_URL: https://${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}
         VITE_PAINEL_URL: https://${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}
+    ports:
+      - "127.0.0.1:7121:80"
     networks:
       - universidade
     restart: unless-stopped
@@ -148,76 +163,8 @@ services:
         BUILD_COMMAND: npm run build
         VITE_API_URL: https://${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}/api
         VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}
-    networks:
-      - universidade
-    restart: unless-stopped
-
-  gateway:
-    build:
-      context: .
-      dockerfile: docker/nginx/Dockerfile.gateway
-    environment:
-      DOMAIN_INTERNO: ${DOMAIN_INTERNO:-interno.moneypromotora.com.br}
-      DOMAIN_PLATAFORMA: ${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}
-      DOMAIN_PAINEL: ${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}
-      DOMAIN_INTERNO_HML: ${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}
-      DOMAIN_PLATAFORMA_HML: ${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}
-      DOMAIN_PAINEL_HML: ${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - static_prod:/data/prod/static:ro
-      - media_prod:/data/prod/media:ro
-      - static_hml:/data/hml/static:ro
-      - media_hml:/data/hml/media:ro
-      - certbot_www:/var/www/certbot:ro
-      - certbot_certs:/etc/letsencrypt:ro
-    depends_on:
-      - backend-prod
-      - frontend-interno-prod
-      - frontend-plataforma-prod
-      - frontend-painel-prod
+      - "127.0.0.1:7122:80"
     networks:
       - universidade
     restart: unless-stopped
-
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - certbot_www:/var/www/certbot
-      - certbot_certs:/etc/letsencrypt
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        trap exit TERM
-        while :; do
-          certbot renew --webroot -w /var/www/certbot --quiet || true
-          sleep 12h
-        done
-    networks:
-      - universidade
-    restart: unless-stopped
-
-  certbot-init:
-    image: certbot/certbot:latest
-    profiles: ["init"]
-    volumes:
-      - certbot_www:/var/www/certbot
-      - certbot_certs:/etc/letsencrypt
-      - ./docker/certbot/init-certs.sh:/init-certs.sh:ro
-    environment:
-      DOMAIN_INTERNO: ${DOMAIN_INTERNO:-interno.moneypromotora.com.br}
-      DOMAIN_PLATAFORMA: ${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}
-      DOMAIN_PAINEL: ${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}
-      DOMAIN_INTERNO_HML: ${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}
-      DOMAIN_PLATAFORMA_HML: ${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}
-      DOMAIN_PAINEL_HML: ${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}
-      CERTBOT_EMAIL: ${CERTBOT_EMAIL:-admin@moneypromotora.com.br}
-    entrypoint: /bin/sh
-    command: ["-c", "sed -i 's/\\r$//' /init-certs.sh && chmod +x /init-certs.sh && /init-certs.sh"]
-    networks:
-      - universidade
-    depends_on:
-      - gateway

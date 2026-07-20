@@ -1,5 +1,19 @@
 # Docker — UniversidadeMoney
 
+## Regra da VPS
+
+O **nginx do host** continua na frente (80/443) para **todos** os sites.  
+Containers Docker só escutam em `127.0.0.1` — **nunca** `systemctl stop nginx`.
+
+## Portas (localhost)
+
+| Porta | Serviço |
+|-------|---------|
+| 7101 | API prod |
+| 7110 | interno |
+| 7111 | plataforma |
+| 7112 | painel |
+
 ## Dev local
 
 ```bash
@@ -7,42 +21,22 @@ cp .env.development.example .env.development
 docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up --build
 ```
 
-| Serviço | URL |
-|---------|-----|
-| Plataforma | http://localhost:5173 |
-| Painel | http://localhost:5174 |
-| Interno (token) | http://localhost:5175 |
-| API | http://localhost:8000 |
+## VPS — recuperar nginx (se foi parado por engano)
 
-## Subdomínios produção
+```bash
+sudo systemctl start nginx
+sudo systemctl status nginx
+```
 
-| Host | Container |
-|------|-----------|
-| `interno.moneypromotora.com.br` | `frontend-interno-prod` |
-| `plataforma.moneypromotora.com.br` | `frontend-plataforma-prod` |
-| `painel-interno.moneypromotora.com.br` | `frontend-painel-prod` |
-
-Homolog: `interno-hml`, `plataforma-hml`, `painel-interno-hml`.
-
-## SSL (Let's Encrypt) — novos domínios
-
-O erro `NET::ERR_CERT_COMMON_NAME_INVALID` aparece quando o **nginx antigo do host** ainda responde na 443 com o certificado de `universidade.moneypromotora.com.br`.
-
-### 1. Instalar Docker (obrigatório)
+## VPS — Docker + sites
 
 ```bash
 cd /var/www/universidade/repo
 git pull origin main
 sed -i 's/\r$//' deploy/scripts/*.sh
-bash deploy/scripts/install-docker-vps.sh
-```
-
-### 2. Emitir certificados
-
-DNS A dos hosts → IP da VPS, depois:
-
-```bash
+bash deploy/scripts/install-docker-vps.sh   # se ainda não tiver Docker
+bash deploy/scripts/deploy-docker.sh prod
 bash deploy/scripts/issue-ssl-certs.sh prod
 ```
 
-Teste: `curl -I https://interno.moneypromotora.com.br/`
+SSL usa **certbot do host** (`certbot --nginx`), sem parar o nginx.

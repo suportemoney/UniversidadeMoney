@@ -14,5 +14,3 @@ volumes:
   media_prod:
   static_hml:
   media_hml:
-  certbot_www:
-  certbot_certs:

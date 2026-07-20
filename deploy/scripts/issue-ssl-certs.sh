@@ -1,44 +1,11 @@
 #!/bin/bash
-# Emite certificados Let's Encrypt para os novos subdomínios (VPS).
-# Uso (na VPS, dentro do repo):
-#   bash deploy/scripts/issue-ssl-certs.sh          # só produção
-#   bash deploy/scripts/issue-ssl-certs.sh all      # prod + hml
-#   bash deploy/scripts/issue-ssl-certs.sh hml      # só homolog
+# Emite SSL via certbot do HOST (nginx compartilhado — NÃO para o nginx).
+# Uso: bash deploy/scripts/issue-ssl-certs.sh [prod|hml|all]
 set -euo pipefail
 
 TARGET="${1:-prod}"
 REPO="${DEPLOY_REPO:-/var/www/universidade/repo}"
 cd "$REPO"
-
-ENV_FILE=".env.production"
-COMPOSE_ENV=".env.production"
-
-if [ ! -f "$REPO/$COMPOSE_ENV" ]; then
-  echo "ERRO: faltando $REPO/$COMPOSE_ENV (copie de .env.production.example)"
-  exit 1
-fi
-
-if ! command -v docker >/dev/null 2>&1; then
-  echo "ERRO: Docker não está instalado nesta VPS."
-  echo "Instale com:"
-  echo "  bash deploy/scripts/install-docker-vps.sh"
-  echo "Depois rode de novo:"
-  echo "  bash deploy/scripts/issue-ssl-certs.sh prod"
-  exit 1
-fi
-
-if ! docker compose version >/dev/null 2>&1; then
-  echo "ERRO: plugin 'docker compose' não encontrado."
-  echo "Instale com: bash deploy/scripts/install-docker-vps.sh"
-  exit 1
-fi
-
-if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-  set +a
-fi
 
 DOMAIN_INTERNO="${DOMAIN_INTERNO:-interno.moneypromotora.com.br}"
 DOMAIN_PLATAFORMA="${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}"
@@ -48,68 +15,57 @@ DOMAIN_PLATAFORMA_HML="${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.co
 DOMAIN_PAINEL_HML="${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@moneypromotora.com.br}"
 
+if [ -f .env.production ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env.production
+  set +a
+fi
+
 DOMAINS=()
 case "$TARGET" in
-  prod)
-    DOMAINS=("$DOMAIN_INTERNO" "$DOMAIN_PLATAFORMA" "$DOMAIN_PAINEL")
-    ;;
-  hml)
-    DOMAINS=("$DOMAIN_INTERNO_HML" "$DOMAIN_PLATAFORMA_HML" "$DOMAIN_PAINEL_HML")
-    ;;
+  prod) DOMAINS=("$DOMAIN_INTERNO" "$DOMAIN_PLATAFORMA" "$DOMAIN_PAINEL") ;;
+  hml)  DOMAINS=("$DOMAIN_INTERNO_HML" "$DOMAIN_PLATAFORMA_HML" "$DOMAIN_PAINEL_HML") ;;
   all)
     DOMAINS=(
       "$DOMAIN_INTERNO" "$DOMAIN_PLATAFORMA" "$DOMAIN_PAINEL"
       "$DOMAIN_INTERNO_HML" "$DOMAIN_PLATAFORMA_HML" "$DOMAIN_PAINEL_HML"
     )
     ;;
-  *)
-    echo "Uso: $0 [prod|hml|all]"
-    exit 1
-    ;;
+  *) echo "Uso: $0 [prod|hml|all]"; exit 1 ;;
 esac
 
-echo "==> Liberando 80/443 para o gateway Docker..."
-# Site legado do host compete com o certificado errado (ERR_CERT_COMMON_NAME_INVALID)
-if [ -f /etc/nginx/sites-enabled/universidade ]; then
-  sudo rm -f /etc/nginx/sites-enabled/universidade
-  echo "    removido sites-enabled/universidade"
+echo "==> Garantindo nginx do HOST ativo (outros sites dependem dele)..."
+sudo systemctl start nginx 2>/dev/null || true
+
+echo "==> Instalando conf bootstrap (HTTP)..."
+sudo mkdir -p /var/www/certbot
+sudo cp "$REPO/deploy/nginx/universidade-sites-bootstrap.conf" /etc/nginx/sites-available/universidade-sites
+sudo ln -sf /etc/nginx/sites-available/universidade-sites /etc/nginx/sites-enabled/universidade-sites
+sudo nginx -t
+sudo systemctl reload nginx
+
+if ! command -v certbot >/dev/null 2>&1; then
+  echo "Instalando certbot..."
+  sudo apt-get update -y
+  sudo apt-get install -y certbot python3-certbot-nginx
 fi
-if systemctl is-active --quiet nginx 2>/dev/null; then
-  if sudo ss -tulpn 2>/dev/null | grep -E ':80 |:443 ' | grep -q nginx; then
-    echo "    parando nginx do host (portas 80/443 em uso)"
-    sudo systemctl stop nginx || true
-  fi
-fi
 
-COMPOSE=(docker compose -f compose.yml -f compose.vps.yml --env-file "$COMPOSE_ENV")
-
-echo "==> Subindo gateway (bootstrap HTTP se ainda sem certs)..."
-"${COMPOSE[@]}" up -d --build gateway db certbot \
-  frontend-interno-prod frontend-plataforma-prod frontend-painel-prod \
-  backend-prod 2>/dev/null || "${COMPOSE[@]}" up -d gateway
-
-"${COMPOSE[@]}" exec -T gateway sh -c 'mkdir -p /var/www/certbot && chmod -R 755 /var/www/certbot' 2>/dev/null || true
-
-echo "==> Emitindo certificados..."
+echo "==> Emitindo certificados (certbot --nginx no HOST)..."
 for d in "${DOMAINS[@]}"; do
   echo "---- $d ----"
-  "${COMPOSE[@]}" run --rm --entrypoint certbot \
-    -e CERTBOT_EMAIL="$CERTBOT_EMAIL" \
-    certbot certonly --webroot -w /var/www/certbot \
-      --email "$CERTBOT_EMAIL" --agree-tos --no-eff-email --non-interactive \
-      -d "$d" || {
-        echo "AVISO: falha em $d (DNS aponta para esta VPS? porta 80 livre?)"
-        continue
-      }
+  sudo certbot --nginx -d "$d" \
+    --email "$CERTBOT_EMAIL" --agree-tos --no-eff-email --non-interactive \
+    --redirect || echo "AVISO: falha em $d (DNS A → esta VPS?)"
 done
 
-echo "==> Recriando gateway com HTTPS onde houver certificado..."
-"${COMPOSE[@]}" up -d --force-recreate gateway
+echo "==> Aplicando conf completa com SSL..."
+sudo cp "$REPO/deploy/nginx/universidade-sites.conf" /etc/nginx/sites-available/universidade-sites
+sudo nginx -t
+sudo systemctl reload nginx
 
 echo ""
-echo "Concluído. Teste:"
+echo "Concluído. Nginx do host permanece no ar (outros sites intactos)."
 for d in "${DOMAINS[@]}"; do
   echo "  curl -I https://$d/"
 done
-echo ""
-echo "Se ainda aparecer certificado errado: confirme DNS A → IP desta VPS e que só o container gateway escuta 443."
