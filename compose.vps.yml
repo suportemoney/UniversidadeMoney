@@ -10,9 +10,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-universidade_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-universidade_money}
+      POSTGRES_USER: ${POSTGRES_USER:-${DB_USER:-universidade_user}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD:?definir POSTGRES_PASSWORD ou DB_PASSWORD}}
+      POSTGRES_DB: ${POSTGRES_DB:-${DB_NAME:-universidade_money}}
       POSTGRES_MULTIPLE_DATABASES: universidade_money_hml
     volumes:
       - pgdata_vps:/var/lib/postgresql/data
