@@ -1,20 +1,30 @@
-# Build estático do React (prod / homolog)
+# Build SPA (plataforma / interno / painel)
+# ARGs: FRONTEND_DIR, BUILD_COMMAND, VITE_*
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json ./
+ARG FRONTEND_DIR=frontend-plataforma
+COPY ${FRONTEND_DIR}/package.json ${FRONTEND_DIR}/package-lock.json ./
 RUN npm ci
 
-COPY frontend/ ./
+COPY ${FRONTEND_DIR}/ ./
 
-# VITE_API_URL injetado no build (ex.: https://dominio/api)
 ARG VITE_API_URL=/api
-ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_SURFACE=plataforma
+ARG VITE_PLATAFORMA_URL=
+ARG VITE_INTERNO_URL=
+ARG VITE_PAINEL_URL=
+ARG BUILD_COMMAND=npm run build
 
-RUN npm run build
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_SURFACE=$VITE_SURFACE \
+    VITE_PLATAFORMA_URL=$VITE_PLATAFORMA_URL \
+    VITE_INTERNO_URL=$VITE_INTERNO_URL \
+    VITE_PAINEL_URL=$VITE_PAINEL_URL
 
-# Servir arquivos estáticos
+RUN sh -c "$BUILD_COMMAND"
+
 FROM nginx:1.27-alpine
 
 COPY docker/nginx/frontend-spa.conf /etc/nginx/conf.d/default.conf

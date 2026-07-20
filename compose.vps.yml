@@ -1,10 +1,4 @@
-# VPS: produção + homologação + gateway nginx + certbot
-# Uso (primeira vez e atualizações):
-#   docker compose -f compose.yml -f compose.vps.yml --env-file .env.production up -d --build
-#
-# Deploy seletivo (Actions):
-#   docker compose -f compose.yml -f compose.vps.yml --env-file .env.production up -d --build backend-prod frontend-prod
-#   docker compose -f compose.yml -f compose.vps.yml --env-file .env.homolog up -d --build backend-hml frontend-hml
+# VPS: produção + homologação (3 frontends cada) + gateway + certbot
 
 services:
   db:
@@ -74,22 +68,86 @@ services:
       - universidade
     restart: unless-stopped
 
-  frontend-prod:
+  frontend-interno-prod:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL_PROD:-https://universidade.moneypromotora.com.br/api}
+        FRONTEND_DIR: frontend-plataforma
+        BUILD_COMMAND: npm run build:interno
+        VITE_SURFACE: interno
+        VITE_API_URL: https://${DOMAIN_INTERNO:-interno.moneypromotora.com.br}/api
+        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}/login
     networks:
       - universidade
     restart: unless-stopped
 
-  frontend-hml:
+  frontend-plataforma-prod:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL_HML:-https://universidade-hml.moneypromotora.com.br/api}
+        FRONTEND_DIR: frontend-plataforma
+        BUILD_COMMAND: npm run build
+        VITE_SURFACE: plataforma
+        VITE_API_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}/api
+        VITE_INTERNO_URL: https://${DOMAIN_INTERNO:-interno.moneypromotora.com.br}
+        VITE_PAINEL_URL: https://${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  frontend-painel-prod:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        FRONTEND_DIR: frontend-painel
+        BUILD_COMMAND: npm run build
+        VITE_API_URL: https://${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}/api
+        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  frontend-interno-hml:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        FRONTEND_DIR: frontend-plataforma
+        BUILD_COMMAND: npm run build:interno
+        VITE_SURFACE: interno
+        VITE_API_URL: https://${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}/api
+        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}/login
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  frontend-plataforma-hml:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        FRONTEND_DIR: frontend-plataforma
+        BUILD_COMMAND: npm run build
+        VITE_SURFACE: plataforma
+        VITE_API_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}/api
+        VITE_INTERNO_URL: https://${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}
+        VITE_PAINEL_URL: https://${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}
+    networks:
+      - universidade
+    restart: unless-stopped
+
+  frontend-painel-hml:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        FRONTEND_DIR: frontend-painel
+        BUILD_COMMAND: npm run build
+        VITE_API_URL: https://${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}/api
+        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}
     networks:
       - universidade
     restart: unless-stopped
@@ -99,8 +157,12 @@ services:
       context: .
       dockerfile: docker/nginx/Dockerfile.gateway
     environment:
-      DOMAIN_PROD: ${DOMAIN_PROD:-universidade.moneypromotora.com.br}
-      DOMAIN_HML: ${DOMAIN_HML:-universidade-hml.moneypromotora.com.br}
+      DOMAIN_INTERNO: ${DOMAIN_INTERNO:-interno.moneypromotora.com.br}
+      DOMAIN_PLATAFORMA: ${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}
+      DOMAIN_PAINEL: ${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}
+      DOMAIN_INTERNO_HML: ${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}
+      DOMAIN_PLATAFORMA_HML: ${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}
+      DOMAIN_PAINEL_HML: ${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}
     ports:
       - "80:80"
       - "443:443"
@@ -114,8 +176,12 @@ services:
     depends_on:
       - backend-prod
       - backend-hml
-      - frontend-prod
-      - frontend-hml
+      - frontend-interno-prod
+      - frontend-plataforma-prod
+      - frontend-painel-prod
+      - frontend-interno-hml
+      - frontend-plataforma-hml
+      - frontend-painel-hml
     networks:
       - universidade
     restart: unless-stopped
@@ -138,8 +204,6 @@ services:
       - universidade
     restart: unless-stopped
 
-  # Uso único: emitir certificados iniciais
-  # docker compose -f compose.yml -f compose.vps.yml --env-file .env.production --profile init run --rm certbot-init
   certbot-init:
     image: certbot/certbot:latest
     profiles: ["init"]
@@ -148,8 +212,12 @@ services:
       - certbot_certs:/etc/letsencrypt
       - ./docker/certbot/init-certs.sh:/init-certs.sh:ro
     environment:
-      DOMAIN_PROD: ${DOMAIN_PROD:-universidade.moneypromotora.com.br}
-      DOMAIN_HML: ${DOMAIN_HML:-universidade-hml.moneypromotora.com.br}
+      DOMAIN_INTERNO: ${DOMAIN_INTERNO:-interno.moneypromotora.com.br}
+      DOMAIN_PLATAFORMA: ${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}
+      DOMAIN_PAINEL: ${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}
+      DOMAIN_INTERNO_HML: ${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}
+      DOMAIN_PLATAFORMA_HML: ${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}
+      DOMAIN_PAINEL_HML: ${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}
       CERTBOT_EMAIL: ${CERTBOT_EMAIL:-admin@moneypromotora.com.br}
     entrypoint: /bin/sh
     command: ["-c", "sed -i 's/\\r$//' /init-certs.sh && chmod +x /init-certs.sh && /init-certs.sh"]

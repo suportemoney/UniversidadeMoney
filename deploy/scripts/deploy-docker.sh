@@ -18,11 +18,11 @@ git fetch origin 2>/dev/null || true
 if [ "$TARGET" = "prod" ]; then
   BRANCH="main"
   ENV_FILE=".env.production"
-  SERVICES="backend-prod frontend-prod gateway"
+  SERVICES="backend-prod frontend-interno-prod frontend-plataforma-prod frontend-painel-prod gateway"
 elif [ "$TARGET" = "hml" ]; then
   BRANCH="homolog"
   ENV_FILE=".env.homolog"
-  SERVICES="backend-hml frontend-hml gateway"
+  SERVICES="backend-hml frontend-interno-hml frontend-plataforma-hml frontend-painel-hml gateway"
 else
   echo "Alvo inválido: $TARGET (use prod ou hml)"
   exit 1

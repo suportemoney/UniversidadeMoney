@@ -1,19 +1,19 @@
 #!/bin/sh
-# Emite certificados iniciais (rodar uma vez na VPS com gateway em modo bootstrap).
-# Uso:
-#   docker compose -f compose.yml -f compose.vps.yml --env-file .env.production run --rm certbot-init
 set -e
 
-DOMAIN_PROD="${DOMAIN_PROD:-universidade.moneypromotora.com.br}"
-DOMAIN_HML="${DOMAIN_HML:-universidade-hml.moneypromotora.com.br}"
+DOMAIN_INTERNO="${DOMAIN_INTERNO:-interno.moneypromotora.com.br}"
+DOMAIN_PLATAFORMA="${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}"
+DOMAIN_PAINEL="${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}"
+DOMAIN_INTERNO_HML="${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}"
+DOMAIN_PLATAFORMA_HML="${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}"
+DOMAIN_PAINEL_HML="${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}"
 EMAIL="${CERTBOT_EMAIL:-admin@moneypromotora.com.br}"
 
-certbot certonly --webroot -w /var/www/certbot \
-  --email "$EMAIL" --agree-tos --no-eff-email \
-  -d "$DOMAIN_PROD"
+for d in "$DOMAIN_INTERNO" "$DOMAIN_PLATAFORMA" "$DOMAIN_PAINEL" "$DOMAIN_INTERNO_HML" "$DOMAIN_PLATAFORMA_HML" "$DOMAIN_PAINEL_HML"; do
+  echo "==> Emitindo certificado para $d"
+  certbot certonly --webroot -w /var/www/certbot \
+    --email "$EMAIL" --agree-tos --no-eff-email \
+    -d "$d"
+done
 
-certbot certonly --webroot -w /var/www/certbot \
-  --email "$EMAIL" --agree-tos --no-eff-email \
-  -d "$DOMAIN_HML"
-
-echo "Certificados emitidos. Reinicie o gateway: docker compose ... up -d gateway --force-recreate"
+echo "Certificados emitidos. Recrie o gateway."

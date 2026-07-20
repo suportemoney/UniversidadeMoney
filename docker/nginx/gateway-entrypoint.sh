@@ -1,25 +1,32 @@
 #!/bin/bash
-# Gera conf nginx; se ainda não houver certificado, usa modo bootstrap (só HTTP).
 set -e
 
-DOMAIN_PROD="${DOMAIN_PROD:-universidade.moneypromotora.com.br}"
-DOMAIN_HML="${DOMAIN_HML:-universidade-hml.moneypromotora.com.br}"
+DOMAIN_INTERNO="${DOMAIN_INTERNO:-interno.moneypromotora.com.br}"
+DOMAIN_PLATAFORMA="${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}"
+DOMAIN_PAINEL="${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}"
+DOMAIN_INTERNO_HML="${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}"
+DOMAIN_PLATAFORMA_HML="${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}"
+DOMAIN_PAINEL_HML="${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}"
 
-CERT_PROD="/etc/letsencrypt/live/${DOMAIN_PROD}/fullchain.pem"
-CERT_HML="/etc/letsencrypt/live/${DOMAIN_HML}/fullchain.pem"
+export DOMAIN_INTERNO DOMAIN_PLATAFORMA DOMAIN_PAINEL
+export DOMAIN_INTERNO_HML DOMAIN_PLATAFORMA_HML DOMAIN_PAINEL_HML
 
-export DOMAIN_PROD DOMAIN_HML
+ENV_VARS='${DOMAIN_INTERNO} ${DOMAIN_PLATAFORMA} ${DOMAIN_PAINEL} ${DOMAIN_INTERNO_HML} ${DOMAIN_PLATAFORMA_HML} ${DOMAIN_PAINEL_HML}'
 
-if [ -f "$CERT_PROD" ] && [ -f "$CERT_HML" ]; then
-  echo "==> Certificados encontrados — modo HTTPS completo"
-  envsubst '${DOMAIN_PROD} ${DOMAIN_HML}' \
-    < /etc/nginx/templates/default.conf.template \
-    > /etc/nginx/conf.d/default.conf
+all_certs=true
+for d in "$DOMAIN_INTERNO" "$DOMAIN_PLATAFORMA" "$DOMAIN_PAINEL" "$DOMAIN_INTERNO_HML" "$DOMAIN_PLATAFORMA_HML" "$DOMAIN_PAINEL_HML"; do
+  if [ ! -f "/etc/letsencrypt/live/${d}/fullchain.pem" ]; then
+    all_certs=false
+    break
+  fi
+done
+
+if [ "$all_certs" = true ]; then
+  echo "==> Certificados OK — modo HTTPS"
+  envsubst "$ENV_VARS" < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 else
-  echo "==> Certificados ausentes — modo bootstrap HTTP (emita SSL com certbot)"
-  envsubst '${DOMAIN_PROD} ${DOMAIN_HML}' \
-    < /etc/nginx/templates/gateway-bootstrap.conf.template \
-    > /etc/nginx/conf.d/default.conf
+  echo "==> Certificados ausentes — modo bootstrap HTTP"
+  envsubst "$ENV_VARS" < /etc/nginx/templates/gateway-bootstrap.conf.template > /etc/nginx/conf.d/default.conf
 fi
 
 exec "$@"

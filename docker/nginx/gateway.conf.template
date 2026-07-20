@@ -1,10 +1,10 @@
-# Gateway VPS: roteia por server_name (prod + homolog)
-# Variáveis: DOMAIN_PROD, DOMAIN_HML
+# Gateway VPS — 3 hosts prod + 3 hosts hml
+# Variáveis: DOMAIN_INTERNO, DOMAIN_PLATAFORMA, DOMAIN_PAINEL,
+#            DOMAIN_INTERNO_HML, DOMAIN_PLATAFORMA_HML, DOMAIN_PAINEL_HML
 
-# HTTP — ACME challenge + redirect HTTPS
 server {
     listen 80;
-    server_name ${DOMAIN_PROD} ${DOMAIN_HML};
+    server_name ${DOMAIN_INTERNO} ${DOMAIN_PLATAFORMA} ${DOMAIN_PAINEL} ${DOMAIN_INTERNO_HML} ${DOMAIN_PLATAFORMA_HML} ${DOMAIN_PAINEL_HML};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -15,14 +15,12 @@ server {
     }
 }
 
-# Produção
+# --- Produção: interno ---
 server {
     listen 443 ssl http2;
-    server_name ${DOMAIN_PROD};
-
-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_PROD}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_PROD}/privkey.pem;
-
+    server_name ${DOMAIN_INTERNO};
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_INTERNO}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_INTERNO}/privkey.pem;
     client_max_body_size 500M;
 
     location /api/ {
@@ -32,7 +30,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
     location /admin/ {
         proxy_pass http://backend-prod:8000;
         proxy_set_header Host $host;
@@ -40,36 +37,83 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
-    location /static/ {
-        alias /data/prod/static/;
-        expires 30d;
-        access_log off;
-    }
-
-    location /media/ {
-        alias /data/prod/media/;
-        expires 7d;
-        access_log off;
-    }
-
+    location /static/ { alias /data/prod/static/; expires 30d; access_log off; }
+    location /media/ { alias /data/prod/media/; expires 7d; access_log off; }
     location / {
-        proxy_pass http://frontend-prod:80;
+        proxy_pass http://frontend-interno-prod:80;
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 
-# Homologação
+# --- Produção: plataforma ---
 server {
     listen 443 ssl http2;
-    server_name ${DOMAIN_HML};
+    server_name ${DOMAIN_PLATAFORMA};
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_PLATAFORMA}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_PLATAFORMA}/privkey.pem;
+    client_max_body_size 500M;
 
-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_HML}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_HML}/privkey.pem;
+    location /api/ {
+        proxy_pass http://backend-prod:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /admin/ {
+        proxy_pass http://backend-prod:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /static/ { alias /data/prod/static/; expires 30d; access_log off; }
+    location /media/ { alias /data/prod/media/; expires 7d; access_log off; }
+    location / {
+        proxy_pass http://frontend-plataforma-prod:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 
+# --- Produção: painel ---
+server {
+    listen 443 ssl http2;
+    server_name ${DOMAIN_PAINEL};
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_PAINEL}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_PAINEL}/privkey.pem;
+    client_max_body_size 500M;
+
+    location /api/ {
+        proxy_pass http://backend-prod:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /admin/ {
+        proxy_pass http://backend-prod:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /static/ { alias /data/prod/static/; expires 30d; access_log off; }
+    location /media/ { alias /data/prod/media/; expires 7d; access_log off; }
+    location / {
+        proxy_pass http://frontend-painel-prod:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# --- Homolog: interno ---
+server {
+    listen 443 ssl http2;
+    server_name ${DOMAIN_INTERNO_HML};
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_INTERNO_HML}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_INTERNO_HML}/privkey.pem;
     client_max_body_size 500M;
 
     location /api/ {
@@ -79,7 +123,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
     location /admin/ {
         proxy_pass http://backend-hml:8000;
         proxy_set_header Host $host;
@@ -87,24 +130,73 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
-    location /static/ {
-        alias /data/hml/static/;
-        expires 30d;
-        access_log off;
-    }
-
-    location /media/ {
-        alias /data/hml/media/;
-        expires 7d;
-        access_log off;
-    }
-
+    location /static/ { alias /data/hml/static/; expires 30d; access_log off; }
+    location /media/ { alias /data/hml/media/; expires 7d; access_log off; }
     location / {
-        proxy_pass http://frontend-hml:80;
+        proxy_pass http://frontend-interno-hml:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# --- Homolog: plataforma ---
+server {
+    listen 443 ssl http2;
+    server_name ${DOMAIN_PLATAFORMA_HML};
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_PLATAFORMA_HML}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_PLATAFORMA_HML}/privkey.pem;
+    client_max_body_size 500M;
+
+    location /api/ {
+        proxy_pass http://backend-hml:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /admin/ {
+        proxy_pass http://backend-hml:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /static/ { alias /data/hml/static/; expires 30d; access_log off; }
+    location /media/ { alias /data/hml/media/; expires 7d; access_log off; }
+    location / {
+        proxy_pass http://frontend-plataforma-hml:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# --- Homolog: painel ---
+server {
+    listen 443 ssl http2;
+    server_name ${DOMAIN_PAINEL_HML};
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN_PAINEL_HML}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_PAINEL_HML}/privkey.pem;
+    client_max_body_size 500M;
+
+    location /api/ {
+        proxy_pass http://backend-hml:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /admin/ {
+        proxy_pass http://backend-hml:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /static/ { alias /data/hml/static/; expires 30d; access_log off; }
+    location /media/ { alias /data/hml/media/; expires 7d; access_log off; }
+    location / {
+        proxy_pass http://frontend-painel-hml:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }

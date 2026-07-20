@@ -1,59 +1,36 @@
 # UniversidadeMoney
 
-Monorepo **Django + DRF** (backend) e **React + Vite** (frontend), executado com **Docker** em três ambientes: desenvolvimento, homologação e produção.
+Monorepo Docker: **Django + DRF**, dois frontends Vite (**plataforma** e **painel**), portal **interno** (token-key).
 
-## Stack
+## Frontends
 
-- PostgreSQL (container)
-- Python + Django + DRF + Gunicorn
-- React + Vite
-- nginx + certbot (VPS)
+| App | Porta local | Produção |
+|-----|-------------|----------|
+| `frontend-plataforma` | 5173 | `plataforma.moneypromotora.com.br` |
+| `frontend-painel` | 5174 | `painel-interno.moneypromotora.com.br` |
+| plataforma modo `interno` | 5175 | `interno.moneypromotora.com.br` |
 
-## Ambientes
-
-| Ambiente | Como sobe | Domínio |
-|----------|-----------|---------|
-| development | `compose.dev.yml` no Windows | localhost |
-| homologation | `compose.vps.yml` + branch `homolog` | `universidade-hml.moneypromotora.com.br` |
-| production | `compose.vps.yml` + branch `main` | `universidade.moneypromotora.com.br` |
-
-Bancos separados: `universidade_money_dev` / `universidade_money_hml` / `universidade_money`.
-
-## Estrutura
-
-```
-backend/          # API Django + DRF
-frontend/         # SPA React (Vite)
-docker/           # imagens, nginx, entrypoints
-compose*.yml      # orquestração por ambiente
-deploy/           # scripts de deploy
-docs/             # guias operacionais
-```
-
-## Desenvolvimento local (Windows)
+## Dev local
 
 ```bash
 cp .env.development.example .env.development
 docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up --build
 ```
 
-- Front: http://localhost:5173  
-- API (direto): http://localhost:8000  
-- Proxy nginx opcional: http://localhost:8080  
+Ou sem Docker nos fronts:
 
-## Variáveis de ambiente
+```bash
+cd frontend-plataforma && npm ci && npm run dev
+cd frontend-plataforma && npm run dev:interno
+cd frontend-painel && npm ci && npm run dev
+```
 
-Modelos no Git (sem segredos):
+## Token-key
 
-- `.env.development.example`
-- `.env.homolog.example`
-- `.env.production.example`
+No painel: **Convites** → cria username (ex. `jaqueline_rocha`) + token.  
+Colaborador ativa em **interno** e depois faz login na **plataforma** com CPF.
 
-Na VPS: copiar para `.env.homolog` e `.env.production` dentro do clone do repositório.
+## Docs
 
-## Deploy
-
-- Push `main` → produção (Docker)
-- Push `homolog` → homologação (Docker)
-
-Guia: [docs/docker.md](docs/docker.md) · Arquitetura: [ARCHITECTURE.md](ARCHITECTURE.md)
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [docs/docker.md](docs/docker.md)

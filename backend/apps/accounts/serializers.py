@@ -37,7 +37,11 @@ class RegisterSerializer(serializers.Serializer):
             password=validated_data["password"],
             first_name=validated_data["nome"].strip(),
         )
-        Profile.objects.create(user=user, cpf=validated_data["cpf"])
+        Profile.objects.create(
+            user=user,
+            cpf=validated_data["cpf"],
+            precisa_redefinir_senha=False,
+        )
         return user
 
 
@@ -56,12 +60,14 @@ class UserSerializer(serializers.ModelSerializer):
     assinatura = serializers.SerializerMethodField()
     features = serializers.SerializerMethodField()
 
+    precisa_redefinir_senha = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
-            "id", "email", "first_name", "cpf", "cargo", "setor",
+            "id", "username", "email", "first_name", "cpf", "cargo", "setor",
             "is_superuser", "is_membro_equipe", "pode_gestao",
-            "tem_plano", "assinatura", "features",
+            "tem_plano", "assinatura", "features", "precisa_redefinir_senha",
         ]
 
     def get_cpf(self, obj):
@@ -69,6 +75,10 @@ class UserSerializer(serializers.ModelSerializer):
             return obj.profile.cpf
         return None
 
+    def get_precisa_redefinir_senha(self, obj):
+        if hasattr(obj, "profile"):
+            return obj.profile.precisa_redefinir_senha
+        return False
     def get_cargo(self, obj):
         if hasattr(obj, "profile"):
             return obj.profile.cargo

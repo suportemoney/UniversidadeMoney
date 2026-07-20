@@ -1,13 +1,14 @@
-# Frontend com Vite HMR (somente desenvolvimento local)
+# Dev Vite — FRONTEND_DIR + comando via env
 FROM node:20-alpine
 
+ARG FRONTEND_DIR=frontend-plataforma
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY ${FRONTEND_DIR}/package.json ${FRONTEND_DIR}/package-lock.json ./
 RUN npm ci
 
-COPY frontend/ ./
+COPY ${FRONTEND_DIR}/ ./
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
