@@ -24,11 +24,25 @@ docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up 
 
 Homolog: `interno-hml`, `plataforma-hml`, `painel-interno-hml`.
 
-## VPS
+## SSL (Let's Encrypt) — novos domínios
 
-1. DNS A para os 6 hosts
-2. `.env.production` e `.env.homolog` a partir dos exemplos
-3. `docker compose -f compose.yml -f compose.vps.yml --env-file .env.production up -d --build`
-4. Certificados: `--profile init run --rm certbot-init` e recrear `gateway`
+O erro `NET::ERR_CERT_COMMON_NAME_INVALID` aparece quando o **nginx antigo do host** ainda responde na 443 com o certificado de `universidade.moneypromotora.com.br`.
 
-Deploy: `deploy/scripts/deploy-docker.sh prod|hml`
+Na VPS, após DNS A dos 3 (ou 6) hosts apontarem para o IP:
+
+```bash
+cd /var/www/universidade/repo
+git pull origin main
+sed -i 's/\r$//' deploy/scripts/issue-ssl-certs.sh
+bash deploy/scripts/issue-ssl-certs.sh prod    # interno + plataforma + painel
+# bash deploy/scripts/issue-ssl-certs.sh all   # inclui homolog
+```
+
+O script:
+
+1. Remove o site legado `universidade` do nginx do host (se existir)
+2. Para o nginx do host se ele ocupar 80/443
+3. Emite certificados via certbot (webroot no gateway Docker)
+4. Recria o gateway — HTTPS só nos hosts que já têm cert
+
+Teste: `curl -I https://interno.moneypromotora.com.br/`

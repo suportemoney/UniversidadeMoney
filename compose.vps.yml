@@ -175,13 +175,9 @@ services:
       - certbot_certs:/etc/letsencrypt:ro
     depends_on:
       - backend-prod
-      - backend-hml
       - frontend-interno-prod
       - frontend-plataforma-prod
       - frontend-painel-prod
-      - frontend-interno-hml
-      - frontend-plataforma-hml
-      - frontend-painel-hml
     networks:
       - universidade
     restart: unless-stopped
