@@ -9,6 +9,8 @@ COPY ${FRONTEND_DIR}/package.json ${FRONTEND_DIR}/package-lock.json ./
 RUN npm ci
 
 COPY ${FRONTEND_DIR}/ ./
+# Tokens/tema compartilhados (alias @shared → /shared)
+COPY shared/ /shared/
 
 ARG VITE_API_URL=/api
 ARG VITE_SURFACE=plataforma
@@ -21,7 +23,8 @@ ENV VITE_API_URL=$VITE_API_URL \
     VITE_SURFACE=$VITE_SURFACE \
     VITE_PLATAFORMA_URL=$VITE_PLATAFORMA_URL \
     VITE_INTERNO_URL=$VITE_INTERNO_URL \
-    VITE_PAINEL_URL=$VITE_PAINEL_URL
+    VITE_PAINEL_URL=$VITE_PAINEL_URL \
+    SHARED_UI_ROOT=/shared
 
 RUN sh -c "$BUILD_COMMAND"
 
