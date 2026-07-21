@@ -27,4 +27,4 @@ RUN sed -i 's/\r$//' /entrypoint-backend.sh \
 EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint-backend.sh"]
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "300", "--graceful-timeout", "30"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "1200", "--graceful-timeout", "60"]

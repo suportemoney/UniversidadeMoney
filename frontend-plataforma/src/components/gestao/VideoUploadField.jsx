@@ -28,7 +28,7 @@ export default function VideoUploadField({ aula, onUploaded }) {
         <p className="gestao-muted">Nenhum vídeo enviado.</p>
       )}
       <label className="btn btn-outline btn-sm">
-        {loading ? "Enviando e convertendo..." : "Enviar vídeo (salva como .webm)"}
+        {loading ? "Convertendo para .webm… aguarde (pode levar alguns minutos)" : "Enviar vídeo (salva como .webm)"}
         <input
           type="file"
           accept="video/*,.mp4,.m4v,.webm,.mov,.avi,.mkv,.mpeg,.mpg,.wmv,.flv,.3gp,.ogv,.ts"

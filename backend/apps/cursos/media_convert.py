@@ -14,7 +14,7 @@ class MediaConvertError(Exception):
 def converter_video_para_webm(uploaded_file):
     """
     Converte upload de vídeo (mp4, avi, mov, etc.) para VP9/Opus .webm.
-    Usa CRF para equilibrar tamanho e qualidade.
+    Prioriza arquivo menor e conversão mais rápida (máx. 720p, cpu-used alto).
     Retorna ContentFile pronto para FileField.save().
     """
     suffix = os.path.splitext(getattr(uploaded_file, "name", "") or "")[1] or ".mp4"
@@ -22,29 +22,42 @@ def converter_video_para_webm(uploaded_file):
         entrada = os.path.join(tmp, f"in{suffix}")
         saida = os.path.join(tmp, "out.webm")
         with open(entrada, "wb") as f:
-            for chunk in uploaded_file.chunks():
-                f.write(chunk)
+            try:
+                uploaded_file.seek(0)
+            except Exception:
+                pass
+            if hasattr(uploaded_file, "chunks"):
+                for chunk in uploaded_file.chunks():
+                    f.write(chunk)
+            else:
+                f.write(uploaded_file.read())
 
-        # VP9 com CRF: arquivo menor que bitrate fixo, qualidade estável
+        # VP9 compacto + rápido: limita altura a 720p, CRF alto, cpu-used 8
         cmd = [
             "ffmpeg",
             "-y",
             "-i",
             entrada,
+            "-vf",
+            "scale=-2:'min(720,ih)'",
             "-c:v",
             "libvpx-vp9",
             "-crf",
-            "32",
+            "36",
             "-b:v",
             "0",
             "-row-mt",
             "1",
+            "-cpu-used",
+            "8",
+            "-deadline",
+            "realtime",
             "-threads",
-            "4",
+            "2",
             "-c:a",
             "libopus",
             "-b:a",
-            "96k",
+            "64k",
             "-ac",
             "2",
             saida,
@@ -54,17 +67,24 @@ def converter_video_para_webm(uploaded_file):
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=900,
+                timeout=1200,
                 check=False,
             )
         except FileNotFoundError as exc:
             raise MediaConvertError("ffmpeg não está instalado no servidor.") from exc
         except subprocess.TimeoutExpired as exc:
-            raise MediaConvertError("Conversão de vídeo excedeu o tempo limite.") from exc
+            raise MediaConvertError(
+                "Conversão de vídeo excedeu o tempo limite (20 min). "
+                "Tente um arquivo menor ou mais curto."
+            ) from exc
 
         if result.returncode != 0 or not os.path.exists(saida):
             detalhe = (result.stderr or result.stdout or "").strip()[-500:]
             raise MediaConvertError(f"Falha ao converter vídeo para webm. {detalhe}")
+
+        tamanho = os.path.getsize(saida)
+        if tamanho < 100:
+            raise MediaConvertError("Arquivo webm gerado está vazio ou inválido.")
 
         with open(saida, "rb") as f:
             dados = f.read()
