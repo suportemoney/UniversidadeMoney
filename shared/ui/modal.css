@@ -1,0 +1,254 @@
+/* Modais — tema tech (tokens de theme.css). Importar no componente Modal. */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 13, 26, 0.72);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1.25rem;
+  animation: um-modal-fade-in 0.2s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@keyframes um-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes um-modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-box {
+  position: relative;
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: min(90vh, 860px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow), var(--glow-cyan) !important;
+  animation: um-modal-slide-in 0.22s ease;
+  z-index: 10001;
+}
+
+.modal-box--wide {
+  max-width: 680px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.5rem;
+  border-bottom: 1px solid var(--color-border) !important;
+  background: var(--color-surface-2) !important;
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text) !important;
+  letter-spacing: -0.01em;
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--color-muted) !important;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.modal-close:hover {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface)) !important;
+  color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  box-shadow: var(--glow-cyan);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  color: var(--color-text) !important;
+  background: var(--color-surface) !important;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border) !important;
+  background: var(--color-surface-2) !important;
+  flex-shrink: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border) !important;
+}
+
+.modal-alert {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  line-height: 1.45;
+}
+
+.modal-alert--error {
+  background: color-mix(in srgb, var(--color-error) 14%, transparent) !important;
+  color: var(--color-error) !important;
+  border: 1px solid color-mix(in srgb, var(--color-error) 40%, transparent) !important;
+}
+
+.modal-alert--success {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent) !important;
+  color: var(--color-primary) !important;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent) !important;
+}
+
+.modal-confirm-message {
+  margin: 0 0 0.25rem;
+  color: var(--color-muted) !important;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.modal-success-block {
+  text-align: center;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.modal-success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
+  color: var(--color-primary) !important;
+  font-size: 1.5rem;
+  margin-bottom: 0.85rem;
+  box-shadow: var(--glow-green);
+}
+
+.modal-success-block p {
+  margin: 0 0 0.75rem;
+  color: var(--color-muted) !important;
+  font-size: 0.95rem;
+}
+
+.modal-token-chave {
+  display: block;
+  padding: 0.85rem 1rem;
+  background: var(--color-bg-elevated) !important;
+  border: 1px dashed var(--color-border-strong) !important;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text) !important;
+  letter-spacing: 0.04em;
+  margin-bottom: 1rem;
+  word-break: break-all;
+}
+
+/* Campos dentro do modal */
+.modal-body .gestao-field,
+.modal-body label {
+  color: var(--color-muted) !important;
+}
+
+.modal-body input,
+.modal-body textarea,
+.modal-body select,
+.modal-body .gestao-field input,
+.modal-body .gestao-field textarea,
+.modal-body .gestao-field select,
+.modal-body .gestao-form--modal input,
+.modal-body .gestao-form--modal textarea,
+.modal-body .gestao-form--modal select {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+.modal-body input:focus,
+.modal-body textarea:focus,
+.modal-body select:focus,
+.modal-body .gestao-field input:focus,
+.modal-body .gestao-field textarea:focus,
+.modal-body .gestao-field select:focus {
+  border-color: var(--color-accent) !important;
+  box-shadow: var(--glow-cyan) !important;
+  outline: none;
+}
+
+.modal-body .gestao-form-section {
+  background: var(--color-surface-2) !important;
+  border-color: var(--color-border) !important;
+}
+
+.modal-body .gestao-form-section-title {
+  color: var(--color-text) !important;
+}
+
+.modal-body .convites-perfil-dl dt {
+  color: var(--color-muted) !important;
+}
+
+.modal-body .convites-perfil-dl dd {
+  color: var(--color-text) !important;
+}
+
+.modal-footer .btn-outline,
+.modal-body .btn-outline {
+  color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  background: transparent !important;
+}
+
+.modal-footer .btn-primary,
+.modal-body .btn-primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary-fg) !important;
+  box-shadow: var(--glow-green);
+}

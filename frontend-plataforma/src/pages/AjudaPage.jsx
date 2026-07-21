@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: "Como me inscrever em treinamento ao vivo?",
-    a: "Em Treinamentos ao vivo, clique em Inscrever-se no evento desejado.",
+    a: "Em Ao vivo, clique em Inscrever-se no evento desejado.",
     icon: "🎥",
   },
 ];
@@ -37,7 +37,7 @@ export default function AjudaPage() {
     <div className="dash-page">
       <PageHeader
         icon="❓"
-        titulo="Ajuda e suporte"
+        titulo="Ajuda"
         subtitulo="Dúvidas sobre a plataforma? Consulte o FAQ ou entre em contato."
       />
 

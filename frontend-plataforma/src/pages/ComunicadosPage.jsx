@@ -38,7 +38,7 @@ export default function ComunicadosPage() {
     <div className="dash-page">
       <PageHeader
         icon="📢"
-        titulo="Comunicados internos"
+        titulo="Comunicados"
         subtitulo="Notícias, avisos e conquistas da Money Promotora."
       />
 

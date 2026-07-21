@@ -21,10 +21,20 @@ from .models import (
 )
 from .serializers_gestao import AulaVideoSerializer, CursoGestaoDetailSerializer, CursoMaterialSerializer
 from .services import (
+    atividade_liberada_para,
+    aulas_pendentes_video,
+    atividades_pendentes,
     avaliar_e_emitir_certificado,
+    aula_assistida_completa,
+    aula_liberada_para,
     calcular_progresso_matricula,
     corrigir_questoes,
+    duracao_efetiva_aula,
     emitir_conquista,
+    liberacao_flags_aulas,
+    percentual_assistido,
+    prova_liberada_para,
+    registrar_progresso_aula,
     resumo_notas_matricula,
 )
 
@@ -68,12 +78,20 @@ class CursoAlunoDetailView(APIView):
             return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
-        progresso_aulas = {
-            pa.aula_id: pa.concluida
+        progresso_map = {
+            pa.aula_id: pa
             for pa in ProgressoAula.objects.filter(matricula=matricula)
         }
 
         materiais = CursoMaterialSerializer(curso.materiais.all(), many=True).data
+
+        todas_aulas = list(
+            AulaVideo.objects.filter(modulo__curso=curso).order_by("modulo__ordem", "ordem", "id")
+        )
+        liberacao = liberacao_flags_aulas(matricula, todas_aulas, progresso_map)
+        ativ_ok = atividade_liberada_para(matricula)
+        prova_ok = prova_liberada_para(matricula)
+        pendentes_ativ = atividades_pendentes(matricula)
 
         modulos = []
         for modulo in curso.modulos.all():
@@ -86,7 +104,16 @@ class CursoAlunoDetailView(APIView):
             }
             for aula in modulo.aulas.all():
                 aula_data = AulaVideoSerializer(aula).data
-                aula_data["concluida"] = progresso_aulas.get(aula.id, False)
+                pa = progresso_map.get(aula.id)
+                segundos = float(pa.segundos_assistidos) if pa else 0.0
+                duracao = duracao_efetiva_aula(aula)
+                concluida = bool(pa and pa.concluida)
+                aula_data["concluida"] = concluida
+                aula_data["liberada"] = bool(liberacao.get(aula.id, False))
+                aula_data["segundos_assistidos"] = segundos
+                aula_data["percentual_assistido"] = (
+                    100 if concluida else percentual_assistido(segundos, duracao)
+                )
                 item["aulas"].append(aula_data)
 
             ativ = modulo.atividades.first()
@@ -103,6 +130,7 @@ class CursoAlunoDetailView(APIView):
                     "obrigatoria": ativ.obrigatoria,
                     "nota": melhor.nota if melhor else None,
                     "concluida": melhor is not None,
+                    "liberada": ativ_ok,
                 }
             modulos.append(item)
 
@@ -126,6 +154,7 @@ class CursoAlunoDetailView(APIView):
                 "aprovado": melhor_prova.aprovado if melhor_prova else False,
             }
 
+        pendentes = aulas_pendentes_video(matricula)
         notas = resumo_notas_matricula(matricula)
         cert = Certificado.objects.filter(usuario=request.user, curso=curso).first()
         curso_data = CursoGestaoDetailSerializer(curso).data
@@ -139,6 +168,10 @@ class CursoAlunoDetailView(APIView):
                 "materiais": materiais,
                 "modulos": modulos,
                 "prova_final": prova,
+                "prova_liberada": prova_ok,
+                "atividade_liberada": ativ_ok,
+                "aulas_pendentes": pendentes,
+                "atividades_pendentes": pendentes_ativ,
                 "notas": notas,
                 "certificado": bool(cert) or matricula.certificado_liberado,
                 "certificado_id": cert.id if cert else None,
@@ -160,13 +193,68 @@ class ConcluirAulaView(APIView):
             return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
+        progresso = ProgressoAula.objects.filter(matricula=matricula, aula=aula).first()
+        if not aula_liberada_para(matricula, aula):
+            return Response(
+                {"detail": "Assista a videoaula anterior até o final para liberar esta aula."},
+                status=403,
+            )
+        if not aula_assistida_completa(progresso, aula):
+            return Response(
+                {"detail": "Assista o vídeo até o final para concluir a aula."},
+                status=400,
+            )
+
         ProgressoAula.objects.update_or_create(
             matricula=matricula,
             aula=aula,
             defaults={"concluida": True, "concluida_em": timezone.now()},
         )
-        progresso = calcular_progresso_matricula(matricula)
-        return Response({"progresso": progresso})
+        progresso_pct = calcular_progresso_matricula(matricula)
+        return Response({"progresso": progresso_pct, "concluida": True})
+
+
+class ProgressoAulaView(APIView):
+    """Heartbeat de watch — avança só para frente, conclui ao atingir limiar."""
+
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
+
+    def post(self, request, aula_id):
+        try:
+            aula = AulaVideo.objects.select_related("modulo__curso").get(pk=aula_id)
+        except AulaVideo.DoesNotExist:
+            return Response({"detail": "Aula não encontrada."}, status=404)
+
+        curso = aula.modulo.curso
+        if not curso_visivel_para_usuario(request.user, curso):
+            return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
+
+        matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
+        if not aula_liberada_para(matricula, aula):
+            return Response(
+                {"detail": "Assista a videoaula anterior até o final para liberar esta aula."},
+                status=403,
+            )
+        posicao = request.data.get("posicao_atual", 0)
+        duracao = request.data.get("duracao")
+
+        progresso, ok = registrar_progresso_aula(matricula, aula, posicao, duracao)
+        duracao_eff = duracao_efetiva_aula(aula, duracao)
+        return Response(
+            {
+                "ok": ok,
+                "segundos_assistidos": float(progresso.segundos_assistidos or 0),
+                "percentual_assistido": (
+                    100
+                    if progresso.concluida
+                    else percentual_assistido(progresso.segundos_assistidos, duracao_eff)
+                ),
+                "concluida": progresso.concluida,
+                "progresso_curso": matricula.progresso,
+                "prova_liberada": prova_liberada_para(matricula),
+                "atividade_liberada": atividade_liberada_para(matricula),
+            }
+        )
 
 
 class AtividadeAlunoView(APIView):
@@ -183,6 +271,16 @@ class AtividadeAlunoView(APIView):
         curso = atividade.modulo.curso
         if not curso_visivel_para_usuario(request.user, curso):
             return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
+
+        matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
+        if not atividade_liberada_para(matricula):
+            return Response(
+                {
+                    "detail": "Assista todas as videoaulas antes da atividade.",
+                    "aulas_pendentes": aulas_pendentes_video(matricula),
+                },
+                status=403,
+            )
 
         questoes = [
             {"id": q.id, "enunciado": q.enunciado, "tipo": q.tipo, "opcoes": q.opcoes, "ordem": q.ordem}
@@ -203,6 +301,14 @@ class AtividadeAlunoView(APIView):
             return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=curso)
+        if not atividade_liberada_para(matricula):
+            return Response(
+                {
+                    "detail": "Assista todas as videoaulas antes da atividade.",
+                    "aulas_pendentes": aulas_pendentes_video(matricula),
+                },
+                status=403,
+            )
         questoes = list(atividade.questoes.all())
         respostas = request.data.get("respostas", {})
         nota, _ = corrigir_questoes(questoes, respostas)
@@ -216,7 +322,12 @@ class AtividadeAlunoView(APIView):
             respostas=respostas,
         )
         calcular_progresso_matricula(matricula)
-        return Response({"nota": nota, "aprovado": aprovado, "tentativa_id": tentativa.id})
+        return Response({
+            "nota": nota,
+            "aprovado": aprovado,
+            "tentativa_id": tentativa.id,
+            "prova_liberada": prova_liberada_para(matricula),
+        })
 
 
 class ProvaAlunoView(APIView):
@@ -232,6 +343,15 @@ class ProvaAlunoView(APIView):
             return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=prova.curso)
+        if not prova_liberada_para(matricula):
+            return Response(
+                {
+                    "detail": "Assista todas as videoaulas e conclua as atividades antes da prova.",
+                    "aulas_pendentes": aulas_pendentes_video(matricula),
+                    "atividades_pendentes": atividades_pendentes(matricula),
+                },
+                status=403,
+            )
         tentativas = TentativaProva.objects.filter(matricula=matricula, prova=prova).count()
         if tentativas >= prova.tentativas_max:
             return Response({"detail": "Limite de tentativas atingido."}, status=400)
@@ -261,6 +381,15 @@ class ProvaAlunoView(APIView):
             return Response({"detail": "Este curso não está disponível no seu plano."}, status=403)
 
         matricula, _ = Matricula.objects.get_or_create(usuario=request.user, curso=prova.curso)
+        if not prova_liberada_para(matricula):
+            return Response(
+                {
+                    "detail": "Assista todas as videoaulas e conclua as atividades antes da prova.",
+                    "aulas_pendentes": aulas_pendentes_video(matricula),
+                    "atividades_pendentes": atividades_pendentes(matricula),
+                },
+                status=403,
+            )
         tentativas = TentativaProva.objects.filter(matricula=matricula, prova=prova).count()
         if tentativas >= prova.tentativas_max:
             return Response({"detail": "Limite de tentativas atingido."}, status=400)

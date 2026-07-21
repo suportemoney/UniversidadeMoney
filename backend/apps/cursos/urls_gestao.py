@@ -13,6 +13,11 @@ urlpatterns = [
         name="gestao-usuario-detail",
     ),
     path(
+        "gestao/usuarios/<int:user_id>/excluir-permanente/",
+        views_gestao.GestaoUsuarioExcluirPermanenteView.as_view(),
+        name="gestao-usuario-excluir-permanente",
+    ),
+    path(
         "gestao/usuarios/<int:user_id>/equipe/",
         views_gestao.GestaoUsuarioEquipeView.as_view(),
         name="gestao-usuario-equipe",

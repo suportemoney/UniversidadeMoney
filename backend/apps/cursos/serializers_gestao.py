@@ -261,10 +261,21 @@ class UsuarioEquipeCreateSerializer(serializers.Serializer):
     cpf = serializers.CharField(max_length=14)
     password = serializers.CharField(min_length=8, write_only=True)
     nivel_acesso = serializers.ChoiceField(
-        choices=[c[0] for c in Profile.NIVEL_CHOICES],
+        choices=[
+            Profile.NIVEL_INSTRUTOR,
+            Profile.NIVEL_GESTOR,
+            Profile.NIVEL_ADMINISTRADOR,
+        ],
         default=Profile.NIVEL_GESTOR,
     )
     setor = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_nivel_acesso(self, value):
+        if value == Profile.NIVEL_PADRAO:
+            raise serializers.ValidationError(
+                "Usuários padrão devem ser criados em Convidados."
+            )
+        return value
 
     def validate_email(self, value):
         email = value.strip().lower()
@@ -312,10 +323,21 @@ class UsuarioEquipeCreateSerializer(serializers.Serializer):
 class UsuarioEquipeUpdateSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150, required=False)
     nivel_acesso = serializers.ChoiceField(
-        choices=[c[0] for c in Profile.NIVEL_CHOICES],
+        choices=[
+            Profile.NIVEL_INSTRUTOR,
+            Profile.NIVEL_GESTOR,
+            Profile.NIVEL_ADMINISTRADOR,
+        ],
         required=False,
     )
     setor = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_nivel_acesso(self, value):
+        if value == Profile.NIVEL_PADRAO:
+            raise serializers.ValidationError(
+                "Para nível padrão, use a área de Convidados."
+            )
+        return value
 
     def validate_setor(self, value):
         if value is None:

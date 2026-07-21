@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import CursoDescobertaAside from "../components/dashboard/CursoDescobertaAside";
 import PageSkeleton from "../components/dashboard/PageSkeleton";
 import { getCursoDetalhe, matricularCurso } from "../services/api";
 
@@ -63,7 +64,8 @@ export default function CursoDetalhePage() {
   const passos = curso.modulos.length + (materiais.length ? 1 : 0) + 1;
 
   return (
-    <div className="dash-page dash-curso-detalhe">
+    <div className="dash-page dash-curso-shell">
+      <div className="dash-curso-detalhe">
       <nav className="dash-curso-nav">
         <Link to="/dashboard/explorar" className="dash-curso-back">
           <span aria-hidden>←</span> Explorar cursos
@@ -244,6 +246,12 @@ export default function CursoDetalhePage() {
           </div>
         </section>
       )}
+      </div>
+
+      <CursoDescobertaAside
+        excludeCursoId={curso.id}
+        setorPreferido={curso.setor}
+      />
     </div>
   );
 }

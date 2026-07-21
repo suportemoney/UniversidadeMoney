@@ -3,6 +3,7 @@ import os
 from apps.accounts.permissions_api import IsFrontendJwtOrApiKey
 
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -68,7 +69,22 @@ from .serializers_gestao import (
 from .services import curso_pronto_publicar, recalcular_curso
 
 VIDEO_MAX_MB = int(os.getenv("VIDEO_MAX_MB", "500"))
-VIDEO_EXT = {".mp4", ".webm", ".mov"}
+# Entrada: qualquer formato comum; saída sempre .webm (exceto se já for .webm)
+VIDEO_EXT = {
+    ".webm",
+    ".mp4",
+    ".m4v",
+    ".mov",
+    ".avi",
+    ".mkv",
+    ".mpeg",
+    ".mpg",
+    ".wmv",
+    ".flv",
+    ".3gp",
+    ".ogv",
+    ".ts",
+}
 THUMB_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 PDF_MAX_MB = int(os.getenv("PDF_MAX_MB", "50"))
 PDF_EXT = {".pdf"}
@@ -181,7 +197,14 @@ class GestaoUsuariosView(generics.ListCreateAPIView):
         return UsuarioEquipeSerializer
 
     def get_queryset(self):
-        qs = User.objects.filter(is_active=True).select_related("profile", "profile__setor").order_by("first_name")
+        from apps.cursos.permissions import NIVEIS_EQUIPE
+
+        qs = (
+            User.objects.filter(is_active=True)
+            .filter(Q(is_superuser=True) | Q(profile__nivel_acesso__in=NIVEIS_EQUIPE))
+            .select_related("profile", "profile__setor")
+            .order_by("first_name")
+        )
         q = self.request.query_params.get("q", "").strip()
         if q:
             qs = qs.filter(Q(first_name__icontains=q) | Q(email__icontains=q))
@@ -222,6 +245,32 @@ class GestaoUsuarioDetailView(generics.RetrieveUpdateDestroyAPIView):
         if hasattr(instance, "profile"):
             instance.profile.is_membro_equipe = False
             instance.profile.save(update_fields=["is_membro_equipe"])
+
+
+class GestaoUsuarioExcluirPermanenteView(APIView):
+    """Remove o usuário do banco (exclusão permanente)."""
+
+    permission_classes = [IsFrontendJwtOrApiKey, PodeEquipe, PodeExcluir]
+
+    def delete(self, request, user_id):
+        try:
+            user = User.objects.select_related("profile").get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Usuário não encontrado."}, status=404)
+
+        if user.is_superuser:
+            return Response(
+                {"detail": "Não é possível excluir permanentemente um superuser."},
+                status=400,
+            )
+        if user.pk == request.user.pk:
+            return Response(
+                {"detail": "Não é possível excluir a própria conta."},
+                status=400,
+            )
+
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class GestaoUsuarioEquipeView(APIView):
@@ -517,7 +566,15 @@ class GestaoAulaUploadVideoView(APIView):
             aula.video.delete(save=False)
 
         try:
-            webm = converter_video_para_webm(arquivo)
+            # Já é webm: guarda como está (sem reencode)
+            if ext == ".webm":
+                try:
+                    arquivo.seek(0)
+                except Exception:
+                    pass
+                webm = ContentFile(arquivo.read(), name="video.webm")
+            else:
+                webm = converter_video_para_webm(arquivo)
         except MediaConvertError as exc:
             return Response({"detail": str(exc)}, status=400)
 

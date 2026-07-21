@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import ThemeToggle from "@shared/ui/ThemeToggle.jsx";
 import { getMe, logout } from "../services/api";
 import Logo from "./Logo";
 import GestaoBreadcrumb from "./gestao/GestaoBreadcrumb";
@@ -105,6 +106,7 @@ export default function GestaoLayout() {
           </div>
 
           <div className="gestao-header-actions">
+            <ThemeToggle />
             <button type="button" className="gestao-notif-btn" aria-label="Notificações">
               <GestaoIcon name="sino" />
             </button>

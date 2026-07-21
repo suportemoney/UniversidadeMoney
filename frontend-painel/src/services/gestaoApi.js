@@ -16,6 +16,8 @@ export const gestaoApi = {
     apiFetch(`/gestao/usuarios/${userId}/`, { method: "PATCH", body: JSON.stringify(data) }),
   inativarUsuarioEquipe: (userId) =>
     apiFetch(`/gestao/usuarios/${userId}/`, { method: "DELETE" }),
+  excluirUsuarioEquipePermanente: (userId) =>
+    apiFetch(`/gestao/usuarios/${userId}/excluir-permanente/`, { method: "DELETE" }),
   toggleEquipe: (userId, isMembro) =>
     apiFetch(`/gestao/usuarios/${userId}/equipe/`, {
       method: "PATCH",

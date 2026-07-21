@@ -9,9 +9,19 @@ NIVEL_GESTOR = Profile.NIVEL_GESTOR
 NIVEL_ADMINISTRADOR = Profile.NIVEL_ADMINISTRADOR
 
 NIVEIS_PAINEL = {NIVEL_INSTRUTOR, NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
+NIVEIS_EQUIPE = {NIVEL_INSTRUTOR, NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
 NIVEIS_CONVITES = {NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
 NIVEIS_MFA = {NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
 LABELS_NIVEL = dict(Profile.NIVEL_CHOICES)
+
+
+def eh_membro_equipe_gestao(user) -> bool:
+    """Instrutor, gestor, administrador ou superuser (lista Equipe)."""
+    if not user:
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    return nivel_do_usuario(user) in NIVEIS_EQUIPE
 
 
 def nivel_do_usuario(user) -> str:

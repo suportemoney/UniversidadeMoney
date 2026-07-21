@@ -125,7 +125,8 @@ def curso_permitido_por_tags_plano(usuario, curso):
     """Apenas regra de tags — sem bypass de matrícula (usado em trilhas)."""
     if usuario_pode_gestao(usuario):
         return True
-    if not assinatura_ativa(usuario):
+    # LMS interno: autenticado ativo acessa; tags do plano só restringem se existirem
+    if not usuario_tem_acesso_aluno(usuario):
         return False
     return _item_permitido_por_tags(curso, tag_ids_do_plano_ativo(usuario))
 
@@ -157,7 +158,7 @@ def ao_vivo_visivel_para_usuario(usuario, treinamento):
     """Treinamento ao vivo permitido pelas tags do plano."""
     if usuario_pode_gestao(usuario):
         return True
-    if not assinatura_ativa(usuario):
+    if not usuario_tem_acesso_aluno(usuario):
         return False
     return _item_permitido_por_tags(treinamento, tag_ids_do_plano_ativo(usuario))
 

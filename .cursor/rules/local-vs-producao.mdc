@@ -1,0 +1,36 @@
+---
+description: Separação local vs produção — commit/push/deploy só sob pedido explícito
+alwaysApply: true
+---
+
+# Local vs produção (UniversidadeMoney)
+
+## Regra principal
+
+**NÃO** fazer `git commit`, `git push` nem disparar deploy automaticamente após alterar arquivos.
+
+Isto **sobrepõe** a skill `git-push-check-actions` neste repositório.
+
+## Trabalho local (padrão)
+
+- Editar código, Docker, docs, etc. normalmente.
+- Manter mudanças só no working tree (ou staged se o usuário pedir).
+- **Não** commit, **não** push, **não** `gh run watch` por iniciativa própria.
+- **Sim** sincronizar Docker local após alterações de código — ver regra `docker-local-sync.mdc`.
+- Resumo final: apenas arquivos alterados (como já pedido nas user rules).
+
+## Subir para produção (só sob pedido)
+
+Só executar commit + push (+ conferir Actions, se couber) quando o usuário pedir de forma explícita, por exemplo:
+
+- "sobe para produção"
+- "faz deploy"
+- "commit e push"
+- "publica na main"
+- "envia pro remoto"
+
+Nesse caso, seguir o protocolo git do usuário + skill `git-push-check-actions` (commit, push, monitorar Action, corrigir se falhar).
+
+## Ambíguo
+
+Se não estiver claro se é só local ou produção, **perguntar** antes de commit/push.

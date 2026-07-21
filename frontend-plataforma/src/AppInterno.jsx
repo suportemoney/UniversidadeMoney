@@ -7,7 +7,7 @@ import "./App.css";
 /** Portal interno: apenas token-key e setup inicial. */
 export default function AppInterno() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route element={<AuthLayout />}>
           <Route path="/" element={<TokenKeyPage />} />

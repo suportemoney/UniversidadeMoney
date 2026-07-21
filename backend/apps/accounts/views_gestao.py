@@ -8,6 +8,7 @@ from .permissions_api import IsFrontendJwtOrApiKey
 from apps.accounts.models import Profile
 from apps.cursos.permissions import (
     NIVEL_ADMINISTRADOR,
+    NIVEL_PADRAO,
     PodeConvites,
     nivel_do_usuario,
 )
@@ -46,13 +47,17 @@ class GestaoConvitesListCreateView(APIView):
     permission_classes = [IsFrontendJwtOrApiKey, PodeConvites]
 
     def get(self, request):
+        # Convidados = apenas usuários nível padrão (equipe fica em /gestao/equipe)
         qs = (
             TokenAcesso.objects.select_related(
                 "usuario", "usuario__profile", "usuario__profile__setor", "criado_por"
             )
+            .filter(usuario__profile__nivel_acesso=NIVEL_PADRAO)
+            .exclude(usuario__is_superuser=True)
             .order_by("-criado_em")[:200]
         )
         data = []
+        vistos = set()
         for t in qs:
             row = {
                 "id": t.id,
@@ -70,6 +75,33 @@ class GestaoConvitesListCreateView(APIView):
             }
             row.update(_perfil_usuario_convite(t.usuario))
             data.append(row)
+            vistos.add(t.usuario_id)
+
+        # Inclui usuários padrão ativos ainda sem token-key
+        extras = (
+            User.objects.filter(is_active=True, is_superuser=False, profile__nivel_acesso=NIVEL_PADRAO)
+            .exclude(id__in=vistos)
+            .select_related("profile", "profile__setor")
+            .order_by("first_name")[:100]
+        )
+        for user in extras:
+            row = {
+                "id": None,
+                "chave": None,
+                "usuario_id": user.id,
+                "username": user.get_username(),
+                "first_name": user.first_name,
+                "nivel_acesso": nivel_do_usuario(user),
+                "ativo": False,
+                "usado_em": None,
+                "valido_ate": None,
+                "criado_em": user.date_joined,
+                "criado_por": None,
+                "valido": False,
+            }
+            row.update(_perfil_usuario_convite(user))
+            data.append(row)
+
         return Response(data)
 
     def post(self, request):
@@ -77,19 +109,9 @@ class GestaoConvitesListCreateView(APIView):
         first_name = request.data.get("first_name") or request.data.get("nome") or ""
         email = request.data.get("email") or ""
         cpf = request.data.get("cpf") or ""
-        nivel = (request.data.get("nivel_acesso") or Profile.NIVEL_PADRAO).strip().lower()
+        # Convidados sempre cria usuário padrão; equipe de gestão é outra tela
+        nivel = NIVEL_PADRAO
         cargo = request.data.get("cargo") or ""
-
-        validos = {c[0] for c in Profile.NIVEL_CHOICES}
-        if nivel not in validos:
-            return Response({"detail": "Nível de acesso inválido."}, status=400)
-
-        # Gestor não pode criar administrador
-        if nivel == NIVEL_ADMINISTRADOR and nivel_do_usuario(request.user) != NIVEL_ADMINISTRADOR:
-            return Response(
-                {"detail": "Apenas administradores podem convidar outro administrador."},
-                status=403,
-            )
 
         try:
             user, token = criar_colaborador_com_token(

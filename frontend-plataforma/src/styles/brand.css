@@ -55,5 +55,11 @@
 
 .brand-logo--header .brand-logo-fallback,
 .brand-logo--auth .brand-logo-fallback {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary);
+}
+
+/* Logo em dark: leve brilho para contraste */
+html[data-theme="dark"] .brand-logo--auth img,
+html[data-theme="dark"] .brand-logo--header img {
+  filter: drop-shadow(0 0 10px rgba(11, 213, 240, 0.25));
 }

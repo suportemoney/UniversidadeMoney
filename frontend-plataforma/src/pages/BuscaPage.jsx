@@ -10,7 +10,7 @@ const SECOES = [
   { key: "cursos", label: "Cursos", icon: "📚", rota: (id) => `/dashboard/curso/${id}` },
   { key: "trilhas", label: "Trilhas", icon: "🛤️", rota: (id) => `/dashboard/trilhas/${id}` },
   { key: "biblioteca", label: "PDFs da biblioteca", icon: "📄", externo: true },
-  { key: "ao_vivo", label: "Workshops ao vivo", icon: "🎥", rota: () => "/dashboard/ao-vivo" },
+  { key: "ao_vivo", label: "Ao vivo", icon: "🎥", rota: () => "/dashboard/ao-vivo" },
 ];
 
 function formatData(iso) {
@@ -65,7 +65,7 @@ export default function BuscaPage() {
       <PageHeader
         icon="🔍"
         titulo="Resultados da busca"
-        subtitulo="Cursos, trilhas, PDFs e workshops ao vivo em um só lugar."
+        subtitulo="Cursos, trilhas, PDFs e eventos ao vivo em um só lugar."
       >
         <form
           className="dash-page-search"

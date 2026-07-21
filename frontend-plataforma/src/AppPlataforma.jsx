@@ -23,7 +23,7 @@ import "./App.css";
 /** Rotas da plataforma interna (cursos + login CPF) — sem planos. */
 export default function AppPlataforma() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route element={<AuthLayout />}>

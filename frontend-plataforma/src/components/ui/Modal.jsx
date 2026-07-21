@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import "@shared/ui/modal.css";
 
 export default function Modal({ open, onClose, title, children, wide, footer }) {
   useEffect(() => {

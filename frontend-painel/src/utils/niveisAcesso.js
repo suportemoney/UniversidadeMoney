@@ -14,12 +14,21 @@ export const NIVEL_LABELS = {
   administrador: "Administrador",
 };
 
-export const NIVEIS_CONVITE = [
-  { value: "padrao", label: "Padrão" },
+/** Níveis criados/listados em Equipe de gestão */
+export const NIVEIS_EQUIPE = [
   { value: "instrutor", label: "Instrutor" },
   { value: "gestor", label: "Gestor" },
   { value: "administrador", label: "Administrador" },
 ];
+
+/** @deprecated use NIVEIS_EQUIPE — mantido para compat */
+export const NIVEIS_CONVITE = NIVEIS_EQUIPE;
+
+export function ehNivelEquipe(user) {
+  if (user?.is_superuser) return true;
+  const n = user?.nivel_acesso;
+  return n === NIVEL.INSTRUTOR || n === NIVEL.GESTOR || n === NIVEL.ADMINISTRADOR;
+}
 
 export function labelNivel(user) {
   const n = user?.nivel_acesso;
@@ -30,11 +39,9 @@ export function podeExcluir(user) {
   return Boolean(user?.pode_excluir || user?.nivel_acesso === NIVEL.ADMINISTRADOR);
 }
 
-export function niveisDisponiveisParaConvite(user) {
-  if (user?.nivel_acesso === NIVEL.ADMINISTRADOR || user?.pode_equipe) {
-    return NIVEIS_CONVITE;
-  }
-  return NIVEIS_CONVITE.filter((n) => n.value !== NIVEL.ADMINISTRADOR);
+export function niveisDisponiveisParaConvite() {
+  // Convidados = apenas padrão
+  return [{ value: NIVEL.PADRAO, label: NIVEL_LABELS.padrao }];
 }
 
 /** Filtra itens do menu conforme flags do /me */

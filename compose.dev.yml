@@ -48,6 +48,12 @@ services:
         condition: service_healthy
     networks:
       - universidade
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/admin/login/ >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
   frontend-plataforma:
@@ -62,13 +68,16 @@ services:
       VITE_PROXY_TARGET: http://backend:8000
       VITE_INTERNO_URL: http://localhost:5175
       VITE_PAINEL_URL: http://localhost:5174
+      SHARED_UI_ROOT: /shared
     volumes:
       - ./frontend-plataforma:/app
+      - ./shared:/shared
       - /app/node_modules
     ports:
       - "5173:5173"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - universidade
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
@@ -83,13 +92,16 @@ services:
       VITE_API_URL: /api
       VITE_PROXY_TARGET: http://backend:8000
       VITE_PLATAFORMA_URL: http://localhost:5173
+      SHARED_UI_ROOT: /shared
     volumes:
       - ./frontend-painel:/app
+      - ./shared:/shared
       - /app/node_modules
     ports:
       - "5174:5174"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - universidade
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5174"]
@@ -105,13 +117,16 @@ services:
       VITE_SURFACE: interno
       VITE_PROXY_TARGET: http://backend:8000
       VITE_PLATAFORMA_URL: http://localhost:5173/login
+      SHARED_UI_ROOT: /shared
     volumes:
       - ./frontend-plataforma:/app
+      - ./shared:/shared
       - /app/node_modules
     ports:
       - "5175:5175"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - universidade
     command: ["npm", "run", "dev:interno", "--", "--host", "0.0.0.0", "--port", "5175"]

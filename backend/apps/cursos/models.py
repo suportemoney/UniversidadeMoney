@@ -343,6 +343,8 @@ class ProgressoAula(models.Model):
     aula = models.ForeignKey(AulaVideo, on_delete=models.CASCADE, related_name="progressos")
     concluida = models.BooleanField(default=False)
     concluida_em = models.DateTimeField(null=True, blank=True)
+    # Máximo de segundos válidos assistidos em sequência (anti-pulo)
+    segundos_assistidos = models.FloatField(default=0)
 
     class Meta:
         unique_together = [["matricula", "aula"]]

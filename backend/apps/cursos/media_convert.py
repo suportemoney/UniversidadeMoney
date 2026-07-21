@@ -13,7 +13,8 @@ class MediaConvertError(Exception):
 
 def converter_video_para_webm(uploaded_file):
     """
-    Converte upload de vídeo para VP9/Opus .webm.
+    Converte upload de vídeo (mp4, avi, mov, etc.) para VP9/Opus .webm.
+    Usa CRF para equilibrar tamanho e qualidade.
     Retorna ContentFile pronto para FileField.save().
     """
     suffix = os.path.splitext(getattr(uploaded_file, "name", "") or "")[1] or ".mp4"
@@ -24,6 +25,7 @@ def converter_video_para_webm(uploaded_file):
             for chunk in uploaded_file.chunks():
                 f.write(chunk)
 
+        # VP9 com CRF: arquivo menor que bitrate fixo, qualidade estável
         cmd = [
             "ffmpeg",
             "-y",
@@ -31,12 +33,20 @@ def converter_video_para_webm(uploaded_file):
             entrada,
             "-c:v",
             "libvpx-vp9",
+            "-crf",
+            "32",
             "-b:v",
-            "1M",
+            "0",
+            "-row-mt",
+            "1",
+            "-threads",
+            "4",
             "-c:a",
             "libopus",
             "-b:a",
-            "128k",
+            "96k",
+            "-ac",
+            "2",
             saida,
         ]
         try:
@@ -44,7 +54,7 @@ def converter_video_para_webm(uploaded_file):
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=600,
+                timeout=900,
                 check=False,
             )
         except FileNotFoundError as exc:

@@ -50,6 +50,7 @@ export default function QuestaoEditor({ questao, onSave, onDelete }) {
                 onChange={() => setCorreta(i)}
               />
               <input
+                type="text"
                 value={op}
                 onChange={(e) => {
                   const n = [...opcoes];

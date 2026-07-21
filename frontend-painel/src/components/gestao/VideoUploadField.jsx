@@ -29,7 +29,13 @@ export default function VideoUploadField({ aula, onUploaded }) {
       )}
       <label className="btn btn-outline btn-sm">
         {loading ? "Enviando e convertendo..." : "Enviar vídeo (salva como .webm)"}
-        <input type="file" accept="video/mp4,video/webm,video/quicktime" hidden onChange={handleFile} disabled={loading} />
+        <input
+          type="file"
+          accept="video/*,.mp4,.m4v,.webm,.mov,.avi,.mkv,.mpeg,.mpg,.wmv,.flv,.3gp,.ogv,.ts"
+          hidden
+          onChange={handleFile}
+          disabled={loading}
+        />
       </label>
       {erro && <p className="gestao-erro">{erro}</p>}
     </div>

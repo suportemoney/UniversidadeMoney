@@ -1,0 +1,52 @@
+---
+description: Após alterar código, sincronizar/subir stack Docker local (dev)
+alwaysApply: true
+---
+
+# Docker local após alterações
+
+## Regra
+
+Sempre que o agente **criar, editar ou apagar** arquivos do projeto (backend, frontends, Docker, compose, etc.), ao final do trabalho — **antes de encerrar a resposta** — sincronizar a stack Docker de desenvolvimento com `up -d --build` (não só editar e pedir hard refresh).
+
+Isto **não** é deploy de produção (continua valendo `local-vs-producao.mdc`: sem commit/push a menos que o usuário peça).
+
+## Comando padrão (Windows / PowerShell)
+
+Na raiz do repositório — **obrigatório** após mudanças em frontend/CSS/shared/Docker:
+
+```powershell
+docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up -d --build frontend-painel frontend-plataforma frontend-interno
+```
+
+Stack inteira (quando backend/db também mudou):
+
+```powershell
+docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up -d --build
+```
+
+**Importante:** após recreate/restart do `backend`, reinicie também os frontends Vite — o proxy pode ficar com IP antigo do container e o browser mostra `Erro HTTP 500` no login:
+
+```powershell
+docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up -d --build backend frontend-painel frontend-plataforma frontend-interno
+```
+
+Só backend (código em volume, sem rebuild de imagem) — e reinicia os fronts do proxy:
+
+```powershell
+docker compose -f compose.yml -f compose.dev.yml --env-file .env.development restart backend frontend-painel frontend-plataforma frontend-interno
+```
+
+O `--build` cobre mudanças de Dockerfile/deps e garante que o CSS/shared copiado na imagem entre.
+
+## Migrations
+
+O entrypoint do backend aplica `migrate` na subida. Se a migration nova não tiver entrado, reiniciar o `backend` ou subir de novo com `up -d`.
+
+**Não** rodar `manage.py` no host Windows; só via container Docker.
+
+## Quando NÃO aplicar
+
+- Resposta só de leitura / explicação, sem mudança de arquivos
+- Ask mode
+- Usuário pediu explicitamente para **não** mexer no Docker

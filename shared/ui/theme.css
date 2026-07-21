@@ -1,0 +1,209 @@
+/* Tokens Universidade Money — tech dark/neon (marca: #142650, #70F611, #0BD5F0) */
+
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --brand-navy: #142650;
+  --brand-green: #70f611;
+  --brand-cyan: #0bd5f0;
+
+  --color-bg: #070d1a;
+  --color-bg-elevated: #0c1528;
+  --color-surface: #101b33;
+  --color-surface-2: #162445;
+  --color-text: #f2f6ff;
+  --color-muted: #a8b6d0;
+  --color-border: rgba(11, 213, 240, 0.18);
+  --color-border-strong: rgba(112, 246, 17, 0.35);
+
+  --color-primary: var(--brand-green);
+  --color-primary-dark: #5ccc0d;
+  --color-primary-fg: #07120a;
+  --color-accent: var(--brand-cyan);
+  --color-accent-fg: #042028;
+  --color-success: var(--brand-green);
+  --color-error: #ff5c7a;
+  --color-warning: #f5c542;
+
+  --glow-green: 0 0 20px rgba(112, 246, 17, 0.35);
+  --glow-cyan: 0 0 18px rgba(11, 213, 240, 0.3);
+  --radius: 10px;
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.35);
+
+  /* Aliases dashboard */
+  --navy: var(--brand-navy);
+  --navy-dark: #0c1730;
+  --navy-light: #1c3568;
+  --green: var(--brand-green);
+  --green-dark: var(--color-primary-dark);
+  --surface: var(--color-surface);
+  --bg: var(--color-bg);
+  --muted: var(--color-muted);
+  --border: var(--color-border);
+  --sidebar-w: 240px;
+
+  /* Aliases gestão */
+  --gestao-navy: var(--brand-navy);
+  --gestao-navy-dark: var(--navy-dark);
+  --gestao-navy-light: var(--navy-light);
+  --gestao-primary: var(--color-primary);
+  --gestao-primary-dark: var(--color-primary-dark);
+  --gestao-green: var(--brand-green);
+  --gestao-bg: var(--color-bg);
+  --gestao-surface: var(--color-surface);
+  --gestao-border: var(--color-border);
+  --gestao-muted: var(--color-muted);
+  --gestao-sidebar-w: 268px;
+  --gestao-header-h: 68px;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --brand-navy: #142650;
+  --brand-green: #4db80a;
+  --brand-cyan: #0899ad;
+
+  --color-bg: #eef2f8;
+  --color-bg-elevated: #f7f9fc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f4fa;
+  --color-text: #142650;
+  --color-muted: #5a6b86;
+  --color-border: rgba(20, 38, 80, 0.12);
+  --color-border-strong: rgba(77, 184, 10, 0.4);
+
+  --color-primary: #4db80a;
+  --color-primary-dark: #3d9608;
+  --color-primary-fg: #ffffff;
+  --color-accent: #0899ad;
+  --color-accent-fg: #ffffff;
+  --color-success: #3d9608;
+  --color-error: #dc2626;
+  --color-warning: #ca8a04;
+
+  --glow-green: 0 0 16px rgba(77, 184, 10, 0.25);
+  --glow-cyan: 0 0 14px rgba(8, 153, 173, 0.22);
+  --radius: 10px;
+  --shadow: 0 8px 28px rgba(20, 38, 80, 0.1);
+  --shadow-soft: 0 2px 12px rgba(20, 38, 80, 0.06);
+
+  --navy: var(--brand-navy);
+  --navy-dark: #0f1c3a;
+  --navy-light: #243a66;
+  --green: var(--color-primary);
+  --green-dark: var(--color-primary-dark);
+  --surface: var(--color-surface);
+  --bg: var(--color-bg);
+  --muted: var(--color-muted);
+  --border: var(--color-border);
+
+  --gestao-navy: var(--brand-navy);
+  --gestao-navy-dark: var(--navy-dark);
+  --gestao-navy-light: var(--navy-light);
+  --gestao-primary: var(--color-primary);
+  --gestao-primary-dark: var(--color-primary-dark);
+  --gestao-green: var(--color-primary);
+  --gestao-bg: var(--color-bg);
+  --gestao-surface: var(--color-surface);
+  --gestao-border: var(--color-border);
+  --gestao-muted: var(--color-muted);
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Toggle de tema */
+.um-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.um-theme-toggle:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--glow-cyan);
+  color: var(--color-primary);
+}
+
+.um-theme-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  box-shadow: var(--glow-cyan);
+}
+
+.um-theme-toggle svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.um-theme-toggle--float {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 200;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Neon utilitários */
+.um-neon-focus:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  box-shadow: var(--glow-cyan);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .um-theme-toggle {
+    transition: none;
+  }
+}
+
+/* Seleção e scroll tech */
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  color: var(--color-text);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-accent) 50%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}

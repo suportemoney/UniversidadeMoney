@@ -36,7 +36,7 @@ export default function CertificadosPage() {
     <div className="dash-page">
       <PageHeader
         icon="🏅"
-        titulo="Meus certificados"
+        titulo="Certificados"
         subtitulo="Conquistas emitidas ao concluir os cursos da plataforma."
       >
         {!loading && certs.length > 0 && (

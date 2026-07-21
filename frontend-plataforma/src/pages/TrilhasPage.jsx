@@ -23,7 +23,7 @@ export default function TrilhasPage() {
     <div className="dash-page">
       <PageHeader
         icon="🛤️"
-        titulo="Trilhas de aprendizado"
+        titulo="Trilhas"
         subtitulo="Percursos organizados por setor e carreira na Money Promotora."
       />
 

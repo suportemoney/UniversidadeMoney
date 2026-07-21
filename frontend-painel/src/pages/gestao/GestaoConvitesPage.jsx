@@ -35,6 +35,7 @@ const PAGE_SIZE = 8;
 const INTERNO_URL = import.meta.env.VITE_INTERNO_URL || "http://localhost:5175";
 
 function statusConvite(row) {
+  if (!row.id && !row.chave) return { key: "rascunho", label: "Sem token" };
   if (row.usado_em) return { key: "info", label: "Usado" };
   if (row.valido) return { key: "ativo", label: "Válido" };
   return { key: "inativo", label: "Revogado" };
@@ -292,15 +293,16 @@ export default function GestaoConvitesPage() {
         <tbody>
           {paginados.map((row, i) => {
             const st = statusConvite(row);
+            const rowKey = row.id ?? `user-${row.usuario_id}`;
             return (
               <GestaoTableRow
-                key={row.id}
+                key={rowKey}
                 index={i}
-                selected={crud.selection.isSelected(row.id)}
+                selected={row.id ? crud.selection.isSelected(row.id) : false}
               >
                 <GestaoSelectCell
-                  checked={crud.selection.isSelected(row.id)}
-                  onChange={() => crud.selection.toggle(row.id)}
+                  checked={row.id ? crud.selection.isSelected(row.id) : false}
+                  onChange={() => row.id && crud.selection.toggle(row.id)}
                   disabled={!row.valido}
                 />
                 <td>
@@ -312,16 +314,18 @@ export default function GestaoConvitesPage() {
                 <td>{NIVEL_LABELS[row.nivel_acesso] || row.nivel_acesso || "—"}</td>
                 <td>
                   <div className="convites-token-cell">
-                    <code title={row.chave}>{mascaraToken(row.chave)}</code>
-                    <button
-                      type="button"
-                      className="gestao-icon-btn"
-                      title="Copiar token"
-                      aria-label="Copiar token"
-                      onClick={() => handleCopiar(row.chave, `row-${row.id}`)}
-                    >
-                      {copiado === `row-${row.id}` ? "✓" : "⎘"}
-                    </button>
+                    <code title={row.chave || ""}>{mascaraToken(row.chave)}</code>
+                    {row.chave && (
+                      <button
+                        type="button"
+                        className="gestao-icon-btn"
+                        title="Copiar token"
+                        aria-label="Copiar token"
+                        onClick={() => handleCopiar(row.chave, `row-${rowKey}`)}
+                      >
+                        {copiado === `row-${rowKey}` ? "✓" : "⎘"}
+                      </button>
+                    )}
                   </div>
                 </td>
                 <td>
@@ -440,16 +444,15 @@ export default function GestaoConvitesPage() {
           </label>
           <label className="gestao-field">
             Nível de acesso
-            <select
-              value={form.nivel_acesso}
-              onChange={(e) => setForm((f) => ({ ...f, nivel_acesso: e.target.value }))}
-              required
-            >
+            <select value={form.nivel_acesso} disabled required>
               {niveisOpcoes.map((n) => (
                 <option key={n.value} value={n.value}>{n.label}</option>
               ))}
             </select>
           </label>
+          <div className="convites-hint">
+            Convidados são sempre nível <strong>Padrão</strong>. Instrutor, gestor e administrador ficam em Equipe.
+          </div>
           <div className="convites-hint">
             Senha inicial padrão: <strong>123456</strong>
             <span> — o colaborador redefine no primeiro acesso em interno.</span>

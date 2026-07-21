@@ -39,7 +39,7 @@ export default function ExplorarCursosPage() {
     <div className="dash-page">
       <PageHeader
         icon="📚"
-        titulo="Explorar cursos"
+        titulo="Explorar"
         subtitulo="Escolha um curso específico — não precisa fazer a trilha inteira."
       >
         <form

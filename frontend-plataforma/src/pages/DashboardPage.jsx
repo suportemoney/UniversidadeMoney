@@ -58,173 +58,160 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const { usuario, stats } = data;
+  const { usuario } = data;
+  // Só cursos com progresso real — evita grade morta a 0%
+  const emAndamento = (data.continue_aprendendo || []).filter(
+    (c) => Number(c.progresso) > 0,
+  );
+  const comunicados = (data.comunicados || []).slice(0, 3);
+  const aoVivo = data.treinamentos_ao_vivo || [];
+  const trilhas = data.trilhas_setor || [];
 
   return (
     <div className="dash-home">
       {erro && <div className="alert alert-error">{erro}</div>}
 
-      <section className="dash-top-row">
-        <div className="dash-welcome">
-          <div>
-            <h1>Bem-vindo(a), {usuario.nome || "Colaborador"}!</h1>
-            <p>Sua plataforma de aprendizado corporativo da Money Promotora.</p>
-            <Link to="/dashboard/explorar" className="btn btn-success">Explorar cursos</Link>
-          </div>
-          <div className="dash-welcome-art" aria-hidden="true">🎓</div>
-        </div>
-
-        <div className="dash-stats">
-          <div className="dash-stat-card">
-            <span className="dash-stat-label">Cursos disponíveis</span>
-            <strong>{stats.cursos_disponiveis}</strong>
-            <small>+{stats.cursos_novos_semana} esta semana</small>
-          </div>
-          <div className="dash-stat-card">
-            <span className="dash-stat-label">Em andamento</span>
-            <strong>{stats.em_andamento}</strong>
-            <small>Cursos ativos</small>
-          </div>
-          <div className="dash-stat-card">
-            <span className="dash-stat-label">Certificados</span>
-            <strong>{stats.certificados}</strong>
-            <small>Conquistados</small>
-          </div>
-          <div className="dash-stat-card">
-            <span className="dash-stat-label">Horas de treinamento</span>
-            <strong>{stats.horas_treinamento}h</strong>
-            <small>Total acumulado</small>
-          </div>
-          <div className="dash-stat-card">
-            <span className="dash-stat-label">Colaboradores ativos</span>
-            <strong>{stats.colaboradores_ativos}</strong>
-            <small>Na plataforma</small>
-          </div>
+      <section className="dash-home-hero">
+        <div className="dash-home-hero__inner">
+          <p className="dash-home-hero__brand">Money Promotora</p>
+          <h1>Olá, {usuario.nome || "Colaborador"}</h1>
+          <p className="dash-home-hero__lead">
+            Continue de onde parou ou explore novos treinamentos da equipe.
+          </p>
+          <Link to="/dashboard/explorar" className="btn btn-success">
+            Explorar cursos
+          </Link>
         </div>
       </section>
 
-      <section className="dash-section">
-        <h2>Continue aprendendo</h2>
-        <div className="dash-scroll-row">
-          {data.continue_aprendendo.map((curso) => (
-            <article key={curso.id} className="dash-course-card">
-              <h3>{curso.titulo}</h3>
-              {curso.setor && <span className="dash-tag">{curso.setor}</span>}
-              <div className="dash-progress">
-                <div className="dash-progress-bar" style={{ width: `${curso.progresso}%` }} />
-              </div>
-              <span className="dash-progress-text">{curso.progresso}% concluído</span>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => handleContinuar(curso.id)}
-              >
-                Continuar
-              </button>
-            </article>
-          ))}
+      <section className="dash-section dash-section--primary dash-home-animate">
+        <div className="dash-section-head">
+          <h2>Continue aprendendo</h2>
+          <p>Retome os cursos em que você já avançou.</p>
         </div>
+
+        {emAndamento.length === 0 ? (
+          <div className="dash-home-empty">
+            <p>Nenhum curso em andamento ainda.</p>
+            <Link to="/dashboard/explorar" className="btn btn-primary btn-sm">
+              Começar a explorar
+            </Link>
+          </div>
+        ) : (
+          <div className="dash-scroll-row dash-scroll-row--courses">
+            {emAndamento.map((curso) => (
+              <article key={curso.id} className="dash-course-card dash-course-card--home">
+                <h3>{curso.titulo}</h3>
+                {curso.setor && <span className="dash-tag">{curso.setor}</span>}
+                <div className="dash-progress">
+                  <div className="dash-progress-bar" style={{ width: `${curso.progresso}%` }} />
+                </div>
+                <span className="dash-progress-text">{curso.progresso}% concluído</span>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handleContinuar(curso.id)}
+                >
+                  Continuar
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
-      <section className="dash-section">
-        <h2>Trilhas por setor</h2>
-        <div className="dash-scroll-row dash-trilhas">
-          {data.trilhas_setor.map((t) => (
-            <Link key={t.slug} to="/dashboard/trilhas" className="dash-trilha-card dash-trilha-card--link">
-              <span className="dash-trilha-icon">{t.icone}</span>
-              <strong>{t.nome}</strong>
-              <small>{t.total_cursos} cursos</small>
-              <div className="dash-progress">
-                <div className="dash-progress-bar" style={{ width: `${t.progresso}%` }} />
-              </div>
+      <section className="dash-section dash-home-animate dash-home-animate--delay">
+        <div className="dash-section-head">
+          <h2>Trilhas por setor</h2>
+          <p>Acesse a trilha do seu time.</p>
+        </div>
+        <div className="dash-trilhas-strip" role="list">
+          {trilhas.map((t) => (
+            <Link
+              key={t.slug}
+              to="/dashboard/trilhas"
+              className="dash-trilha-chip"
+              role="listitem"
+            >
+              <span className="dash-trilha-chip__icon" aria-hidden="true">
+                {t.icone}
+              </span>
+              <span className="dash-trilha-chip__text">
+                <strong>{t.nome}</strong>
+                <small>
+                  {t.total_cursos} curso{t.total_cursos === 1 ? "" : "s"}
+                </small>
+              </span>
             </Link>
           ))}
         </div>
       </section>
 
-      <div className="dash-grid-2">
-        <section className="dash-panel">
-          <h2>Novos treinamentos</h2>
-          <ul className="dash-list">
-            {data.novos_treinamentos.map((c) => (
-              <li key={c.id} className="dash-list-item">
-                <Link to={`/dashboard/curso/${c.id}`} className="dash-list-item-link">
+      <div className="dash-home-secondary dash-home-animate dash-home-animate--delay2">
+        <section className="dash-panel dash-panel--home">
+          <div className="dash-section-head">
+            <h2>Ao vivo</h2>
+            <p>Próximos treinamentos ao vivo.</p>
+          </div>
+          {aoVivo.length === 0 ? (
+            <p className="dash-home-panel-empty">Nenhum evento agendado.</p>
+          ) : (
+            <ul className="dash-list dash-list--home">
+              {aoVivo.map((t) => (
+                <li key={t.id} className="dash-list-item dash-live-item">
+                  <div className="dash-live-date">
+                    <strong>{formatData(t.data)}</strong>
+                    <small>{t.hora}</small>
+                  </div>
+                  <div className="dash-live-item__body">
+                    <strong>{t.titulo}</strong>
+                    <small>{t.setor}</small>
+                  </div>
+                  {t.link ? (
+                    <a
+                      href={t.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline btn-sm"
+                    >
+                      {labelLinkAoVivo(t.tipo_plataforma)}
+                    </a>
+                  ) : (
+                    <Link to="/dashboard/ao-vivo" className="btn btn-outline btn-sm">
+                      Detalhes
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="dash-panel dash-panel--home">
+          <div className="dash-section-head">
+            <h2>Comunicados</h2>
+            <p>Avisos internos recentes.</p>
+          </div>
+          {comunicados.length === 0 ? (
+            <p className="dash-home-panel-empty">Nenhum comunicado no momento.</p>
+          ) : (
+            <ul className="dash-list dash-list--home">
+              {comunicados.map((c) => (
+                <li key={c.id} className="dash-list-item dash-comunicado-item">
+                  <span className="dash-comunicado-item__icon" aria-hidden="true">
+                    {ICON_COMUNICADO[c.tipo] || "ℹ️"}
+                  </span>
                   <div>
                     <strong>{c.titulo}</strong>
-                    <small>{c.modulos} módulos · {c.duracao_horas}h</small>
+                    <p>{c.conteudo}</p>
+                    <small>{tempoRelativo(c.criado_em)}</small>
                   </div>
-                  {c.is_novo && <span className="dash-badge-novo">Novo</span>}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="dash-panel">
-          <h2>Próximos treinamentos ao vivo</h2>
-          <ul className="dash-list">
-            {data.treinamentos_ao_vivo.map((t) => (
-              <li key={t.id} className="dash-list-item dash-live-item">
-                <div className="dash-live-date">
-                  <strong>{formatData(t.data)}</strong>
-                  <small>{t.hora}</small>
-                </div>
-                <div>
-                  <strong>{t.titulo}</strong>
-                  <small>{t.setor}</small>
-                </div>
-                {t.link ? (
-                  <a
-                    href={t.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-outline btn-sm"
-                  >
-                    {labelLinkAoVivo(t.tipo_plataforma)}
-                  </a>
-                ) : (
-                  <Link to="/dashboard/ao-vivo" className="btn btn-outline btn-sm">Ver detalhes</Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="dash-panel">
-          <h2>Comunicados internos</h2>
-          <ul className="dash-list">
-            {data.comunicados.map((c) => (
-              <li key={c.id} className="dash-list-item">
-                <span>{ICON_COMUNICADO[c.tipo] || "ℹ️"}</span>
-                <div>
-                  <strong>{c.titulo}</strong>
-                  <p>{c.conteudo}</p>
-                  <small>{tempoRelativo(c.criado_em)}</small>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
-
-      <section className="dash-conquistas-row">
-        <div>
-          <h2>Certificados e conquistas</h2>
-          <div className="dash-conquistas">
-            {data.conquistas.map((c) => (
-              <div key={c.slug} className="dash-conquista-badge">
-                <span>🏅</span>
-                <small>{c.titulo}</small>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="dash-cert-summary">
-          <strong>{data.total_certificados}</strong>
-          <span>Certificados conquistados</span>
-          <Link to="/dashboard/certificados">Ver todos os certificados</Link>
-        </div>
-      </section>
     </div>
   );
 }

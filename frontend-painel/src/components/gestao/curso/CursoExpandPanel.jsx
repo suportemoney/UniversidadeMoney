@@ -240,7 +240,7 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
                         Criar atividade final
                       </button>
                     ) : (
-                      <div className="curso-expand-atividade">
+                      <div className="curso-expand-atividade gestao-atividade">
                         <p><strong>{ativ.titulo}</strong></p>
                         {(ativ.questoes || []).map((q) => (
                           <QuestaoEditor

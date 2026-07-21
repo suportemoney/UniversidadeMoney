@@ -32,7 +32,7 @@ export default function AoVivoPage() {
     <div className="dash-page">
       <PageHeader
         icon="🎥"
-        titulo="Treinamentos ao vivo"
+        titulo="Ao vivo"
         subtitulo="Acesse as transmissões pelo Google Meet ou YouTube Live."
       />
 

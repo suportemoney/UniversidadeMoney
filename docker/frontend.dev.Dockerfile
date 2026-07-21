@@ -8,6 +8,10 @@ COPY ${FRONTEND_DIR}/package.json ${FRONTEND_DIR}/package-lock.json ./
 RUN npm ci
 
 COPY ${FRONTEND_DIR}/ ./
+# Tokens/tema compartilhados (alias @shared → /shared)
+COPY shared/ /shared/
+
+ENV SHARED_UI_ROOT=/shared
 
 EXPOSE 5173
 

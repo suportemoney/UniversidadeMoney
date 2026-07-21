@@ -13,7 +13,8 @@ import StatusBadge from "../../components/gestao/StatusBadge";
 import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
-import { NIVEL_LABELS, NIVEIS_CONVITE } from "../../utils/niveisAcesso";
+import { formatarCpf } from "../../utils/cpf";
+import { NIVEL_LABELS, NIVEIS_EQUIPE, ehNivelEquipe } from "../../utils/niveisAcesso";
 
 const FORM_CRIAR_VAZIO = {
   nome: "",
@@ -33,16 +34,18 @@ export default function GestaoEquipePage() {
   const [setores, setSetores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ open: false, item: null });
+  const [visualizar, setVisualizar] = useState(null);
   const [form, setForm] = useState(FORM_CRIAR_VAZIO);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [inativar, setInativar] = useState(null);
+  const [excluir, setExcluir] = useState(null);
   const crud = useGestaoCrudTable();
 
   const carregar = (termo = "") => {
     setLoading(true);
     return gestaoApi.usuarios(termo)
-      .then(setUsuarios)
+      .then((lista) => setUsuarios((Array.isArray(lista) ? lista : []).filter(ehNivelEquipe)))
       .catch((e) => setErro(e.message))
       .finally(() => setLoading(false));
   };
@@ -81,6 +84,11 @@ export default function GestaoEquipePage() {
   const pageIds = paginados.filter(podeSelecionar).map((u) => u.id);
 
   const fecharModal = () => setModal({ open: false, item: null });
+
+  const abrirEdicao = (item) => {
+    setVisualizar(null);
+    setModal({ open: true, item });
+  };
 
   const confirmarLote = async () => {
     await crud.confirmarLote(
@@ -124,6 +132,17 @@ export default function GestaoEquipePage() {
     await gestaoApi.inativarUsuarioEquipe(inativar.id);
     setInativar(null);
     carregar();
+  };
+
+  const confirmarExcluir = async () => {
+    try {
+      await gestaoApi.excluirUsuarioEquipePermanente(excluir.id);
+      setExcluir(null);
+      carregar();
+    } catch (err) {
+      setErro(err.message || "Não foi possível excluir o colaborador.");
+      setExcluir(null);
+    }
   };
 
   return (
@@ -183,7 +202,7 @@ export default function GestaoEquipePage() {
             <th>Colaborador</th>
             <th>E-mail</th>
             <th>Nível</th>
-            <th>Ações</th>
+            <th className="gestao-th-acoes">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -202,19 +221,63 @@ export default function GestaoEquipePage() {
                   label={NIVEL_LABELS[u.nivel_acesso] || u.cargo || "—"}
                 />
               </td>
-              <td>
-                {!u.is_superuser && (
+              <td className="gestao-td-acoes">
+                {!u.is_superuser ? (
                   <GestaoTableActions
-                    onEdit={() => setModal({ open: true, item: u })}
+                    center
+                    onView={() => setVisualizar(u)}
                     onInativar={() => setInativar(u)}
+                    onDelete={() => setExcluir(u)}
+                    viewLabel="Visualizar"
                     inativarLabel="Inativar"
+                    deleteLabel="Excluir permanente"
                   />
+                ) : (
+                  <span className="gestao-muted">—</span>
                 )}
               </td>
             </GestaoTableRow>
           ))}
         </tbody>
       </GestaoDataTable>
+
+      <Modal
+        open={!!visualizar}
+        onClose={() => setVisualizar(null)}
+        title="Perfil do membro"
+        wide
+        footer={(
+          <>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setVisualizar(null)}>
+              Fechar
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => abrirEdicao(visualizar)}
+            >
+              <GestaoIcon name="editar" />
+              Editar
+            </button>
+          </>
+        )}
+      >
+        {visualizar && (
+          <dl className="convites-perfil-dl">
+            <div><dt>Nome</dt><dd>{visualizar.first_name || "—"}</dd></div>
+            <div><dt>E-mail</dt><dd>{visualizar.email || "—"}</dd></div>
+            <div><dt>CPF</dt><dd>{visualizar.cpf ? formatarCpf(visualizar.cpf) : "—"}</dd></div>
+            <div>
+              <dt>Nível de acesso</dt>
+              <dd>{NIVEL_LABELS[visualizar.nivel_acesso] || visualizar.nivel_acesso || "—"}</dd>
+            </div>
+            <div><dt>Cargo</dt><dd>{visualizar.cargo || "—"}</dd></div>
+            <div><dt>Setor</dt><dd>{visualizar.setor_nome || "Geral"}</dd></div>
+            <div><dt>Membro da equipe</dt><dd>{visualizar.is_membro_equipe ? "Sim" : "Não"}</dd></div>
+            <div><dt>Administrador</dt><dd>{visualizar.is_superuser ? "Sim" : "Não"}</dd></div>
+          </dl>
+        )}
+      </Modal>
 
       <Modal
         open={modal.open}
@@ -280,7 +343,7 @@ export default function GestaoEquipePage() {
               onChange={(e) => setForm({ ...form, nivel_acesso: e.target.value })}
               required
             >
-              {NIVEIS_CONVITE.map((n) => (
+              {NIVEIS_EQUIPE.map((n) => (
                 <option key={n.value} value={n.value}>{n.label}</option>
               ))}
             </select>
@@ -304,6 +367,16 @@ export default function GestaoEquipePage() {
         title="Inativar colaborador"
         message={`Inativar "${inativar?.first_name || inativar?.email}"? A conta deixará de acessar a plataforma.`}
         confirmLabel="Inativar"
+        danger
+      />
+
+      <ConfirmDialog
+        open={!!excluir}
+        onClose={() => setExcluir(null)}
+        onConfirm={confirmarExcluir}
+        title="Excluir permanentemente"
+        message={`Excluir permanentemente "${excluir?.first_name || excluir?.email}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir permanente"
         danger
       />
 

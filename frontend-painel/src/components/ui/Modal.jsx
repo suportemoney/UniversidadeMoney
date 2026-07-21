@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import "@shared/ui/modal.css";
 
 /**
  * Modal global: portal no body, fixed + z-index alto (fora de overflow/transform da tabela).
