@@ -7,9 +7,12 @@ from django.db import models
 
 
 def aula_video_upload_path(instance, filename):
-    # Sempre .webm após conversão no upload
+    # Mantém a extensão original (mp4, webm, etc.)
+    ext = "webm"
+    if filename and "." in filename:
+        ext = filename.rsplit(".", 1)[-1].lower()[:8] or "webm"
     uid = instance.pk or uuid.uuid4().hex[:12]
-    return f"cursos/{instance.modulo.curso_id}/aulas/{uid}.webm"
+    return f"cursos/{instance.modulo.curso_id}/aulas/{uid}.{ext}"
 
 
 def curso_thumbnail_upload_path(instance, filename):

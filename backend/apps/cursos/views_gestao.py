@@ -565,23 +565,28 @@ class GestaoAulaUploadVideoView(APIView):
         if aula.video:
             aula.video.delete(save=False)
 
+        # Guarda o arquivo original (mp4/webm/…).
+        # Conversão síncrona MP4→WebM (VP9) estourava timeout do gunicorn (HTTP 500).
         try:
-            # Já é webm: guarda como está (sem reencode)
-            if ext == ".webm":
-                try:
-                    arquivo.seek(0)
-                except Exception:
-                    pass
-                webm = ContentFile(arquivo.read(), name="video.webm")
-            else:
-                webm = converter_video_para_webm(arquivo)
-        except MediaConvertError as exc:
-            return Response({"detail": str(exc)}, status=400)
+            try:
+                arquivo.seek(0)
+            except Exception:
+                pass
+            nome_safe = f"video{ext}" if ext else "video.mp4"
+            video_file = ContentFile(arquivo.read(), name=nome_safe)
+            aula.video.save(nome_safe, video_file, save=False)
+        except Exception as exc:
+            return Response(
+                {"detail": f"Falha ao salvar o vídeo: {exc}"},
+                status=500,
+            )
 
-        aula.video.save("video.webm", webm, save=False)
         duracao = request.data.get("duracao_segundos")
         if duracao:
-            aula.duracao_segundos = int(duracao)
+            try:
+                aula.duracao_segundos = int(duracao)
+            except (TypeError, ValueError):
+                pass
         aula.save()
         recalcular_curso(aula.modulo.curso)
         return Response(AulaVideoSerializer(aula).data)
