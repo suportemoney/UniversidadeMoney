@@ -1,4 +1,5 @@
 """Seed do curso Operações SIAPE: descrição, 1 módulo, 4 aulas, atividade e prova."""
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from apps.cursos.models import Atividade, AulaVideo, Curso, Modulo, ProvaFinal, Questao
@@ -178,6 +179,22 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"Módulo {'criado' if mod_created else 'já existia'}: {modulo.titulo}")
         )
+
+        # Instrutor padrão (admin), se o curso ainda não tiver
+        if not curso.instrutor_id:
+            admin = User.objects.filter(is_superuser=True).order_by("id").first()
+            if admin:
+                curso.instrutor = admin
+                curso.save(update_fields=["instrutor", "atualizado_em"])
+                self.stdout.write(self.style.SUCCESS(f"Instrutor definido: {admin.username}"))
+
+        # Remove módulos vazios (sem aulas/atividades) que bloqueiam a publicação
+        for m in list(curso.modulos.all()):
+            if m.id == modulo.id:
+                continue
+            if not m.aulas.exists() and not m.atividades.exists():
+                self.stdout.write(f"Removendo módulo vazio: {m.titulo} (id={m.id})")
+                m.delete()
 
         for meta in AULAS:
             aula, created = AulaVideo.objects.get_or_create(

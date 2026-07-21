@@ -36,10 +36,14 @@ function isRotaAuthPublica(path) {
 }
 
 function mensagemErro(data, status, path) {
+  // Lista de erros de validação (ex.: publicar curso)
+  if (Array.isArray(data?.erros) && data.erros.length) {
+    return data.erros.join(" · ");
+  }
+
   const detail =
     data.detail ||
     data.message ||
-    (data.erros && data.erros.join(" ")) ||
     (typeof data === "object" ? Object.values(data).flat().join(" ") : "") ||
     `Erro HTTP ${status}`;
 
