@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.accounts.permissions_api import IsFrontendJwtOrApiKey
 
 from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
 from apps.planos.services import (
@@ -18,7 +19,7 @@ from .serializers_gestao import CursoGestaoListSerializer
 
 
 class BuscaView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         q = request.query_params.get("q", "").strip()
@@ -93,7 +94,7 @@ class BuscaView(APIView):
 
 
 class CatalogoCursosView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
 
     def get(self, request):
         qs = filtrar_cursos_queryset(
@@ -114,12 +115,12 @@ class CatalogoCursosView(APIView):
 
 class CatalogoCursoDetailView(APIView):
     """Detalhe público de um curso para matrícula individual (sem trilha)."""
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
 
     def get(self, request, pk):
         try:
             curso = Curso.objects.prefetch_related(
-                "modulos__aulas", "modulos__arquivos", "participantes", "tags"
+                "modulos__aulas", "modulos__arquivos", "participantes", "tags", "materiais"
             ).select_related("setor", "instrutor").get(
                 pk=pk, status=Curso.STATUS_PUBLICADO
             )
@@ -134,11 +135,15 @@ class CatalogoCursoDetailView(APIView):
             {
                 "id": m.id,
                 "titulo": m.titulo,
-                "tipo": m.tipo,
-                "total_aulas": m.aulas.count() if m.tipo == Modulo.TIPO_VIDEO else m.arquivos.count(),
+                "tipo": "video",
+                "total_aulas": m.aulas.count(),
                 "duracao_minutos": m.duracao_minutos,
             }
             for m in curso.modulos.all()
+        ]
+        materiais = [
+            {"id": mat.id, "titulo": mat.titulo, "arquivo_url": mat.arquivo.url if mat.arquivo else None}
+            for mat in curso.materiais.all()
         ]
         trilhas = [
             {"id": t.id, "titulo": t.titulo}
@@ -160,6 +165,7 @@ class CatalogoCursoDetailView(APIView):
                 for p in curso.participantes.all()
             ],
             "modulos": modulos,
+            "materiais": materiais,
             "trilhas": trilhas,
             "matriculado": bool(matricula),
             "progresso": matricula.progresso if matricula else 0,
@@ -168,7 +174,7 @@ class CatalogoCursoDetailView(APIView):
 
 
 class TrilhasAlunoListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_trilhas")]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno, TemFeaturePlano("acesso_trilhas")]
 
     def get(self, request):
         trilhas = Trilha.objects.prefetch_related("itens__curso__tags").select_related("setor")
@@ -196,7 +202,7 @@ class TrilhasAlunoListView(APIView):
 
 
 class TrilhaAlunoDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_trilhas")]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno, TemFeaturePlano("acesso_trilhas")]
 
     def get(self, request, pk):
         try:

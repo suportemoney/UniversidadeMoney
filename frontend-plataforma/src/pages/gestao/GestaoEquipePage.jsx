@@ -13,15 +13,15 @@ import StatusBadge from "../../components/gestao/StatusBadge";
 import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
+import { NIVEL_LABELS, NIVEIS_CONVITE } from "../../utils/niveisAcesso";
 
 const FORM_CRIAR_VAZIO = {
   nome: "",
   email: "",
   cpf: "",
   password: "",
-  cargo: "Colaborador",
+  nivel_acesso: "gestor",
   setor: "",
-  is_membro_equipe: true,
 };
 
 function podeSelecionar(u) {
@@ -53,7 +53,7 @@ export default function GestaoEquipePage() {
 
   const {
     busca, setBusca, page, setPage, paginados, totalPages, totalItems, pageSize,
-  } = usePaginatedList(usuarios, { searchKeys: ["first_name", "email", "cargo"], pageSize: 10 });
+  } = usePaginatedList(usuarios, { searchKeys: ["first_name", "email", "cargo", "nivel_acesso"], pageSize: 10 });
 
   useEffect(() => {
     const timer = setTimeout(() => carregar(busca), 400);
@@ -69,9 +69,8 @@ export default function GestaoEquipePage() {
         email: modal.item.email || "",
         cpf: modal.item.cpf || "",
         password: "",
-        cargo: modal.item.cargo || "Colaborador",
+        nivel_acesso: modal.item.nivel_acesso || "gestor",
         setor: modal.item.setor || "",
-        is_membro_equipe: !!modal.item.is_membro_equipe,
       });
     } else {
       setForm(FORM_CRIAR_VAZIO);
@@ -99,9 +98,8 @@ export default function GestaoEquipePage() {
       if (modal.item) {
         await gestaoApi.atualizarUsuarioEquipe(modal.item.id, {
           first_name: form.nome,
-          cargo: form.cargo,
+          nivel_acesso: form.nivel_acesso,
           setor: form.setor ? Number(form.setor) : null,
-          is_membro_equipe: form.is_membro_equipe,
         });
       } else {
         await gestaoApi.criarUsuarioEquipe({
@@ -109,9 +107,8 @@ export default function GestaoEquipePage() {
           email: form.email,
           cpf: form.cpf,
           password: form.password,
-          cargo: form.cargo,
+          nivel_acesso: form.nivel_acesso,
           setor: form.setor ? Number(form.setor) : null,
-          is_membro_equipe: form.is_membro_equipe,
         });
       }
       fecharModal();
@@ -185,8 +182,7 @@ export default function GestaoEquipePage() {
             />
             <th>Colaborador</th>
             <th>E-mail</th>
-            <th>Cargo</th>
-            <th>Equipe</th>
+            <th>Nível</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -200,20 +196,18 @@ export default function GestaoEquipePage() {
               />
               <td><GestaoCellCurso titulo={u.first_name || u.email} descricao={u.setor_nome || undefined} /></td>
               <td>{u.email}</td>
-              <td>{u.cargo || "—"}</td>
               <td>
-                {u.is_superuser ? (
-                  <span className="gestao-badge">Superuser</span>
-                ) : (
-                  <StatusBadge status={u.is_membro_equipe ? "ativo" : "inativo"} label={u.is_membro_equipe ? "Membro" : "Sem acesso"} />
-                )}
+                <StatusBadge
+                  status={u.nivel_acesso === "administrador" || u.is_superuser ? "ativo" : "info"}
+                  label={NIVEL_LABELS[u.nivel_acesso] || u.cargo || "—"}
+                />
               </td>
               <td>
                 {!u.is_superuser && (
                   <GestaoTableActions
                     onEdit={() => setModal({ open: true, item: u })}
-                    onDelete={() => setInativar(u)}
-                    deleteLabel="Inativar"
+                    onInativar={() => setInativar(u)}
+                    inativarLabel="Inativar"
                   />
                 )}
               </td>
@@ -280,11 +274,16 @@ export default function GestaoEquipePage() {
             </>
           )}
           <label className="gestao-field">
-            Cargo
-            <input
-              value={form.cargo}
-              onChange={(e) => setForm({ ...form, cargo: e.target.value })}
-            />
+            Nível de acesso
+            <select
+              value={form.nivel_acesso}
+              onChange={(e) => setForm({ ...form, nivel_acesso: e.target.value })}
+              required
+            >
+              {NIVEIS_CONVITE.map((n) => (
+                <option key={n.value} value={n.value}>{n.label}</option>
+              ))}
+            </select>
           </label>
           <label className="gestao-field">
             Setor
@@ -294,14 +293,6 @@ export default function GestaoEquipePage() {
                 <option key={s.id} value={s.id}>{s.nome}</option>
               ))}
             </select>
-          </label>
-          <label className="gestao-checkbox">
-            <input
-              type="checkbox"
-              checked={form.is_membro_equipe}
-              onChange={(e) => setForm({ ...form, is_membro_equipe: e.target.checked })}
-            />
-            Membro da equipe de gestão (pode criar e editar conteúdo)
           </label>
         </form>
       </Modal>

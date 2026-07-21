@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
@@ -12,8 +13,11 @@ import GestaoToolbar from "../../components/gestao/GestaoToolbar";
 import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
+import { podeExcluir } from "../../utils/niveisAcesso";
 
 export default function GestaoTrilhasPage() {
+  const { user } = useOutletContext() || {};
+  const podeApagar = podeExcluir(user);
   const [trilhas, setTrilhas] = useState([]);
   const [modal, setModal] = useState(false);
   const [titulo, setTitulo] = useState("");
@@ -85,7 +89,7 @@ export default function GestaoTrilhasPage() {
       {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
 
       <GestaoToolbar
-        bulkActions={(
+        bulkActions={podeApagar ? (
           <GestaoBulkActions
             count={crud.selection.count}
             actionLabel="Excluir selecionadas"
@@ -93,7 +97,7 @@ export default function GestaoTrilhasPage() {
             onClear={crud.selection.clear}
             loading={crud.loteLoading}
           />
-        )}
+        ) : null}
         searchValue={busca}
         onSearchChange={setBusca}
         searchPlaceholder="Buscar trilhas..."
@@ -142,7 +146,7 @@ export default function GestaoTrilhasPage() {
                 <GestaoTableActions
                   editTo={`/gestao/trilhas/${t.id}`}
                   editLabel="Montar"
-                  onDelete={() => setExcluir(t)}
+                  onDelete={podeApagar ? () => setExcluir(t) : undefined}
                 />
               </td>
             </GestaoTableRow>

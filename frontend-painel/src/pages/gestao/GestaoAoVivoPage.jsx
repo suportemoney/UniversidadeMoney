@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
@@ -12,12 +13,15 @@ import GestaoToolbar from "../../components/gestao/GestaoToolbar";
 import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
+import { podeExcluir } from "../../utils/niveisAcesso";
 
 const FORM_VAZIO = {
   titulo: "", data: "", hora: "", setor: "", descricao: "", tipo_plataforma: "meet", link: "", tag_ids: [],
 };
 
 export default function GestaoAoVivoPage() {
+  const { user } = useOutletContext() || {};
+  const podeApagar = podeExcluir(user);
   const [itens, setItens] = useState([]);
   const [setores, setSetores] = useState([]);
   const [tags, setTags] = useState([]);
@@ -107,7 +111,7 @@ export default function GestaoAoVivoPage() {
       {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
 
       <GestaoToolbar
-        bulkActions={(
+        bulkActions={podeApagar ? (
           <GestaoBulkActions
             count={crud.selection.count}
             actionLabel="Excluir selecionados"
@@ -115,7 +119,7 @@ export default function GestaoAoVivoPage() {
             onClear={crud.selection.clear}
             loading={crud.loteLoading}
           />
-        )}
+        ) : null}
         searchValue={busca}
         onSearchChange={setBusca}
         searchPlaceholder="Buscar treinamentos..."
@@ -159,7 +163,7 @@ export default function GestaoAoVivoPage() {
               <td>{labelPlataforma(t.tipo_plataforma)}</td>
               <td>{t.setor_nome || "—"}</td>
               <td>
-                <GestaoTableActions onEdit={() => setModal({ open: true, item: t })} onDelete={() => setExcluir(t)} />
+                <GestaoTableActions onEdit={() => setModal({ open: true, item: t })} onDelete={podeApagar ? () => setExcluir(t) : undefined} />
               </td>
             </GestaoTableRow>
           ))}

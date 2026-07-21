@@ -8,6 +8,7 @@ from .models import (
     AulaVideo,
     Comunicado,
     Curso,
+    CursoMaterial,
     CursoParticipante,
     MaterialBiblioteca,
     Modulo,
@@ -83,9 +84,10 @@ class ModuloSerializer(serializers.ModelSerializer):
             "id", "curso", "titulo", "tipo", "conteudo_texto", "ordem",
             "duracao_minutos", "aulas", "atividades", "arquivos",
         ]
-        read_only_fields = ["id", "duracao_minutos", "curso", "ordem"]
+        read_only_fields = ["id", "duracao_minutos", "curso", "ordem", "tipo"]
 
     def validate(self, attrs):
+        # Novos módulos são sempre de vídeo; tipo legado permanece read-only
         if self.instance and "tipo" in attrs and attrs["tipo"] != self.instance.tipo:
             raise serializers.ValidationError({"tipo": "O tipo do módulo não pode ser alterado após a criação."})
         return attrs
@@ -96,6 +98,18 @@ class CursoParticipanteSerializer(serializers.ModelSerializer):
         model = CursoParticipante
         fields = ["id", "curso", "nome", "cargo", "ordem"]
         read_only_fields = ["id", "curso", "ordem"]
+
+
+class CursoMaterialSerializer(serializers.ModelSerializer):
+    arquivo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CursoMaterial
+        fields = ["id", "curso", "titulo", "arquivo", "arquivo_url", "ordem"]
+        read_only_fields = ["id", "arquivo_url", "curso", "ordem"]
+
+    def get_arquivo_url(self, obj):
+        return obj.arquivo_url
 
 
 class ProvaFinalSerializer(serializers.ModelSerializer):
@@ -118,17 +132,19 @@ class CursoGestaoListSerializer(serializers.ModelSerializer):
     setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
     criado_por_nome = serializers.CharField(source="criado_por.first_name", read_only=True, default=None)
     tags = TagCursoSerializer(many=True, read_only=True)
+    descricao = serializers.CharField(read_only=True)
 
     class Meta:
         model = Curso
         fields = [
-            "id", "titulo", "status", "setor", "setor_nome", "total_modulos",
+            "id", "titulo", "descricao", "status", "setor", "setor_nome", "total_modulos",
             "duracao_horas", "is_novo", "criado_em", "atualizado_em", "criado_por_nome", "tags",
         ]
 
 
 class CursoGestaoDetailSerializer(serializers.ModelSerializer):
     modulos = ModuloSerializer(many=True, read_only=True)
+    materiais = CursoMaterialSerializer(many=True, read_only=True)
     prova_final = ProvaFinalSerializer(read_only=True)
     setor_nome = serializers.CharField(source="setor.nome", read_only=True, default=None)
     instrutor_nome = serializers.CharField(source="instrutor.first_name", read_only=True, default=None)
@@ -140,7 +156,7 @@ class CursoGestaoDetailSerializer(serializers.ModelSerializer):
         model = Curso
         fields = [
             "id", "titulo", "descricao", "status", "setor", "setor_nome",
-            "instrutor", "instrutor_nome", "participantes",
+            "instrutor", "instrutor_nome", "participantes", "materiais",
             "total_modulos", "duracao_horas", "is_novo", "thumbnail", "thumbnail_url",
             "criado_em", "atualizado_em", "modulos", "prova_final", "tags",
         ]
@@ -206,14 +222,15 @@ class UsuarioEquipeSerializer(serializers.ModelSerializer):
     cpf = serializers.SerializerMethodField()
     is_membro_equipe = serializers.SerializerMethodField()
     cargo = serializers.SerializerMethodField()
+    nivel_acesso = serializers.SerializerMethodField()
     setor = serializers.SerializerMethodField()
     setor_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
-            "id", "email", "first_name", "cpf", "cargo", "setor", "setor_nome",
-            "is_membro_equipe", "is_superuser",
+            "id", "email", "first_name", "cpf", "cargo", "nivel_acesso",
+            "setor", "setor_nome", "is_membro_equipe", "is_superuser",
         ]
 
     def get_cpf(self, obj):
@@ -224,6 +241,10 @@ class UsuarioEquipeSerializer(serializers.ModelSerializer):
 
     def get_cargo(self, obj):
         return getattr(getattr(obj, "profile", None), "cargo", "Colaborador")
+
+    def get_nivel_acesso(self, obj):
+        from apps.cursos.permissions import nivel_do_usuario
+        return nivel_do_usuario(obj)
 
     def get_setor(self, obj):
         profile = getattr(obj, "profile", None)
@@ -239,9 +260,11 @@ class UsuarioEquipeCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
     cpf = serializers.CharField(max_length=14)
     password = serializers.CharField(min_length=8, write_only=True)
-    cargo = serializers.CharField(max_length=100, required=False, default="Colaborador")
+    nivel_acesso = serializers.ChoiceField(
+        choices=[c[0] for c in Profile.NIVEL_CHOICES],
+        default=Profile.NIVEL_GESTOR,
+    )
     setor = serializers.IntegerField(required=False, allow_null=True)
-    is_membro_equipe = serializers.BooleanField(default=True)
 
     def validate_email(self, value):
         email = value.strip().lower()
@@ -267,6 +290,8 @@ class UsuarioEquipeCreateSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
+        from apps.cursos.permissions import aplicar_nivel_acesso
+
         email = validated_data["email"].strip().lower()
         user = User.objects.create_user(
             username=email,
@@ -277,18 +302,20 @@ class UsuarioEquipeCreateSerializer(serializers.Serializer):
         Profile.objects.create(
             user=user,
             cpf=validated_data["cpf"],
-            cargo=validated_data.get("cargo") or "Colaborador",
             setor_id=validated_data.get("setor"),
-            is_membro_equipe=validated_data.get("is_membro_equipe", True),
+            precisa_redefinir_senha=False,
         )
+        aplicar_nivel_acesso(user, validated_data.get("nivel_acesso") or Profile.NIVEL_GESTOR)
         return User.objects.select_related("profile", "profile__setor").get(pk=user.pk)
 
 
 class UsuarioEquipeUpdateSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150, required=False)
-    cargo = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    nivel_acesso = serializers.ChoiceField(
+        choices=[c[0] for c in Profile.NIVEL_CHOICES],
+        required=False,
+    )
     setor = serializers.IntegerField(required=False, allow_null=True)
-    is_membro_equipe = serializers.BooleanField(required=False)
 
     def validate_setor(self, value):
         if value is None:
@@ -298,26 +325,27 @@ class UsuarioEquipeUpdateSerializer(serializers.Serializer):
         return value
 
     def update(self, instance, validated_data):
-        if instance.is_superuser:
-            raise serializers.ValidationError("Não é possível alterar superuser.")
+        from apps.cursos.permissions import aplicar_nivel_acesso
+
+        if instance.is_superuser and validated_data.get("nivel_acesso") not in (
+            None,
+            Profile.NIVEL_ADMINISTRADOR,
+        ):
+            raise serializers.ValidationError(
+                "Não é possível rebaixar o nível de um administrador por este formulário."
+            )
 
         if "first_name" in validated_data:
             instance.first_name = validated_data["first_name"].strip()
             instance.save(update_fields=["first_name"])
 
         profile = instance.profile
-        campos = []
-        if "cargo" in validated_data:
-            profile.cargo = validated_data["cargo"] or "Colaborador"
-            campos.append("cargo")
         if "setor" in validated_data:
             profile.setor_id = validated_data["setor"]
-            campos.append("setor")
-        if "is_membro_equipe" in validated_data:
-            profile.is_membro_equipe = validated_data["is_membro_equipe"]
-            campos.append("is_membro_equipe")
-        if campos:
-            profile.save(update_fields=campos)
+            profile.save(update_fields=["setor"])
+
+        if "nivel_acesso" in validated_data:
+            aplicar_nivel_acesso(instance, validated_data["nivel_acesso"])
 
         return User.objects.select_related("profile", "profile__setor").get(pk=instance.pk)
 

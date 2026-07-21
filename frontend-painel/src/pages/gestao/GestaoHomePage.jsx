@@ -86,9 +86,9 @@ export default function GestaoHomePage() {
           <GestaoKpiCard icon="trilhas" value={kpis.trilhas} label="Trilhas" to="/gestao/trilhas" delay={80} />
           <GestaoKpiCard icon="equipe" value={kpis.colaboradores_ativos} label="Colaboradores ativos" to="/gestao/equipe" delay={120} />
           <GestaoKpiCard icon="cursos" value={kpis.matriculas} label="Matrículas" to="/gestao/cursos" delay={160} />
-          <GestaoKpiCard icon="planos" value={kpis.assinaturas_ativas} label="Assinaturas ativas" to="/gestao/planos" delay={200} />
-          <GestaoKpiCard icon="comunicados" value={kpis.comunicados} label="Comunicados" to="/gestao/comunicados" delay={240} />
-          <GestaoKpiCard icon="biblioteca" value={kpis.biblioteca_total} label="Materiais na biblioteca" to="/gestao/biblioteca" delay={280} />
+          <GestaoKpiCard icon="comunicados" value={kpis.comunicados} label="Comunicados" to="/gestao/comunicados" delay={200} />
+          <GestaoKpiCard icon="biblioteca" value={kpis.biblioteca_total} label="Materiais na biblioteca" to="/gestao/biblioteca" delay={240} />
+          <GestaoKpiCard icon="api" value="—" label="Integração API" to="/gestao/api" delay={280} />
         </div>
       </section>
 
@@ -106,14 +106,7 @@ export default function GestaoHomePage() {
           <GestaoKpiCard icon="setores" value={kpis.setores} label="Setores" to="/gestao/setores" delay={40} />
           <GestaoKpiCard icon="tags" value={kpis.tags_ativas} label="Tags ativas" to="/gestao/tags" delay={80} />
           <GestaoKpiCard icon="equipe" value={kpis.membros_equipe} label="Membros da equipe" to="/gestao/equipe" delay={120} />
-          <GestaoKpiCard
-            icon="planos"
-            value={kpis.planos_ativos}
-            label="Planos ativos"
-            hint={kpis.tokens_ativos ? `${kpis.tokens_ativos} token(s) ativo(s)` : undefined}
-            to="/gestao/planos"
-            delay={160}
-          />
+          <GestaoKpiCard icon="tokens" value="—" label="Convites" to="/gestao/convites" delay={160} />
         </div>
       </section>
 
@@ -182,7 +175,8 @@ export default function GestaoHomePage() {
           <Link to="/gestao/trilhas" className="btn btn-outline btn-sm">Gerenciar trilhas</Link>
           <Link to="/gestao/comunicados" className="btn btn-outline btn-sm">Comunicados</Link>
           <Link to="/gestao/biblioteca" className="btn btn-outline btn-sm">Biblioteca</Link>
-          <Link to="/gestao/landing" className="btn btn-outline btn-sm">Landing page</Link>
+          <Link to="/gestao/api" className="btn btn-outline btn-sm">API</Link>
+          <Link to="/gestao/convites" className="btn btn-outline btn-sm">Convites</Link>
         </div>
       </section>
     </div>

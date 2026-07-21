@@ -1,20 +1,25 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
+/**
+ * Modal global: portal no body, fixed + z-index alto (fora de overflow/transform da tabela).
+ */
 export default function Modal({ open, onClose, title, children, wide, footer }) {
   useEffect(() => {
     if (!open) return;
     const handler = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", handler);
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", handler);
-      document.body.style.overflow = "";
+      document.body.style.overflow = prevOverflow;
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
         className={`modal-box${wide ? " modal-box--wide" : ""}`}
@@ -34,6 +39,7 @@ export default function Modal({ open, onClose, title, children, wide, footer }) 
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

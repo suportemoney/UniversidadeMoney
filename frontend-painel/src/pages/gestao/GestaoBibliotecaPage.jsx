@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
@@ -13,8 +14,11 @@ import StatusBadge from "../../components/gestao/StatusBadge";
 import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
+import { podeExcluir } from "../../utils/niveisAcesso";
 
 export default function GestaoBibliotecaPage() {
+  const { user } = useOutletContext() || {};
+  const podeApagar = podeExcluir(user);
   const [itens, setItens] = useState([]);
   const [setores, setSetores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +95,7 @@ export default function GestaoBibliotecaPage() {
       {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
 
       <GestaoToolbar
-        bulkActions={(
+        bulkActions={podeApagar ? (
           <GestaoBulkActions
             count={crud.selection.count}
             actionLabel="Excluir selecionados"
@@ -99,7 +103,7 @@ export default function GestaoBibliotecaPage() {
             onClear={crud.selection.clear}
             loading={crud.loteLoading}
           />
-        )}
+        ) : null}
         searchValue={busca}
         onSearchChange={setBusca}
         searchPlaceholder="Buscar materiais..."
@@ -143,7 +147,7 @@ export default function GestaoBibliotecaPage() {
               </td>
               <td><StatusBadge status={m.publicado ? "publicado" : "rascunho"} label={m.publicado ? "Publicado" : "Rascunho"} /></td>
               <td>
-                <GestaoTableActions onEdit={() => setModal({ open: true, item: m })} onDelete={() => setExcluir(m)} />
+                <GestaoTableActions onEdit={() => setModal({ open: true, item: m })} onDelete={podeApagar ? () => setExcluir(m) : undefined} />
               </td>
             </GestaoTableRow>
           ))}

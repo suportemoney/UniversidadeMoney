@@ -59,6 +59,16 @@ urlpatterns = [
     path("gestao/trilhas/<int:pk>/", views_gestao.GestaoTrilhaDetailView.as_view(), name="gestao-trilha-detail"),
     path("gestao/trilhas/<int:pk>/cursos/", views_gestao.GestaoTrilhaCursosView.as_view(), name="gestao-trilha-cursos"),
     path("gestao/cursos/<int:pk>/upload-thumbnail/", views_gestao.GestaoCursoUploadThumbnailView.as_view(), name="gestao-curso-thumbnail"),
+    path(
+        "gestao/cursos/<int:curso_id>/materiais/",
+        views_gestao.GestaoCursoMateriaisListCreateView.as_view(),
+        name="gestao-curso-materiais",
+    ),
+    path(
+        "gestao/materiais/<int:pk>/",
+        views_gestao.GestaoCursoMaterialDetailView.as_view(),
+        name="gestao-curso-material-detail",
+    ),
     path("gestao/comunicados/", views_gestao.GestaoComunicadosListCreateView.as_view(), name="gestao-comunicados"),
     path("gestao/comunicados/<int:pk>/", views_gestao.GestaoComunicadoDetailView.as_view(), name="gestao-comunicado-detail"),
     path("gestao/ao-vivo/", views_gestao.GestaoAoVivoListCreateView.as_view(), name="gestao-ao-vivo"),

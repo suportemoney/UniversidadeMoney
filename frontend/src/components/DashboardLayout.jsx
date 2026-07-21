@@ -4,6 +4,7 @@ import NotificationPanel from "./dashboard/NotificationPanel";
 import SearchOverlay from "./dashboard/SearchOverlay";
 import { getComunicadosNaoLidos, getMe, logout } from "../services/api";
 import Logo from "./Logo";
+import { labelNivel } from "../utils/niveisAcesso";
 import "../styles/dashboard.css";
 
 const MENU = [
@@ -126,13 +127,13 @@ export default function DashboardLayout() {
                   <div className="dash-avatar">{user.first_name?.charAt(0) || "U"}</div>
                   <div className="dash-profile-info">
                     <span>Olá, {user.first_name}</span>
-                    <small>{user.cargo || "Colaborador"}</small>
+                    <small>{labelNivel(user)}</small>
                   </div>
                 </button>
                 {perfilOpen && (
                   <div className="dash-profile-menu">
                     <p><strong>{user.first_name}</strong></p>
-                    <small>{user.cargo || "Colaborador"}</small>
+                    <small>{labelNivel(user)}</small>
                     <Link to="/dashboard/progresso" onClick={() => setPerfilOpen(false)}>Meu progresso</Link>
                     <button type="button" className="btn btn-outline btn-sm" onClick={handleLogout}>Sair</button>
                   </div>

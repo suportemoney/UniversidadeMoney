@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import GestaoBulkActions from "../../components/gestao/GestaoBulkActions";
@@ -13,10 +14,13 @@ import StatusBadge from "../../components/gestao/StatusBadge";
 import useGestaoCrudTable from "../../hooks/useGestaoCrudTable";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { gestaoApi } from "../../services/gestaoApi";
+import { podeExcluir } from "../../utils/niveisAcesso";
 
 const FORM_VAZIO = { nome: "", slug: "", ativo: true };
 
 export default function GestaoTagsPage() {
+  const { user } = useOutletContext() || {};
+  const podeApagar = podeExcluir(user);
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ open: false, item: null });
@@ -87,7 +91,7 @@ export default function GestaoTagsPage() {
       {crud.loteMsg && <div className="gestao-lote-alert">{crud.loteMsg}</div>}
 
       <GestaoToolbar
-        bulkActions={(
+        bulkActions={podeApagar ? (
           <GestaoBulkActions
             count={crud.selection.count}
             actionLabel="Excluir selecionadas"
@@ -95,7 +99,7 @@ export default function GestaoTagsPage() {
             onClear={crud.selection.clear}
             loading={crud.loteLoading}
           />
-        )}
+        ) : null}
         searchValue={busca}
         onSearchChange={setBusca}
         searchPlaceholder="Buscar tags..."
@@ -132,7 +136,11 @@ export default function GestaoTagsPage() {
               <td><code>{t.slug}</code></td>
               <td><StatusBadge status={t.ativo ? "ativo" : "inativo"} /></td>
               <td>
-                <GestaoTableActions onEdit={() => setModal({ open: true, item: t })} onDelete={() => setExcluir(t)} />
+                <GestaoTableActions
+                  onEdit={() => setModal({ open: true, item: t })}
+                  onInativar={t.ativo && !podeApagar ? () => gestaoApi.atualizarTag(t.id, { ...t, ativo: false }).then(carregar) : undefined}
+                  onDelete={podeApagar ? () => setExcluir(t) : undefined}
+                />
               </td>
             </GestaoTableRow>
           ))}

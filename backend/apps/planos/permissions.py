@@ -5,19 +5,19 @@ from .services import usuario_tem_acesso_aluno, usuario_tem_feature
 
 
 class TemAcessoAluno(permissions.BasePermission):
-    """Exige assinatura ativa ou membro da equipe de gestão."""
+    """Exige usuário autenticado ativo (LMS interno)."""
 
-    message = "Ative um plano com seu token-key para acessar a plataforma."
+    message = "Faça login para acessar a plataforma."
 
     def has_permission(self, request, view):
         return usuario_tem_acesso_aluno(request.user)
 
 
 def TemFeaturePlano(feature):
-    """Factory: permissão que exige feature específica do plano."""
+    """Factory: no modo interno equivale a autenticado com feature liberada."""
 
     class _Perm(permissions.BasePermission):
-        message = "Seu plano não inclui acesso a este recurso."
+        message = "Você não tem acesso a este recurso."
 
         def has_permission(self, request, view):
             return usuario_tem_feature(request.user, feature)

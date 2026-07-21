@@ -4,11 +4,12 @@ import { getMe, logout } from "../services/api";
 import Logo from "./Logo";
 import GestaoBreadcrumb from "./gestao/GestaoBreadcrumb";
 import GestaoIcon from "./gestao/GestaoIcons";
+import { itemMenuPermitido, labelNivel } from "../utils/niveisAcesso";
 import "../styles/gestao.css";
 
 const MENU = [
-  { to: "/gestao", label: "Resumo", icon: "resumo", end: true },
-  { to: "/gestao/cursos", label: "Cursos", icon: "cursos" },
+  { to: "/gestao", label: "Resumo", icon: "resumo", end: true, instrutorOk: true },
+  { to: "/gestao/cursos", label: "Cursos", icon: "cursos", instrutorOk: true },
   { to: "/gestao/setores", label: "Setores", icon: "setores" },
   { to: "/gestao/trilhas", label: "Trilhas", icon: "trilhas" },
   { to: "/gestao/comunicados", label: "Comunicados", icon: "comunicados" },
@@ -18,7 +19,7 @@ const MENU = [
   { to: "/gestao/planos", label: "Planos", icon: "planos" },
   { to: "/gestao/tags", label: "Tags", icon: "tags" },
   { to: "/gestao/tokens", label: "Tokens", icon: "tokens" },
-  { to: "/gestao/equipe", label: "Equipe", icon: "equipe", superOnly: true },
+  { to: "/gestao/equipe", label: "Equipe", icon: "equipe", adminOnly: true },
 ];
 
 export default function GestaoLayout() {
@@ -42,6 +43,13 @@ export default function GestaoLayout() {
     return nome.charAt(0).toUpperCase();
   }, [user]);
 
+  const papel = labelNivel(user);
+
+  const menuVisivel = useMemo(
+    () => MENU.filter((m) => itemMenuPermitido(m, user)),
+    [user]
+  );
+
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -63,7 +71,7 @@ export default function GestaoLayout() {
       <aside className="gestao-sidebar">
         <Logo variant="sidebar" linkTo="/gestao" className="gestao-brand" />
         <nav className="gestao-nav" aria-label="Menu de gestão">
-          {MENU.filter((m) => !m.superOnly || user?.is_superuser).map((item) => (
+          {menuVisivel.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -114,7 +122,7 @@ export default function GestaoLayout() {
                   <div className="gestao-avatar">{iniciais}</div>
                   <div className="gestao-profile-info">
                     <span>{user.first_name || "Administrador"}</span>
-                    <small>{user.is_superuser ? "Superusuário" : "Gestor"}</small>
+                    <small>{papel}</small>
                   </div>
                 </button>
                 {perfilOpen && (

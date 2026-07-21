@@ -130,6 +130,15 @@ export const gestaoApi = {
     return apiFetch(`/gestao/cursos/${cursoId}/upload-thumbnail/`, { method: "POST", body: fd });
   },
 
+  listarMateriais: (cursoId) => apiFetch(`/gestao/cursos/${cursoId}/materiais/`),
+  uploadMaterial: (cursoId, file, titulo) => {
+    const fd = new FormData();
+    fd.append("arquivo", file);
+    fd.append("titulo", titulo);
+    return apiFetch(`/gestao/cursos/${cursoId}/materiais/`, { method: "POST", body: fd });
+  },
+  excluirMaterial: (id) => apiFetch(`/gestao/materiais/${id}/`, { method: "DELETE" }),
+
   atualizarQuestao: (id, data) =>
     apiFetch(`/gestao/questoes/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
 
@@ -159,20 +168,6 @@ export const gestaoApi = {
     return apiFetch(`/gestao/biblioteca/${id}/upload-pdf/`, { method: "POST", body: fd });
   },
 
-  listarPlanos: () => apiFetch("/gestao/planos/"),
-  criarPlano: (data) =>
-    apiFetch("/gestao/planos/", { method: "POST", body: JSON.stringify(data) }),
-  atualizarPlano: (id, data) =>
-    apiFetch(`/gestao/planos/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirPlano: (id) => apiFetch(`/gestao/planos/${id}/`, { method: "DELETE" }),
-
-  listarTokens: () => apiFetch("/gestao/tokens/"),
-  criarToken: (data) =>
-    apiFetch("/gestao/tokens/", { method: "POST", body: JSON.stringify(data) }),
-  atualizarToken: (id, data) =>
-    apiFetch(`/gestao/tokens/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  listarTokenUsos: (id) => apiFetch(`/gestao/tokens/${id}/usos/`),
-
   listarTags: () => apiFetch("/gestao/tags/"),
   criarTag: (data) =>
     apiFetch("/gestao/tags/", { method: "POST", body: JSON.stringify(data) }),
@@ -187,20 +182,18 @@ export const gestaoApi = {
     apiFetch(`/gestao/convites/${id}/revogar/`, { method: "POST" }),
   regenerarConvite: (userId) =>
     apiFetch(`/gestao/convites/usuario/${userId}/regenerar/`, { method: "POST" }),
+  redefinirSenhaConvite: (userId) =>
+    apiFetch(`/gestao/convites/usuario/${userId}/redefinir-senha/`, { method: "POST" }),
+  obterPerfilConvite: (userId) =>
+    apiFetch(`/gestao/convites/usuario/${userId}/perfil/`),
 
-  obterFaixaLanding: () => apiFetch("/gestao/landing/faixa/"),
-  atualizarFaixaLanding: (data) =>
-    apiFetch("/gestao/landing/faixa/", { method: "PATCH", body: JSON.stringify(data) }),
-  listarBannersLanding: () => apiFetch("/gestao/landing/banners/"),
-  criarBannerLanding: (data) =>
-    apiFetch("/gestao/landing/banners/", { method: "POST", body: JSON.stringify(data) }),
-  atualizarBannerLanding: (id, data) =>
-    apiFetch(`/gestao/landing/banners/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
-  excluirBannerLanding: (id) =>
-    apiFetch(`/gestao/landing/banners/${id}/`, { method: "DELETE" }),
-  uploadBannerGif: (id, file) => {
-    const fd = new FormData();
-    fd.append("gif", file);
-    return apiFetch(`/gestao/landing/banners/${id}/upload-gif/`, { method: "POST", body: fd });
-  },
+  catalogoApiDocs: () => apiFetch("/gestao/api-docs/catalogo/"),
+  listarApiTokens: () => apiFetch("/gestao/api-docs/tokens/"),
+  criarApiTokenTemp: (data = {}) =>
+    apiFetch("/gestao/api-docs/tokens/temp/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  revogarApiToken: (id) =>
+    apiFetch(`/gestao/api-docs/tokens/${id}/revogar/`, { method: "POST" }),
 };

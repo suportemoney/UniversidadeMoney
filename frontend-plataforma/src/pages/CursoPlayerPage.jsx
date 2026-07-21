@@ -9,33 +9,27 @@ function formatTimer(segundos) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-const TIPO_ICONE = {
-  texto: "📖",
-  apostila: "📎",
-  video: "▶",
-};
-
 export default function CursoPlayerPage() {
   const { cursoId } = useParams();
   const [data, setData] = useState(null);
   const [aulaAtual, setAulaAtual] = useState(null);
-  const [textoModulo, setTextoModulo] = useState(null);
-  const [arquivoAtual, setArquivoAtual] = useState(null);
+  const [materialAtual, setMaterialAtual] = useState(null);
   const [atividade, setAtividade] = useState(null);
   const [prova, setProva] = useState(null);
   const [respostas, setRespostas] = useState({});
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState("");
   const [tempoRestante, setTempoRestante] = useState(null);
+  const [mostrarDesc, setMostrarDesc] = useState(true);
 
   const limparConteudo = () => {
     setAulaAtual(null);
-    setTextoModulo(null);
-    setArquivoAtual(null);
+    setMaterialAtual(null);
     setAtividade(null);
     setProva(null);
     setResultado(null);
     setTempoRestante(null);
+    setMostrarDesc(false);
   };
 
   const carregar = () => {
@@ -61,18 +55,9 @@ export default function CursoPlayerPage() {
     carregar();
   };
 
-  const concluirTexto = async (moduloId) => {
-    await apiFetch(`/modulos-texto/${moduloId}/concluir/`, { method: "POST" });
-    carregar();
-  };
-
-  const concluirArquivo = async (arquivoId) => {
-    await apiFetch(`/modulos-arquivos/${arquivoId}/concluir/`, { method: "POST" });
-    carregar();
-  };
-
   const abrirAtividade = async (id) => {
     limparConteudo();
+    setRespostas({});
     const d = await apiFetch(`/atividades/${id}/`);
     setAtividade(d);
   };
@@ -89,6 +74,7 @@ export default function CursoPlayerPage() {
   const abrirProva = async () => {
     if (!data?.prova_final) return;
     limparConteudo();
+    setRespostas({});
     setErro("");
     try {
       const p = await apiFetch(`/provas/${data.prova_final.id}/`);
@@ -117,7 +103,8 @@ export default function CursoPlayerPage() {
 
   if (!data) return <p>Carregando curso...</p>;
 
-  const temConteudo = aulaAtual || textoModulo || arquivoAtual || atividade || prova;
+  const temConteudo = mostrarDesc || aulaAtual || materialAtual || atividade || prova;
+  const notas = data.notas || {};
 
   return (
     <div className="player">
@@ -125,97 +112,106 @@ export default function CursoPlayerPage() {
         <h1>{data.curso.titulo}</h1>
         <Link to="/dashboard/meus-cursos" className="btn btn-outline btn-sm">← Meus cursos</Link>
       </div>
-      <p>Progresso: {data.progresso}% {data.certificado && "— Certificado emitido!"}</p>
+      <p>
+        Progresso: {data.progresso}%
+        {data.certificado && " — Certificado disponível!"}
+      </p>
+      {(notas.nota_final != null || notas.nota_prova != null) && (
+        <p className="gestao-muted">
+          Nota prova: {notas.nota_prova ?? "—"}% · Média atividades: {notas.media_atividades ?? "—"}% ·
+          Nota final: {notas.nota_final ?? "—"}% (mín. {notas.nota_minima ?? 70}%)
+        </p>
+      )}
+      {data.certificado && data.certificado_id && (
+        <p>
+          <a href={`/api/certificados/${data.certificado_id}/download/`} className="btn btn-outline btn-sm">
+            Baixar certificado
+          </a>
+        </p>
+      )}
       {erro && <div className="alert alert-error">{erro}</div>}
 
       <div className="player-grid">
         <aside className="player-sidebar">
+          <button
+            type="button"
+            className={`player-item${mostrarDesc ? " player-item--ativ" : ""}`}
+            onClick={() => { limparConteudo(); setMostrarDesc(true); }}
+          >
+            Descrição
+          </button>
+
+          {(data.materiais || []).length > 0 && (
+            <div className="player-modulo">
+              <h3>Material de apoio</h3>
+              {data.materiais.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="player-item"
+                  onClick={() => { limparConteudo(); setMaterialAtual(m); }}
+                >
+                  📎 {m.titulo}
+                </button>
+              ))}
+            </div>
+          )}
+
           {data.modulos.map((mod) => (
             <div key={mod.id} className="player-modulo">
               <h3>{mod.titulo}</h3>
-
-              {mod.tipo === "texto" && (
-                <button
-                  type="button"
-                  className={`player-item${mod.texto_concluido ? " done" : ""}`}
-                  onClick={() => { limparConteudo(); setTextoModulo(mod); }}
-                >
-                  {mod.texto_concluido ? "✓" : TIPO_ICONE.texto} O que você vai aprender
-                </button>
-              )}
-
-              {mod.tipo === "apostila" && mod.arquivos?.map((arq) => (
-                <button
-                  key={arq.id}
-                  type="button"
-                  className={`player-item${arq.concluida ? " done" : ""}`}
-                  onClick={() => { limparConteudo(); setArquivoAtual({ ...arq, moduloId: mod.id }); }}
-                >
-                  {arq.concluida ? "✓" : TIPO_ICONE.apostila} {arq.titulo}
-                </button>
-              ))}
-
-              {mod.tipo === "video" && mod.aulas?.map((aula) => (
+              {mod.aulas?.map((aula) => (
                 <button
                   key={aula.id}
                   type="button"
                   className={`player-item${aula.concluida ? " done" : ""}`}
                   onClick={() => { limparConteudo(); setAulaAtual(aula); }}
                 >
-                  {aula.concluida ? "✓" : TIPO_ICONE.video} {aula.titulo}
+                  {aula.concluida ? "✓" : "▶"} {aula.titulo}
                 </button>
               ))}
-
-              {mod.atividades?.map((a) => (
+              {mod.atividade && (
                 <button
-                  key={a.id}
                   type="button"
-                  className="player-item player-item--ativ"
-                  onClick={() => abrirAtividade(a.id)}
+                  className={`player-item player-item--ativ${mod.atividade.concluida ? " done" : ""}`}
+                  onClick={() => abrirAtividade(mod.atividade.id)}
                 >
-                  📝 {a.titulo}
+                  {mod.atividade.concluida ? "✓" : "📝"} {mod.atividade.titulo}
+                  {mod.atividade.nota != null ? ` (${mod.atividade.nota}%)` : ""}
                 </button>
-              ))}
+              )}
             </div>
           ))}
+
           {data.prova_final && (
             <button type="button" className="btn btn-primary btn-sm" onClick={abrirProva}>
               Prova final
+              {data.prova_final.nota != null ? ` · ${data.prova_final.nota}%` : ""}
             </button>
           )}
         </aside>
 
         <main className="player-main">
-          {textoModulo && (
+          {mostrarDesc && (
             <div>
-              <h2>{textoModulo.titulo}</h2>
+              <h2>Descrição</h2>
               <div className="player-texto-conteudo">
-                {(textoModulo.conteudo_texto || "").split("\n").map((linha, i) => (
-                  <p key={i}>{linha || "\u00A0"}</p>
-                ))}
+                {(data.descricao || data.curso?.descricao || "Sem descrição.")
+                  .split("\n")
+                  .map((linha, i) => (
+                    <p key={i}>{linha || "\u00A0"}</p>
+                  ))}
               </div>
-              {!textoModulo.texto_concluido && (
-                <button type="button" className="btn btn-success" onClick={() => concluirTexto(textoModulo.id)}>
-                  Marcar como lido
-                </button>
-              )}
             </div>
           )}
 
-          {arquivoAtual && (
+          {materialAtual && (
             <div>
-              <h2>{arquivoAtual.titulo}</h2>
-              {arquivoAtual.tipo === "audio" && arquivoAtual.arquivo_url ? (
-                <audio controls src={arquivoAtual.arquivo_url} className="player-audio" />
-              ) : arquivoAtual.arquivo_url ? (
-                <iframe title={arquivoAtual.titulo} src={arquivoAtual.arquivo_url} className="player-pdf" />
+              <h2>{materialAtual.titulo}</h2>
+              {materialAtual.arquivo_url ? (
+                <iframe title={materialAtual.titulo} src={materialAtual.arquivo_url} className="player-pdf" />
               ) : (
                 <p>Arquivo indisponível.</p>
-              )}
-              {!arquivoAtual.concluida && (
-                <button type="button" className="btn btn-success" onClick={() => concluirArquivo(arquivoAtual.id)}>
-                  Marcar como concluído
-                </button>
               )}
             </div>
           )}
@@ -273,7 +269,11 @@ export default function CursoPlayerPage() {
           {prova && (
             <div>
               <h2>{prova.titulo}</h2>
-              <p>Nota mínima: {prova.nota_minima}% — Tentativas restantes: {prova.tentativas_restantes}</p>
+              <p>
+                A nota final = (nota da prova + média das atividades) / 2.
+                Certificado com ≥ {data.notas?.nota_minima ?? 70}%.
+              </p>
+              <p>Tentativas restantes: {prova.tentativas_restantes}</p>
               {tempoRestante !== null && (
                 <div className={`player-timer${tempoRestante < 60 ? " player-timer--urgente" : ""}`}>
                   Tempo restante: {formatTimer(tempoRestante)}
@@ -301,13 +301,23 @@ export default function CursoPlayerPage() {
 
           {resultado && (
             <div className="alert alert-success">
-              Nota: {resultado.nota}% — {resultado.aprovado ? "Aprovado!" : "Não aprovado."}
-              {resultado.certificado && " Certificado emitido!"}
+              {resultado.nota_final != null ? (
+                <>
+                  Nota da prova: {resultado.nota_prova ?? resultado.nota}% ·
+                  Média atividades: {resultado.media_atividades}% ·
+                  Nota final: {resultado.nota_final}% —
+                  {resultado.certificado ? " Certificado liberado!" : " Abaixo de 70% — tente novamente se houver tentativas."}
+                </>
+              ) : (
+                <>
+                  Nota: {resultado.nota}% — {resultado.aprovado ? "Aprovado!" : "Não aprovado."}
+                </>
+              )}
             </div>
           )}
 
           {!temConteudo && (
-            <p>Selecione um módulo, atividade ou a prova final.</p>
+            <p>Selecione a descrição, um material, uma videoaula, a atividade ou a prova final.</p>
           )}
         </main>
       </div>

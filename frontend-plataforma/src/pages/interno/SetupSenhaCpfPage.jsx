@@ -52,7 +52,7 @@ export default function SetupSenhaCpfPage() {
       </p>
       <div className="alert alert-success">
         Senha padrão temporária: <strong>{senhaPadrao}</strong>. Redefina a senha e
-        informe seu CPF para concluir.
+        confirme o CPF cadastrado no convite para concluir.
       </div>
 
       {erro && <div className="alert alert-error">{erro}</div>}
@@ -81,7 +81,7 @@ export default function SetupSenhaCpfPage() {
           />
         </label>
         <label>
-          CPF
+          Confirme seu CPF
           <input
             type="text"
             value={cpf}

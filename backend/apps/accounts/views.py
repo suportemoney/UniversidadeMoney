@@ -3,8 +3,9 @@ from django.contrib.auth.models import User
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
+from .authentication import ApiKeyAuthentication
+from .permissions_api import IsFrontendJwtOrApiKey, LoginFrontendOuApiKey
 from .serializers import MeUpdateSerializer, RegisterSerializer, UserSerializer
 from .services import (
     SENHA_PADRAO_INICIAL,
@@ -12,7 +13,11 @@ from .services import (
     autenticar_por_cpf,
     buscar_token_valido,
     normalizar_chave_token,
+    redefinir_senha_obrigatoria,
 )
+from .tokens import claim_mfa_ok_do_request, tokens_para_usuario
+from apps.cursos.permissions import precisa_mfa_painel
+from .mfa import validar_dispositivo_confiavel
 
 
 class RegisterView(generics.CreateAPIView):
@@ -20,6 +25,7 @@ class RegisterView(generics.CreateAPIView):
 
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -35,7 +41,12 @@ class MeView(generics.RetrieveUpdateAPIView):
     """Retorna e atualiza dados do usuário autenticado."""
 
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsFrontendJwtOrApiKey]
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["mfa_ok"] = claim_mfa_ok_do_request(self.request)
+        return ctx
 
     def get_object(self):
         return self.request.user
@@ -51,17 +62,19 @@ class MeView(generics.RetrieveUpdateAPIView):
         if "cargo" in data and hasattr(user, "profile"):
             user.profile.cargo = data["cargo"]
             user.profile.save(update_fields=["cargo"])
-        return Response(UserSerializer(user).data)
+        return Response(UserSerializer(user, context=self.get_serializer_context()).data)
 
 
 class LoginView(APIView):
     """
     Login JWT.
-    - Plataforma: { cpf, password }
-    - Painel / legado: { username, password }
+    - Nossos fronts (Origin confiável): username/senha ou CPF sem API Key.
+    - Parceiros: exigem Bearer um_... (token_perm) + credenciais no body.
+    - Gestor/admin: mfa_ok=false até concluir 2FA no painel.
     """
 
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [LoginFrontendOuApiKey]
+    authentication_classes = [ApiKeyAuthentication]
 
     def post(self, request):
         password = request.data.get("password") or ""
@@ -88,11 +101,33 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        refresh = RefreshToken.for_user(user)
+        # Gestor/admin: dispositivo confiável dispensa TOTP nesta máquina
+        mfa_ok = None
+        if precisa_mfa_painel(user):
+            device_token = request.data.get("dispositivo_token") or ""
+            mfa_ok = validar_dispositivo_confiavel(user, device_token)
+
+        return Response(tokens_para_usuario(user, mfa_ok=mfa_ok))
+
+
+class RedefinirSenhaObrigatoriaView(APIView):
+    """Troca senha quando precisa_redefinir_senha (confirma CPF)."""
+
+    permission_classes = [IsFrontendJwtOrApiKey]
+
+    def post(self, request):
+        try:
+            redefinir_senha_obrigatoria(
+                request.user,
+                request.data.get("cpf") or "",
+                request.data.get("nova_senha") or "",
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
+                "message": "Senha atualizada.",
+                **tokens_para_usuario(request.user),
             }
         )
 
@@ -101,6 +136,7 @@ class TokenAcessoValidarView(APIView):
     """Valida token-key e retorna username da conta vinculada."""
 
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         chave = normalizar_chave_token(request.data.get("chave") or "")
@@ -121,9 +157,10 @@ class TokenAcessoValidarView(APIView):
 
 
 class TokenAcessoAtivarView(APIView):
-    """Redefine senha + CPF e consome o token."""
+    """Redefine senha + confere CPF e consome o token."""
 
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         chave = request.data.get("chave") or ""
@@ -138,7 +175,7 @@ class TokenAcessoAtivarView(APIView):
             )
         return Response(
             {
-                "message": "Acesso ativado. Faça login na plataforma com CPF e a nova senha.",
+                "message": "Acesso ativado. Faça login na plataforma com CPF ou usuário e a nova senha.",
                 "username": user.get_username(),
             }
         )

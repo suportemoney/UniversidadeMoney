@@ -2,8 +2,9 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.accounts.permissions_api import IsFrontendJwtOrApiKey
 
-from apps.cursos.permissions import IsGestor
+from apps.cursos.permissions import EscopoNaoSomenteCursos, IsGestor, PodeExcluir
 
 from .models import AssinaturaUsuario, Plano, TokenPlano
 from .serializers import (
@@ -15,19 +16,19 @@ from .serializers import (
 
 
 class GestaoPlanosListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
     queryset = Plano.objects.prefetch_related("tags_cursos").all()
     serializer_class = PlanoSerializer
 
 
 class GestaoPlanoDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
     queryset = Plano.objects.prefetch_related("tags_cursos").all()
     serializer_class = PlanoSerializer
 
 
 class GestaoTokensListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -45,7 +46,7 @@ class GestaoTokensListCreateView(generics.ListCreateAPIView):
 
 
 class GestaoTokenDetailView(generics.RetrieveUpdateAPIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
     queryset = TokenPlano.objects.select_related("plano")
     serializer_class = TokenPlanoSerializer
 
@@ -59,7 +60,7 @@ class GestaoTokenDetailView(generics.RetrieveUpdateAPIView):
 
 
 class GestaoTokenUsosView(APIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
 
     def get(self, request, pk):
         try:

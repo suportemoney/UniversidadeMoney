@@ -55,26 +55,24 @@ def assinatura_ativa(usuario):
 
 
 def usuario_tem_acesso_aluno(usuario):
-    """Gestão bypass ou assinatura ativa."""
-    if usuario_pode_gestao(usuario):
-        return True
-    return assinatura_ativa(usuario) is not None
+    """
+    Modo interno: qualquer usuário autenticativo ativo tem acesso.
+    (Planos comerciais desativados no produto.)
+    """
+    if not usuario or not getattr(usuario, "is_authenticated", False):
+        return False
+    if not usuario.is_active:
+        return False
+    return True
 
 
 def features_efetivas(usuario):
-    """Dict de features disponíveis para o usuário."""
-    if usuario_pode_gestao(usuario):
-        return dict(FEATURES_GESTAO)
-    assin = assinatura_ativa(usuario)
-    if not assin:
+    """Dict de features — no modo interno todas liberadas para autenticados."""
+    if not usuario or not getattr(usuario, "is_authenticated", False):
         return {k: False for k in FEATURES_GESTAO}
-    plano = assin.plano
-    return {
-        **FEATURES_PADRAO,
-        "acesso_cursos": plano.acesso_cursos,
-        "acesso_trilhas": plano.acesso_trilhas,
-        "acesso_ao_vivo": plano.acesso_ao_vivo,
-    }
+    if not usuario.is_active:
+        return {k: False for k in FEATURES_GESTAO}
+    return dict(FEATURES_GESTAO)
 
 
 def usuario_tem_feature(usuario, feature):

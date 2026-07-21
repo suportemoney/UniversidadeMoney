@@ -27,26 +27,49 @@ export function isAuthenticated() {
   return !!getAccessToken();
 }
 
-function mensagemErro(data, status) {
-  if (status === 401) {
-    return "Sessão expirada. Faça login novamente.";
-  }
-  const msg =
+function isRotaAuthPublica(path) {
+  return (
+    path.startsWith("/auth/login/") ||
+    path.startsWith("/auth/register/") ||
+    path.startsWith("/auth/api-tokens/trocar/")
+  );
+}
+
+function mensagemErro(data, status, path) {
+  const detail =
     data.detail ||
     data.message ||
     (data.erros && data.erros.join(" ")) ||
-    Object.values(data).flat().join(" ") ||
+    (typeof data === "object" ? Object.values(data).flat().join(" ") : "") ||
     `Erro HTTP ${status}`;
-  if (typeof msg === "string" && msg.includes("token not valid")) {
+
+  const detalheStr = typeof detail === "string" ? detail : JSON.stringify(detail);
+
+  // Rotas públicas: nunca mascarar como "sessão expirada"
+  if (isRotaAuthPublica(path)) {
+    if (status === 401 || status === 403) {
+      if (detalheStr.includes("token not valid") || detalheStr.includes("token_not_valid")) {
+        return "Credenciais inválidas. Limpe o cache e tente de novo.";
+      }
+      return detalheStr || "Credenciais inválidas.";
+    }
+    return detalheStr;
+  }
+
+  if (status === 401 || status === 403) {
     return "Sessão expirada. Faça login novamente.";
   }
-  return typeof msg === "string" ? msg : JSON.stringify(msg);
+
+  if (detalheStr.includes("token not valid")) {
+    return "Sessão expirada. Faça login novamente.";
+  }
+  return detalheStr;
 }
 
-async function parseResponse(res) {
+async function parseResponse(res, path) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(mensagemErro(data, res.status));
+    throw new Error(mensagemErro(data, res.status, path));
   }
   return data;
 }
@@ -81,20 +104,30 @@ async function renovarAccessToken() {
 
 export async function apiFetch(path, options = {}, jaRenovou = false) {
   const headers = { ...options.headers };
+  const rotaPublica = isRotaAuthPublica(path);
 
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = headers["Content-Type"] || "application/json";
   }
 
-  const token = getAccessToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  // Não enviar Bearer em login: JWT antigo fazia 403 token_not_valid
+  if (rotaPublica) {
+    delete headers.Authorization;
+  } else {
+    const token = getAccessToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
   }
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: rotaPublica ? "omit" : options.credentials,
+  });
 
-  const rotaAuth = path.startsWith("/auth/login/") || path.startsWith("/auth/register/");
-  if (res.status === 401 && !jaRenovou && !rotaAuth && token && getRefreshToken()) {
+  const token = getAccessToken();
+  if (res.status === 401 && !jaRenovou && !rotaPublica && token && getRefreshToken()) {
     try {
       await renovarAccessToken();
       return apiFetch(path, options, true);
@@ -104,22 +137,23 @@ export async function apiFetch(path, options = {}, jaRenovou = false) {
     }
   }
 
-  return parseResponse(res);
-}
-
-export async function register(nome, email, cpf, password) {
-  return apiFetch("/auth/register/", {
-    method: "POST",
-    body: JSON.stringify({ nome, email, cpf, password }),
-  });
+  return parseResponse(res, path);
 }
 
 export async function login(identificador, password) {
+  clearTokens();
+  const { payloadLogin } = await import("../utils/loginIdentificador");
+  const { getDispositivoToken, setDispositivoToken } = await import("../utils/dispositivoMfa");
+  const body = {
+    ...payloadLogin(identificador, password),
+    dispositivo_token: getDispositivoToken() || undefined,
+  };
   const data = await apiFetch("/auth/login/", {
     method: "POST",
-    body: JSON.stringify({ username: identificador.trim(), password }),
+    body: JSON.stringify(body),
   });
   setTokens(data.access, data.refresh);
+  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
   return data;
 }
 
@@ -127,94 +161,51 @@ export async function getMe() {
   return apiFetch("/auth/me/");
 }
 
-export async function updateMe(data) {
-  return apiFetch("/auth/me/", { method: "PATCH", body: JSON.stringify(data) });
+export async function redefinirSenhaObrigatoria(cpf, novaSenha) {
+  const data = await apiFetch("/auth/redefinir-senha-obrigatoria/", {
+    method: "POST",
+    body: JSON.stringify({
+      cpf: String(cpf || "").replace(/\D/g, ""),
+      nova_senha: novaSenha,
+    }),
+  });
+  if (data.access) setTokens(data.access, data.refresh);
+  return data;
 }
 
-export async function getDashboard() {
-  return apiFetch("/dashboard/");
+export async function mfaVerificarCpf(cpf) {
+  return apiFetch("/auth/mfa/verificar-cpf/", {
+    method: "POST",
+    body: JSON.stringify({ cpf: String(cpf || "").replace(/\D/g, "") }),
+  });
 }
 
-export async function matricularCurso(cursoId) {
-  return apiFetch(`/cursos/${cursoId}/matricular/`, { method: "POST" });
+export async function mfaEnroll() {
+  return apiFetch("/auth/mfa/enroll/");
 }
 
-export async function buscar(q) {
-  return apiFetch(`/busca/?q=${encodeURIComponent(q)}`);
+export async function mfaConfirmar(codigo, confiarDispositivo = false) {
+  const { setDispositivoToken } = await import("../utils/dispositivoMfa");
+  const data = await apiFetch("/auth/mfa/confirmar/", {
+    method: "POST",
+    body: JSON.stringify({ codigo, confiar_dispositivo: confiarDispositivo }),
+  });
+  if (data.access) setTokens(data.access, data.refresh);
+  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
+  return data;
 }
 
-export async function getCatalogoCursos(params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return apiFetch(`/cursos/${qs ? `?${qs}` : ""}`);
-}
-
-export async function getCursoDetalhe(id) {
-  return apiFetch(`/cursos/${id}/detalhe/`);
-}
-
-export async function getTrilhas() {
-  return apiFetch("/trilhas/");
-}
-
-export async function getTrilha(id) {
-  return apiFetch(`/trilhas/${id}/`);
-}
-
-export async function getCertificados() {
-  return apiFetch("/certificados/");
-}
-
-export async function getProgresso() {
-  return apiFetch("/progresso/");
-}
-
-export async function getComunicados(tipo) {
-  return apiFetch(`/comunicados/${tipo ? `?tipo=${tipo}` : ""}`);
-}
-
-export async function getComunicadosNaoLidos() {
-  return apiFetch("/comunicados/nao-lidos/");
-}
-
-export async function marcarComunicadoLido(id) {
-  return apiFetch(`/comunicados/${id}/lido/`, { method: "POST" });
-}
-
-export async function getAoVivo() {
-  return apiFetch("/ao-vivo/");
-}
-
-export async function inscreverAoVivo(id) {
-  return apiFetch(`/ao-vivo/${id}/inscrever/`, { method: "POST" });
-}
-
-export async function getBiblioteca(setor) {
-  return apiFetch(`/biblioteca/${setor ? `?setor=${setor}` : ""}`);
-}
-
-export async function getConquistas() {
-  return apiFetch("/conquistas/");
-}
-
-export function certificadoDownloadUrl(id) {
-  return `${API_URL}/certificados/${id}/download/`;
+export async function mfaVerificar(codigo, confiarDispositivo = false) {
+  const { setDispositivoToken } = await import("../utils/dispositivoMfa");
+  const data = await apiFetch("/auth/mfa/verificar/", {
+    method: "POST",
+    body: JSON.stringify({ codigo, confiar_dispositivo: confiarDispositivo }),
+  });
+  if (data.access) setTokens(data.access, data.refresh);
+  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
+  return data;
 }
 
 export async function logout() {
   clearTokens();
-}
-
-export async function resgatarToken(chave) {
-  return apiFetch("/planos/resgatar/", {
-    method: "POST",
-    body: JSON.stringify({ chave }),
-  });
-}
-
-export async function getMinhaAssinatura() {
-  return apiFetch("/planos/minha-assinatura/");
-}
-
-export async function getCatalogoPlanos() {
-  return apiFetch("/planos/catalogo/");
 }

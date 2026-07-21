@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.accounts.permissions_api import IsFrontendJwtOrApiKey
 
 from apps.planos.permissions import TemAcessoAluno, TemFeaturePlano
 from apps.planos.services import ao_vivo_visivel_para_usuario, filtrar_ao_vivo_queryset
@@ -22,7 +23,7 @@ from .services import calcular_horas_usuario, emitir_conquista
 
 
 class CertificadosListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         certs = Certificado.objects.filter(usuario=request.user).select_related("curso")
@@ -38,7 +39,7 @@ class CertificadosListView(APIView):
 
 
 class CertificadoDownloadView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request, pk):
         try:
@@ -61,7 +62,7 @@ class CertificadoDownloadView(APIView):
 
 
 class ProgressoView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         user = request.user
@@ -95,7 +96,7 @@ class ProgressoView(APIView):
 
 
 class ComunicadosListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         tipo = request.query_params.get("tipo")
@@ -119,7 +120,7 @@ class ComunicadosListView(APIView):
 
 
 class ComunicadosNaoLidosView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         lidos = ComunicadoLeitura.objects.filter(usuario=request.user).values_list("comunicado_id", flat=True)
@@ -135,7 +136,7 @@ class ComunicadosNaoLidosView(APIView):
 
 
 class ComunicadoMarcarLidoView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def post(self, request, pk):
         try:
@@ -147,7 +148,7 @@ class ComunicadoMarcarLidoView(APIView):
 
 
 class AoVivoListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_ao_vivo")]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno, TemFeaturePlano("acesso_ao_vivo")]
 
     def get(self, request):
         hoje = timezone.now().date()
@@ -175,7 +176,7 @@ class AoVivoListView(APIView):
 
 
 class AoVivoInscreverView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_ao_vivo")]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno, TemFeaturePlano("acesso_ao_vivo")]
 
     def post(self, request, pk):
         try:
@@ -189,7 +190,7 @@ class AoVivoInscreverView(APIView):
 
 
 class BibliotecaListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         setor = request.query_params.get("setor")
@@ -210,7 +211,7 @@ class BibliotecaListView(APIView):
 
 
 class ConquistasListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         conquistas = list(

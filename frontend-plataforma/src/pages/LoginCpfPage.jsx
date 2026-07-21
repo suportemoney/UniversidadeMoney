@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { getMe, loginComCpf } from "../services/api";
-import { formatarCpf } from "../utils/cpf";
+import { getMe, login } from "../services/api";
 
 export default function LoginCpfPage() {
   const navigate = useNavigate();
@@ -10,7 +9,7 @@ export default function LoginCpfPage() {
   const ativado = params.get("ativado") === "1";
   const sessaoExpirada = location.state?.sessaoExpirada;
 
-  const [cpf, setCpf] = useState("");
+  const [identificador, setIdentificador] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,14 +24,13 @@ export default function LoginCpfPage() {
     setErro("");
     setLoading(true);
     try {
-      await loginComCpf(cpf, password);
+      await login(identificador, password);
       const me = await getMe();
-      const destino = location.state?.from?.pathname;
-      if (me.pode_gestao || me.tem_plano) {
-        navigate(destino || "/dashboard");
-      } else {
-        navigate("/dashboard/ativar-plano");
+      if (me.precisa_redefinir_senha) {
+        navigate("/redefinir-senha", { replace: true });
+        return;
       }
+      navigate(location.state?.from?.pathname || "/dashboard");
     } catch (err) {
       setErro(err.message || "Credenciais inválidas.");
     } finally {
@@ -43,11 +41,11 @@ export default function LoginCpfPage() {
   return (
     <>
       <h2>Entrar na plataforma</h2>
-      <p className="auth-subtitle">Use seu CPF e senha para acessar os cursos.</p>
+      <p className="auth-subtitle">Use seu CPF ou usuário e senha para acessar os cursos.</p>
 
       {ativado && (
         <div className="alert alert-success">
-          Conta ativada. Faça login com seu CPF e a nova senha.
+          Conta ativada. Faça login com seu CPF (ou usuário) e a nova senha.
         </div>
       )}
       {sessaoExpirada && (
@@ -57,14 +55,13 @@ export default function LoginCpfPage() {
 
       <form onSubmit={handleSubmit} className="auth-form">
         <label>
-          CPF
+          CPF ou usuário
           <input
             type="text"
-            value={cpf}
-            onChange={(e) => setCpf(formatarCpf(e.target.value))}
+            value={identificador}
+            onChange={(e) => setIdentificador(e.target.value)}
             required
-            inputMode="numeric"
-            placeholder="000.000.000-00"
+            placeholder="000.000.000-00 ou username"
             autoComplete="username"
           />
         </label>

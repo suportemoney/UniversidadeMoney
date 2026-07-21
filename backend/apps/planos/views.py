@@ -1,43 +1,31 @@
-"""Views da API de planos para alunos."""
-from rest_framework import permissions
+"""Views da API de planos para alunos — desativadas no LMS interno."""
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.accounts.permissions_api import IsFrontendJwtOrApiKey
 
-from .models import Plano
-from .serializers import PlanoCatalogoSerializer, ResgatarTokenSerializer
-from .services import assinatura_ativa, resgatar_token, serializar_assinatura
+MSG_DESATIVADO = "Planos comerciais foram desativados. A plataforma opera em modo interno."
 
 
 class MinhaAssinaturaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsFrontendJwtOrApiKey]
 
     def get(self, request):
-        assin = assinatura_ativa(request.user)
-        return Response({
-            "tem_plano": assin is not None,
-            "assinatura": serializar_assinatura(assin),
-        })
+        return Response(
+            {"detail": MSG_DESATIVADO, "tem_plano": True, "assinatura": None},
+            status=status.HTTP_410_GONE,
+        )
 
 
 class ResgatarTokenView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsFrontendJwtOrApiKey]
 
     def post(self, request):
-        serializer = ResgatarTokenSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            assin = resgatar_token(serializer.validated_data["chave"], request.user)
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=400)
-        return Response({
-            "message": "Plano ativado com sucesso!",
-            "assinatura": serializar_assinatura(assin),
-        })
+        return Response({"detail": MSG_DESATIVADO}, status=status.HTTP_410_GONE)
 
 
 class CatalogoPlanosView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsFrontendJwtOrApiKey]
 
     def get(self, request):
-        planos = Plano.objects.filter(ativo=True)
-        return Response(PlanoCatalogoSerializer(planos, many=True).data)
+        return Response({"detail": MSG_DESATIVADO}, status=status.HTTP_410_GONE)

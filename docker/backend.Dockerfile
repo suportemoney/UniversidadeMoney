@@ -10,6 +10,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
+        ffmpeg \
+        libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt /app/requirements.txt

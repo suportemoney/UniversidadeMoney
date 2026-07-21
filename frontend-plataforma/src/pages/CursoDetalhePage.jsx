@@ -5,15 +5,11 @@ import PageSkeleton from "../components/dashboard/PageSkeleton";
 import { getCursoDetalhe, matricularCurso } from "../services/api";
 
 const TIPO_MODULO = {
-  texto: "Texto",
-  apostila: "Apostilas",
-  video: "Vídeos",
+  video: "Videoaulas",
 };
 
 function metaModulo(m) {
-  if (m.tipo === "texto") return "Conteúdo escrito";
-  if (m.tipo === "apostila") return `${m.total_aulas} arquivo(s)`;
-  return `${m.total_aulas} aula(s) · ${m.duracao_minutos || 0} min`;
+  return `${m.total_aulas || 0} aula(s) · ${m.duracao_minutos || 0} min`;
 }
 
 export default function CursoDetalhePage() {
@@ -130,17 +126,42 @@ export default function CursoDetalhePage() {
       <section className="dash-section">
         <h2>Conteúdo do curso</h2>
         <div className="dash-timeline">
+          {curso.descricao && (
+            <div className="dash-timeline-item">
+              <span className="dash-timeline-step">·</span>
+              <div className="dash-timeline-content">
+                <strong>Descrição</strong>
+                <small className="dash-card-meta">Apresentação do curso</small>
+              </div>
+            </div>
+          )}
+          {(curso.materiais || []).map((m, i) => (
+            <div key={`mat-${m.id}`} className="dash-timeline-item" style={{ animationDelay: `${i * 40}ms` }}>
+              <span className="dash-timeline-step">PDF</span>
+              <div className="dash-timeline-content">
+                <strong>{m.titulo}</strong>
+                <small className="dash-card-meta">Material de apoio</small>
+              </div>
+            </div>
+          ))}
           {curso.modulos.map((m, i) => (
             <div key={m.id} className="dash-timeline-item" style={{ animationDelay: `${i * 50}ms` }}>
               <span className="dash-timeline-step">{i + 1}</span>
               <div className="dash-timeline-content">
                 <strong>{m.titulo}</strong>
                 <small className="dash-card-meta">
-                  {TIPO_MODULO[m.tipo] || m.tipo} · {metaModulo(m)}
+                  {TIPO_MODULO[m.tipo] || "Videoaulas"} · {metaModulo(m)} · atividade final
                 </small>
               </div>
             </div>
           ))}
+          <div className="dash-timeline-item">
+            <span className="dash-timeline-step">★</span>
+            <div className="dash-timeline-content">
+              <strong>Prova final</strong>
+              <small className="dash-card-meta">Nota final = (prova + média atividades) / 2 · certificado ≥ 70%</small>
+            </div>
+          </div>
           {curso.modulos.length === 0 && (
             <p className="dash-card-meta">Conteúdo em preparação.</p>
           )}

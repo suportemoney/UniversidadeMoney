@@ -18,7 +18,7 @@ export function GestaoSelectHeaderCell({ checked, indeterminate, onChange, disab
 
 export function GestaoSelectCell({ checked, onChange, disabled }) {
   return (
-    <td className="gestao-table-col-check">
+    <td className="gestao-table-col-check" onClick={(e) => e.stopPropagation()}>
       <input
         type="checkbox"
         className="gestao-table-checkbox"

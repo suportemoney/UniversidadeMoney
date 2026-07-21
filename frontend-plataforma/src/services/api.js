@@ -86,14 +86,28 @@ export async function apiFetch(path, options = {}, jaRenovou = false) {
     headers["Content-Type"] = headers["Content-Type"] || "application/json";
   }
 
-  const token = getAccessToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const rotaAuth =
+    path.startsWith("/auth/login/") ||
+    path.startsWith("/auth/register/") ||
+    path.startsWith("/auth/token-acesso/") ||
+    path.startsWith("/auth/api-tokens/trocar/");
+
+  if (rotaAuth) {
+    delete headers.Authorization;
+  } else {
+    const token = getAccessToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
   }
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: rotaAuth ? "omit" : options.credentials,
+  });
 
-  const rotaAuth = path.startsWith("/auth/login/") || path.startsWith("/auth/register/");
+  const token = getAccessToken();
   if (res.status === 401 && !jaRenovou && !rotaAuth && token && getRefreshToken()) {
     try {
       await renovarAccessToken();
@@ -115,21 +129,19 @@ export async function register(nome, email, cpf, password) {
 }
 
 export async function login(identificador, password) {
+  clearTokens();
+  const { payloadLogin } = await import("../utils/loginIdentificador");
+  const body = payloadLogin(identificador, password);
   const data = await apiFetch("/auth/login/", {
     method: "POST",
-    body: JSON.stringify({ username: identificador.trim(), password }),
+    body: JSON.stringify(body),
   });
   setTokens(data.access, data.refresh);
   return data;
 }
 
 export async function loginComCpf(cpf, password) {
-  const data = await apiFetch("/auth/login/", {
-    method: "POST",
-    body: JSON.stringify({ cpf: cpf.replace(/\D/g, ""), password }),
-  });
-  setTokens(data.access, data.refresh);
-  return data;
+  return login(cpf, password);
 }
 
 export async function validarTokenAcesso(chave) {
@@ -152,6 +164,18 @@ export async function ativarTokenAcesso(chave, novaSenha, cpf) {
 
 export async function getMe() {
   return apiFetch("/auth/me/");
+}
+
+export async function redefinirSenhaObrigatoria(cpf, novaSenha) {
+  const data = await apiFetch("/auth/redefinir-senha-obrigatoria/", {
+    method: "POST",
+    body: JSON.stringify({
+      cpf: String(cpf || "").replace(/\D/g, ""),
+      nova_senha: novaSenha,
+    }),
+  });
+  if (data.access) setTokens(data.access, data.refresh);
+  return data;
 }
 
 export async function updateMe(data) {

@@ -46,7 +46,7 @@ def buscar_token_valido(chave: str):
 @transaction.atomic
 def ativar_token_acesso(chave: str, nova_senha: str, cpf: str):
     """
-    Ativa o acesso: redefine senha, grava CPF e consome o token.
+    Ativa o acesso: confere CPF do Profile, redefine senha e consome o token.
     Levanta ValueError com mensagem amigável em caso de erro.
     """
     token = buscar_token_valido(chave)
@@ -57,25 +57,57 @@ def ativar_token_acesso(chave: str, nova_senha: str, cpf: str):
     if not cpf_valido(cpf_norm):
         raise ValueError("CPF inválido.")
 
-    if Profile.objects.filter(cpf=cpf_norm).exclude(user=token.usuario).exists():
-        raise ValueError("Este CPF já está cadastrado.")
-
     if not nova_senha or len(nova_senha) < 6:
         raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
 
     user = token.usuario
+    profile, _ = Profile.objects.get_or_create(user=user)
+    if not profile.cpf:
+        raise ValueError("Conta sem CPF cadastrado. Solicite um novo convite.")
+    if profile.cpf != cpf_norm:
+        raise ValueError("CPF não confere com o cadastrado no convite.")
+
     user.set_password(nova_senha)
     user.save(update_fields=["password"])
 
-    profile, _ = Profile.objects.get_or_create(user=user)
-    profile.cpf = cpf_norm
     profile.precisa_redefinir_senha = False
-    profile.save(update_fields=["cpf", "precisa_redefinir_senha"])
+    profile.save(update_fields=["precisa_redefinir_senha"])
 
     token.usado_em = timezone.now()
     token.ativo = False
     token.save(update_fields=["usado_em", "ativo"])
 
+    return user
+
+
+@transaction.atomic
+def redefinir_senha_obrigatoria(user, cpf: str, nova_senha: str):
+    """Troca senha forçada: confere CPF e limpa precisa_redefinir_senha."""
+    cpf_norm = normalizar_cpf(cpf)
+    if not cpf_valido(cpf_norm):
+        raise ValueError("CPF inválido.")
+    if not nova_senha or len(nova_senha) < 6:
+        raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
+
+    profile, _ = Profile.objects.get_or_create(user=user)
+    if not profile.cpf or profile.cpf != cpf_norm:
+        raise ValueError("CPF não confere com o cadastrado.")
+
+    user.set_password(nova_senha)
+    user.save(update_fields=["password"])
+    profile.precisa_redefinir_senha = False
+    profile.save(update_fields=["precisa_redefinir_senha"])
+    return user
+
+
+@transaction.atomic
+def resetar_senha_padrao(user):
+    """Admin/gestor: volta senha para 123456 e exige redefinição no próximo login."""
+    user.set_password(SENHA_PADRAO_INICIAL)
+    user.save(update_fields=["password"])
+    profile, _ = Profile.objects.get_or_create(user=user)
+    profile.precisa_redefinir_senha = True
+    profile.save(update_fields=["precisa_redefinir_senha"])
     return user
 
 
@@ -101,19 +133,29 @@ def criar_colaborador_com_token(
     username: str,
     first_name: str = "",
     email: str = "",
+    cpf: str = "",
     cargo: str = "Colaborador",
+    nivel_acesso: str = "padrao",
     criado_por=None,
     valido_ate=None,
 ):
     """
-    Cria usuário com senha padrão 123456, profile sem CPF,
-    e um TokenAcesso ativo.
+    Cria usuário com senha padrão 123456, CPF obrigatório,
+    aplica nivel_acesso e um TokenAcesso ativo.
     """
+    from apps.cursos.permissions import aplicar_nivel_acesso
+
     username = (username or "").strip().lower()
     if not username:
         raise ValueError("Informe o username.")
     if User.objects.filter(username=username).exists():
         raise ValueError("Este username já existe.")
+
+    cpf_norm = normalizar_cpf(cpf)
+    if not cpf_valido(cpf_norm):
+        raise ValueError("CPF inválido.")
+    if Profile.objects.filter(cpf=cpf_norm).exists():
+        raise ValueError("Este CPF já está cadastrado.")
 
     with transaction.atomic():
         user = User.objects.create_user(
@@ -124,11 +166,13 @@ def criar_colaborador_com_token(
         )
         Profile.objects.create(
             user=user,
-            cpf=None,
+            cpf=cpf_norm,
             cargo=cargo or "Colaborador",
             precisa_redefinir_senha=True,
             is_membro_equipe=False,
+            nivel_acesso="padrao",
         )
+        aplicar_nivel_acesso(user, nivel_acesso or "padrao")
         token = TokenAcesso.objects.create(
             usuario=user,
             criado_por=criado_por,

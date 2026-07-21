@@ -102,7 +102,11 @@ REST_FRAMEWORK = {
         "rest_framework.parsers.FormParser",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.accounts.authentication.ApiKeyAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "apps.accounts.permissions_api.IsFrontendJwtOrApiKey",
     ],
 }
 
@@ -124,4 +128,12 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
+]
+
+# Origins dos nossos frontends (JWT permitido). Default = CORS.
+_frontend_env = os.getenv("FRONTEND_ORIGINS", "").strip()
+FRONTEND_ORIGINS = [
+    o.strip().rstrip("/")
+    for o in (_frontend_env.split(",") if _frontend_env else CORS_ALLOWED_ORIGINS)
+    if o.strip()
 ]

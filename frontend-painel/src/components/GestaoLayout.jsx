@@ -1,24 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getMe, logout } from "../services/api";
 import Logo from "./Logo";
 import GestaoBreadcrumb from "./gestao/GestaoBreadcrumb";
 import GestaoIcon from "./gestao/GestaoIcons";
+import { itemMenuPermitido, labelNivel } from "../utils/niveisAcesso";
 import "../styles/gestao.css";
 
-const MENU = [
-  { to: "/gestao", label: "Resumo", icon: "resumo", end: true },
-  { to: "/gestao/convites", label: "Convites", icon: "tokens" },
-  { to: "/gestao/cursos", label: "Cursos", icon: "cursos" },
-  { to: "/gestao/setores", label: "Setores", icon: "setores" },
-  { to: "/gestao/trilhas", label: "Trilhas", icon: "trilhas" },
-  { to: "/gestao/comunicados", label: "Comunicados", icon: "comunicados" },
-  { to: "/gestao/ao-vivo", label: "Ao vivo", icon: "aoVivo" },
-  { to: "/gestao/biblioteca", label: "Biblioteca", icon: "biblioteca" },
-  { to: "/gestao/planos", label: "Planos", icon: "planos" },
-  { to: "/gestao/tags", label: "Tags", icon: "tags" },
-  { to: "/gestao/tokens", label: "Tokens de plano", icon: "tokens" },
-  { to: "/gestao/equipe", label: "Equipe", icon: "equipe", superOnly: true },
+const MENU_SECOES = [
+  {
+    titulo: "Visão geral",
+    itens: [{ to: "/gestao", label: "Resumo", icon: "resumo", end: true, instrutorOk: true }],
+  },
+  {
+    titulo: "Acesso e integração",
+    itens: [
+      { to: "/gestao/convites", label: "Convites", icon: "tokens", convitesOnly: true },
+      { to: "/gestao/api", label: "API", icon: "api", apiOnly: true },
+      { to: "/gestao/equipe", label: "Equipe", icon: "equipe", adminOnly: true },
+    ],
+  },
+  {
+    titulo: "Conteúdo",
+    itens: [
+      { to: "/gestao/cursos", label: "Cursos", icon: "cursos", instrutorOk: true },
+      { to: "/gestao/trilhas", label: "Trilhas", icon: "trilhas" },
+      { to: "/gestao/ao-vivo", label: "Ao vivo", icon: "aoVivo" },
+      { to: "/gestao/biblioteca", label: "Biblioteca", icon: "biblioteca" },
+      { to: "/gestao/comunicados", label: "Comunicados", icon: "comunicados" },
+    ],
+  },
+  {
+    titulo: "Organização",
+    itens: [
+      { to: "/gestao/setores", label: "Setores", icon: "setores" },
+      { to: "/gestao/tags", label: "Tags", icon: "tags" },
+    ],
+  },
 ];
 
 export default function GestaoLayout() {
@@ -37,10 +55,38 @@ export default function GestaoLayout() {
     return () => document.removeEventListener("click", fechar);
   }, [perfilOpen]);
 
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      setPerfilOpen(false);
+      setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
   const iniciais = useMemo(() => {
     const nome = user?.first_name || user?.username || "U";
     return nome.charAt(0).toUpperCase();
   }, [user]);
+
+  const papel = labelNivel(user);
+
+  const secoesVisiveis = useMemo(
+    () =>
+      MENU_SECOES.map((sec) => ({
+        ...sec,
+        itens: sec.itens.filter((m) => itemMenuPermitido(m, user)),
+      })).filter((sec) => sec.itens.length > 0),
+    [user]
+  );
 
   const handleLogout = () => {
     logout();
@@ -48,6 +94,7 @@ export default function GestaoLayout() {
   };
 
   const fecharSidebar = () => setSidebarOpen(false);
+  const plataformaUrl = import.meta.env.VITE_PLATAFORMA_URL || "http://localhost:5173";
 
   return (
     <div className={`gestao${sidebarOpen ? " gestao--sidebar-open" : ""}`}>
@@ -60,30 +107,54 @@ export default function GestaoLayout() {
         />
       )}
 
-      <aside className="gestao-sidebar">
-        <Logo variant="sidebar" linkTo="/gestao" className="gestao-brand" />
+      <aside className="gestao-sidebar" aria-label="Navegação principal">
+        <div className="gestao-sidebar-top">
+          <Logo variant="sidebar" linkTo="/gestao" className="gestao-brand" />
+          <p className="gestao-sidebar-tagline">Painel interno</p>
+        </div>
+
         <nav className="gestao-nav" aria-label="Menu de gestão">
-          {MENU.filter((m) => !m.superOnly || user?.is_superuser).map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => `gestao-nav-item${isActive ? " active" : ""}`}
-              onClick={fecharSidebar}
-            >
-              <GestaoIcon name={item.icon} />
-              <span>{item.label}</span>
-            </NavLink>
+          {secoesVisiveis.map((sec) => (
+            <div key={sec.titulo} className="gestao-nav-section">
+              <p className="gestao-nav-section-title">{sec.titulo}</p>
+              <ul className="gestao-nav-list">
+                {sec.itens.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) =>
+                        `gestao-nav-item${isActive ? " active" : ""}`
+                      }
+                      onClick={fecharSidebar}
+                    >
+                      <span className="gestao-nav-icon" aria-hidden="true">
+                        <GestaoIcon name={item.icon} />
+                      </span>
+                      <span className="gestao-nav-label">{item.label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
         </nav>
-        <a
-          href={import.meta.env.VITE_PLATAFORMA_URL || "http://localhost:5173"}
-          className="gestao-back"
-          onClick={fecharSidebar}
-        >
-          <GestaoIcon name="voltar" />
-          Ir à plataforma
-        </a>
+
+        <div className="gestao-sidebar-foot">
+          <a
+            href={plataformaUrl}
+            className="gestao-back"
+            onClick={fecharSidebar}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <GestaoIcon name="voltar" />
+            <span>
+              Ir à plataforma
+              <small>Abre em nova aba</small>
+            </span>
+          </a>
+        </div>
       </aside>
 
       <div className="gestao-main">
@@ -93,6 +164,7 @@ export default function GestaoLayout() {
               type="button"
               className="gestao-menu-toggle"
               aria-label="Abrir menu"
+              aria-expanded={sidebarOpen}
               onClick={() => setSidebarOpen(true)}
             >
               <GestaoIcon name="menu" />
@@ -101,10 +173,6 @@ export default function GestaoLayout() {
           </div>
 
           <div className="gestao-header-actions">
-            <button type="button" className="gestao-notif-btn" aria-label="Notificações">
-              <GestaoIcon name="sino" />
-            </button>
-
             {user && (
               <div
                 className="gestao-profile-wrap"
@@ -112,23 +180,55 @@ export default function GestaoLayout() {
               >
                 <button
                   type="button"
-                  className="gestao-profile"
+                  className={`gestao-profile${perfilOpen ? " gestao-profile--open" : ""}`}
                   onClick={() => setPerfilOpen((v) => !v)}
+                  aria-expanded={perfilOpen}
+                  aria-haspopup="menu"
                 >
-                  <div className="gestao-avatar">{iniciais}</div>
-                  <div className="gestao-profile-info">
-                    <span>{user.first_name || "Administrador"}</span>
-                    <small>{user.is_superuser ? "Superusuário" : "Gestor"}</small>
+                  <div className="gestao-avatar" aria-hidden="true">
+                    {iniciais}
                   </div>
+                  <div className="gestao-profile-info">
+                    <span>{user.first_name || user.username || "Administrador"}</span>
+                    <small>{papel}</small>
+                  </div>
+                  <span className="gestao-profile-caret" aria-hidden="true">
+                    ▾
+                  </span>
                 </button>
                 {perfilOpen && (
-                  <div className="gestao-profile-menu">
-                    <p><strong>{user.first_name}</strong></p>
-                    <small>{user.email}</small>
-                    <Link to="/dashboard" onClick={() => setPerfilOpen(false)}>Ir ao painel</Link>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={handleLogout}>
-                      Sair
-                    </button>
+                  <div className="gestao-profile-menu" role="menu">
+                    <div className="gestao-profile-menu-head">
+                      <div className="gestao-avatar gestao-avatar--lg" aria-hidden="true">
+                        {iniciais}
+                      </div>
+                      <div>
+                        <p>
+                          <strong>{user.first_name || user.username}</strong>
+                        </p>
+                        <small>{user.email || user.username}</small>
+                        <span className="gestao-role-pill">{papel}</span>
+                      </div>
+                    </div>
+                    <div className="gestao-profile-menu-actions">
+                      <a
+                        href={plataformaUrl}
+                        className="gestao-profile-link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        role="menuitem"
+                      >
+                        Abrir plataforma
+                      </a>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm gestao-logout-btn"
+                        onClick={handleLogout}
+                        role="menuitem"
+                      >
+                        Sair da conta
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

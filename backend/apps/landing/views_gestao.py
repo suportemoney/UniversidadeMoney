@@ -1,12 +1,13 @@
 """API de gestão da landing."""
 import os
+from apps.accounts.permissions_api import IsFrontendJwtOrApiKey
 
 from rest_framework import generics, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.cursos.permissions import IsGestor
+from apps.cursos.permissions import EscopoNaoSomenteCursos, IsGestor, PodeExcluir
 
 from .models import BannerLanding, FaixaPromocional
 from .serializers import (
@@ -20,7 +21,7 @@ GIF_EXT = {".gif"}
 
 
 class GestaoFaixaPromocionalView(APIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
 
     def _obter_ou_criar_faixa(self):
         faixa = FaixaPromocional.objects.order_by("-atualizado_em").first()
@@ -40,7 +41,7 @@ class GestaoFaixaPromocionalView(APIView):
 
 
 class GestaoBannerLandingListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
     queryset = BannerLanding.objects.all()
 
     def get_serializer_class(self):
@@ -50,7 +51,7 @@ class GestaoBannerLandingListCreateView(generics.ListCreateAPIView):
 
 
 class GestaoBannerLandingDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
     queryset = BannerLanding.objects.all()
 
     def get_serializer_class(self):
@@ -65,7 +66,7 @@ class GestaoBannerLandingDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class GestaoBannerUploadGifView(APIView):
-    permission_classes = [IsGestor]
+    permission_classes = [IsFrontendJwtOrApiKey, IsGestor, EscopoNaoSomenteCursos, PodeExcluir]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, pk):

@@ -1,5 +1,6 @@
 """Views e serviços da API de cursos."""
 from datetime import timedelta
+from apps.accounts.permissions_api import IsFrontendJwtOrApiKey
 
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -25,7 +26,7 @@ from .services import emitir_conquista
 class DashboardView(APIView):
     """Agrega dados do painel principal do colaborador."""
 
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno]
 
     def get(self, request):
         user = request.user
@@ -158,7 +159,7 @@ class DashboardView(APIView):
 class MatricularView(APIView):
     """Matricula o usuário em um curso."""
 
-    permission_classes = [permissions.IsAuthenticated, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
+    permission_classes = [IsFrontendJwtOrApiKey, TemAcessoAluno, TemFeaturePlano("acesso_cursos")]
 
     def post(self, request, curso_id):
         try:

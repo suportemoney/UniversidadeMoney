@@ -7,20 +7,25 @@ from django.db import models
 
 
 def aula_video_upload_path(instance, filename):
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
+    # Sempre .webm após conversão no upload
     uid = instance.pk or uuid.uuid4().hex[:12]
-    return f"cursos/{instance.modulo.curso_id}/aulas/{uid}.{ext}"
+    return f"cursos/{instance.modulo.curso_id}/aulas/{uid}.webm"
 
 
 def curso_thumbnail_upload_path(instance, filename):
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
-    return f"cursos/{instance.pk or 'novo'}/thumb.{ext}"
+    # Sempre .webp após conversão no upload
+    return f"cursos/{instance.pk or 'novo'}/thumb.webp"
 
 
 def modulo_arquivo_upload_path(instance, filename):
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "pdf"
     uid = instance.pk or uuid.uuid4().hex[:12]
     return f"cursos/{instance.modulo.curso_id}/modulos/{instance.modulo_id}/{uid}.{ext}"
+
+
+def curso_material_upload_path(instance, filename):
+    uid = instance.pk or uuid.uuid4().hex[:12]
+    return f"cursos/{instance.curso_id}/materiais/{uid}.pdf"
 
 
 class Setor(models.Model):
@@ -155,6 +160,28 @@ class CursoParticipante(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class CursoMaterial(models.Model):
+    """Material de apoio do curso (PDF opcional)."""
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="materiais")
+    titulo = models.CharField(max_length=200)
+    arquivo = models.FileField(upload_to=curso_material_upload_path, blank=True, null=True)
+    ordem = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "id"]
+        verbose_name = "Material do curso"
+        verbose_name_plural = "Materiais do curso"
+
+    def __str__(self):
+        return self.titulo
+
+    @property
+    def arquivo_url(self):
+        if self.arquivo:
+            return self.arquivo.url
+        return None
 
 
 class Modulo(models.Model):
@@ -300,6 +327,8 @@ class Matricula(models.Model):
     )
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="matriculas")
     progresso = models.PositiveSmallIntegerField(default=0)
+    nota_final = models.PositiveSmallIntegerField(null=True, blank=True)
+    certificado_liberado = models.BooleanField(default=False)
     concluido_em = models.DateTimeField(null=True, blank=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

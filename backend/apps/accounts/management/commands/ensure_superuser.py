@@ -39,12 +39,25 @@ class Command(BaseCommand):
                 "cargo": "Administrador",
                 "is_membro_equipe": True,
                 "precisa_redefinir_senha": False,
+                "nivel_acesso": Profile.NIVEL_ADMINISTRADOR,
             },
         )
-        profile = user.profile
-        profile.is_membro_equipe = True
-        profile.cargo = profile.cargo or "Administrador"
-        profile.save()
+        from apps.cursos.permissions import aplicar_nivel_acesso
+
+        aplicar_nivel_acesso(user, Profile.NIVEL_ADMINISTRADOR)
+
+        # CPF opcional via env (superuser não passa por convite)
+        cpf_env = (os.getenv("SUPERUSER_CPF") or "").strip()
+        if cpf_env:
+            from apps.accounts.validators import cpf_valido, normalizar_cpf
+
+            cpf_norm = normalizar_cpf(cpf_env)
+            if cpf_valido(cpf_norm):
+                profile = user.profile
+                if not profile.cpf:
+                    if not Profile.objects.filter(cpf=cpf_norm).exclude(user=user).exists():
+                        profile.cpf = cpf_norm
+                        profile.save(update_fields=["cpf"])
 
         acao = "criado" if created else "atualizado"
         self.stdout.write(self.style.SUCCESS(f"Superuser '{username}' {acao}."))
