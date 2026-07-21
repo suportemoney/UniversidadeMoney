@@ -78,6 +78,59 @@ else
   ensure_env_file ".env.production" "production"
 fi
 
+# Garante hosts/CORS dos 3 fronts (evita Django DisallowedHost → HTTP 400 no login)
+ensure_django_hosts() {
+  local envf="$1"
+  local hosts="$2"
+  local origins="$3"
+  [ -f "$envf" ] || return 0
+
+  upsert_env() {
+    local key="$1"
+    local val="$2"
+    if grep -q "^${key}=" "$envf"; then
+      # Só completa se faltar algum host/origin esperado
+      local atual
+      atual=$(grep -E "^${key}=" "$envf" | head -1 | cut -d= -f2-)
+      local precisa=0
+      local parte
+      IFS=',' read -ra partes <<< "$val"
+      for parte in "${partes[@]}"; do
+        parte=$(echo "$parte" | tr -d ' ')
+        [ -z "$parte" ] && continue
+        case ",$atual," in
+          *",$parte,"*) ;;
+          *) precisa=1; break ;;
+        esac
+      done
+      if [ "$precisa" = "1" ]; then
+        echo "==> Atualizando $key em $envf (hosts/origins incompletos)"
+        sed -i "s|^${key}=.*|${key}=${val}|" "$envf"
+      fi
+    else
+      echo "==> Adicionando $key em $envf"
+      echo "${key}=${val}" >> "$envf"
+    fi
+  }
+
+  upsert_env "ALLOWED_HOSTS" "$hosts"
+  upsert_env "CSRF_TRUSTED_ORIGINS" "$origins"
+  upsert_env "CORS_ALLOWED_ORIGINS" "$origins"
+  upsert_env "FRONTEND_ORIGINS" "$origins"
+}
+
+if [ "$TARGET" = "prod" ]; then
+  ensure_django_hosts \
+    "$REPO/.env.production" \
+    "interno.moneypromotora.com.br,plataforma.moneypromotora.com.br,painel-interno.moneypromotora.com.br" \
+    "https://interno.moneypromotora.com.br,https://plataforma.moneypromotora.com.br,https://painel-interno.moneypromotora.com.br"
+else
+  ensure_django_hosts \
+    "$REPO/.env.homolog" \
+    "interno-hml.moneypromotora.com.br,plataforma-hml.moneypromotora.com.br,painel-interno-hml.moneypromotora.com.br" \
+    "https://interno-hml.moneypromotora.com.br,https://plataforma-hml.moneypromotora.com.br,https://painel-interno-hml.moneypromotora.com.br"
+fi
+
 COMPOSE_ENV=".env.production"
 
 # Sem Docker: legado (não mexe no nginx de outros projetos além do site universidade)
