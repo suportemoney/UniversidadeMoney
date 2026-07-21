@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import PageHeader from "../components/dashboard/PageHeader";
 import PageSkeleton from "../components/dashboard/PageSkeleton";
 import { getCursoDetalhe, matricularCurso } from "../services/api";
 
-const TIPO_MODULO = {
-  video: "Videoaulas",
-};
-
 function metaModulo(m) {
-  return `${m.total_aulas || 0} aula(s) · ${m.duracao_minutos || 0} min`;
+  const aulas = m.total_aulas || 0;
+  const min = m.duracao_minutos || 0;
+  if (min > 0) return `${aulas} aula${aulas === 1 ? "" : "s"} · ${min} min`;
+  return `${aulas} aula${aulas === 1 ? "" : "s"}`;
 }
 
 export default function CursoDetalhePage() {
@@ -53,131 +51,194 @@ export default function CursoDetalhePage() {
   if (erro && !curso) return <div className="alert alert-error">{erro}</div>;
   if (!curso) return null;
 
-  return (
-    <div className="dash-page">
-      <Link to="/dashboard/explorar" className="btn btn-outline btn-sm">← Explorar cursos</Link>
+  const ctaLabel = inscrevendo
+    ? "Carregando..."
+    : curso.matriculado
+      ? curso.progresso > 0
+        ? "Continuar curso"
+        : "Acessar curso"
+      : "Matricular-se neste curso";
 
-      <div className="dash-curso-hero">
+  const materiais = curso.materiais || [];
+  const passos = curso.modulos.length + (materiais.length ? 1 : 0) + 1;
+
+  return (
+    <div className="dash-page dash-curso-detalhe">
+      <nav className="dash-curso-nav">
+        <Link to="/dashboard/explorar" className="dash-curso-back">
+          <span aria-hidden>←</span> Explorar cursos
+        </Link>
+      </nav>
+
+      <header className="dash-curso-hero">
         <div className="dash-curso-hero-media">
           {curso.thumbnail_url ? (
             <img src={curso.thumbnail_url} alt="" className="dash-curso-hero-img" />
           ) : (
-            <div className="dash-curso-hero-placeholder">📚</div>
-          )}
-        </div>
-        <div className="dash-curso-hero-body">
-          {curso.is_novo && <span className="dash-badge-novo">Novo</span>}
-          <h1>{curso.titulo}</h1>
-          {curso.setor && <span className="dash-tag">{curso.setor}</span>}
-          {curso.tags?.length > 0 && (
-            <div className="dash-tags-row">
-              {curso.tags.map((t) => (
-                <span key={t.id} className="dash-tag dash-tag--muted">{t.nome}</span>
-              ))}
+            <div className="dash-curso-hero-placeholder" aria-hidden>
+              <span className="dash-curso-hero-mark">UM</span>
             </div>
           )}
-          <p className="dash-curso-desc">{curso.descricao || "Curso disponível na Universidade Money."}</p>
+          {curso.is_novo && <span className="dash-curso-hero-badge">Novo</span>}
+        </div>
+
+        <div className="dash-curso-hero-body">
+          <div className="dash-curso-hero-topline">
+            {curso.setor && <span className="dash-curso-pill">{curso.setor}</span>}
+            {curso.tags?.map((t) => (
+              <span key={t.id} className="dash-curso-pill dash-curso-pill--muted">{t.nome}</span>
+            ))}
+          </div>
+
+          <h1>{curso.titulo}</h1>
 
           {curso.instrutor_nome && (
-            <p className="dash-curso-meta"><strong>Instrutor:</strong> {curso.instrutor_nome}</p>
-          )}
-          {curso.participantes?.length > 0 && (
-            <div className="dash-participantes">
-              <strong>Participantes:</strong>
-              {curso.participantes.map((p) => (
-                <span key={p.id} className="dash-tag dash-tag--muted">
-                  {p.nome}{p.cargo ? ` (${p.cargo})` : ""}
-                </span>
-              ))}
-            </div>
+            <p className="dash-curso-instrutor">
+              Com <strong>{curso.instrutor_nome}</strong>
+            </p>
           )}
 
-          <div className="dash-curso-stats">
-            <div><strong>{curso.total_modulos}</strong><small>módulos</small></div>
-            <div><strong>{curso.duracao_horas}h</strong><small>duração</small></div>
+          <ul className="dash-curso-stats" aria-label="Resumo do curso">
+            <li>
+              <strong>{curso.total_modulos || curso.modulos.length}</strong>
+              <span>módulos</span>
+            </li>
+            <li>
+              <strong>{passos}</strong>
+              <span>etapas</span>
+            </li>
+            <li>
+              <strong>{Number(curso.duracao_horas) > 0 ? `${curso.duracao_horas}h` : "—"}</strong>
+              <span>duração</span>
+            </li>
             {curso.matriculado && (
-              <div><strong>{curso.progresso}%</strong><small>seu progresso</small></div>
+              <li>
+                <strong>{curso.progresso}%</strong>
+                <span>progresso</span>
+              </li>
             )}
-          </div>
+          </ul>
 
-          <div className="dash-curso-aviso">
-            💡 Este curso pode ser feito <strong>individualmente</strong>, sem precisar completar a trilha inteira.
-          </div>
+          <p className="dash-curso-hint">
+            Pode ser feito individualmente — não precisa concluir uma trilha inteira.
+          </p>
 
           {erro && <div className="alert alert-error">{erro}</div>}
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={acao}
-            disabled={inscrevendo}
-          >
-            {inscrevendo
-              ? "Carregando..."
-              : curso.matriculado
-                ? curso.progresso > 0
-                  ? "Continuar curso"
-                  : "Acessar curso"
-                : "Matricular-se neste curso"}
-          </button>
+          <div className="dash-curso-cta-row">
+            <button
+              type="button"
+              className="btn btn-primary dash-curso-cta"
+              onClick={acao}
+              disabled={inscrevendo}
+            >
+              {ctaLabel}
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <section className="dash-section">
-        <h2>Conteúdo do curso</h2>
-        <div className="dash-timeline">
-          {curso.descricao && (
-            <div className="dash-timeline-item">
-              <span className="dash-timeline-step">·</span>
-              <div className="dash-timeline-content">
-                <strong>Descrição</strong>
-                <small className="dash-card-meta">Apresentação do curso</small>
-              </div>
-            </div>
-          )}
-          {(curso.materiais || []).map((m, i) => (
-            <div key={`mat-${m.id}`} className="dash-timeline-item" style={{ animationDelay: `${i * 40}ms` }}>
-              <span className="dash-timeline-step">PDF</span>
-              <div className="dash-timeline-content">
-                <strong>{m.titulo}</strong>
-                <small className="dash-card-meta">Material de apoio</small>
-              </div>
-            </div>
-          ))}
-          {curso.modulos.map((m, i) => (
-            <div key={m.id} className="dash-timeline-item" style={{ animationDelay: `${i * 50}ms` }}>
-              <span className="dash-timeline-step">{i + 1}</span>
-              <div className="dash-timeline-content">
-                <strong>{m.titulo}</strong>
-                <small className="dash-card-meta">
-                  {TIPO_MODULO[m.tipo] || "Videoaulas"} · {metaModulo(m)} · atividade final
-                </small>
-              </div>
-            </div>
-          ))}
-          <div className="dash-timeline-item">
-            <span className="dash-timeline-step">★</span>
-            <div className="dash-timeline-content">
-              <strong>Prova final</strong>
-              <small className="dash-card-meta">Nota final = (prova + média atividades) / 2 · certificado ≥ 70%</small>
+      {curso.descricao && (
+        <section className="dash-curso-sobre" aria-labelledby="curso-sobre-titulo">
+          <div className="dash-curso-sobre-head">
+            <span className="dash-curso-sobre-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              </svg>
+            </span>
+            <div>
+              <h2 id="curso-sobre-titulo">Sobre o curso</h2>
+              <p>O que você vai encontrar nesta jornada</p>
             </div>
           </div>
-          {curso.modulos.length === 0 && (
-            <p className="dash-card-meta">Conteúdo em preparação.</p>
+          <div className="dash-curso-sobre-body">
+            <p>{curso.descricao}</p>
+          </div>
+          {curso.participantes?.length > 0 && (
+            <div className="dash-curso-participantes">
+              <span className="dash-curso-participantes-label">Participantes</span>
+              <div className="dash-curso-participantes-list">
+                {curso.participantes.map((p) => (
+                  <span key={p.id} className="dash-curso-pill dash-curso-pill--muted">
+                    {p.nome}{p.cargo ? ` · ${p.cargo}` : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
+        </section>
+      )}
+
+      <section className="dash-curso-jornada" aria-labelledby="curso-jornada-titulo">
+        <div className="dash-curso-jornada-head">
+          <h2 id="curso-jornada-titulo">Conteúdo do curso</h2>
+          <p>{passos} etapa{passos === 1 ? "" : "s"} até o certificado</p>
         </div>
+
+        <ol className="dash-curso-path">
+          {materiais.length > 0 && (
+            <li className="dash-curso-path-item dash-curso-path-item--material">
+              <span className="dash-curso-path-num" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              </span>
+              <div className="dash-curso-path-body">
+                <strong>Material de apoio</strong>
+                <span>{materiais.length} PDF{materiais.length === 1 ? "" : "s"} para consulta</span>
+                <ul className="dash-curso-path-files">
+                  {materiais.map((m) => (
+                    <li key={m.id}>{m.titulo}</li>
+                  ))}
+                </ul>
+              </div>
+            </li>
+          )}
+
+          {curso.modulos.map((m, i) => (
+            <li
+              key={m.id}
+              className="dash-curso-path-item"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <span className="dash-curso-path-num">{i + 1}</span>
+              <div className="dash-curso-path-body">
+                <strong>{m.titulo}</strong>
+                <span>Videoaulas · {metaModulo(m)}</span>
+              </div>
+              <span className="dash-curso-path-tag">Módulo</span>
+            </li>
+          ))}
+
+          <li className="dash-curso-path-item dash-curso-path-item--prova">
+            <span className="dash-curso-path-num" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9" />
+              </svg>
+            </span>
+            <div className="dash-curso-path-body">
+              <strong>Prova final</strong>
+              <span>Nota final = (prova + média das atividades) / 2 · certificado a partir de 70%</span>
+            </div>
+            <span className="dash-curso-path-tag dash-curso-path-tag--accent">Avaliação</span>
+          </li>
+
+          {curso.modulos.length === 0 && (
+            <li className="dash-curso-path-empty">Conteúdo em preparação.</li>
+          )}
+        </ol>
       </section>
 
       {curso.trilhas?.length > 0 && (
-        <section className="dash-section">
-          <h2>Também faz parte das trilhas</h2>
-          <p className="dash-card-meta" style={{ marginBottom: "0.75rem" }}>
-            Opcional — você pode fazer só este curso ou seguir a trilha completa depois.
-          </p>
+        <section className="dash-curso-trilhas">
+          <h2>Também nas trilhas</h2>
+          <p>Opcional — faça só este curso ou siga a trilha completa depois.</p>
           <div className="dash-chips">
             {curso.trilhas.map((t) => (
               <Link key={t.id} to={`/dashboard/trilhas/${t.id}`} className="dash-chip">
-                🛤️ {t.titulo}
+                {t.titulo}
               </Link>
             ))}
           </div>
