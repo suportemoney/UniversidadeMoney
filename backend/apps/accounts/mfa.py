@@ -7,7 +7,6 @@ from datetime import timedelta
 
 import pyotp
 import qrcode
-from django.core.cache import cache
 from django.utils import timezone
 
 from apps.accounts.models import DispositivoConfiavelMfa, Profile
@@ -18,20 +17,24 @@ DIAS_DISPOSITIVO_CONFIAVEL = 30
 MAX_DISPOSITIVOS_POR_USER = 5
 
 
-def _cache_key_cpf(user_id: int) -> str:
-    return f"mfa_cpf_ok:{user_id}"
-
-
 def marcar_cpf_verificado_mfa(user_id: int):
-    cache.set(_cache_key_cpf(user_id), True, CACHE_CPF_MFA_TTL)
+    """Persiste no Profile (compartilhado entre workers), não no cache em memória."""
+    Profile.objects.filter(user_id=user_id).update(
+        mfa_cpf_ok_ate=timezone.now() + timedelta(seconds=CACHE_CPF_MFA_TTL)
+    )
 
 
 def cpf_foi_verificado_mfa(user_id: int) -> bool:
-    return bool(cache.get(_cache_key_cpf(user_id)))
+    ate = (
+        Profile.objects.filter(user_id=user_id)
+        .values_list("mfa_cpf_ok_ate", flat=True)
+        .first()
+    )
+    return bool(ate and ate >= timezone.now())
 
 
 def limpar_cpf_verificado_mfa(user_id: int):
-    cache.delete(_cache_key_cpf(user_id))
+    Profile.objects.filter(user_id=user_id).update(mfa_cpf_ok_ate=None)
 
 
 def verificar_cpf_do_usuario(user, cpf: str):
@@ -49,10 +52,13 @@ def verificar_cpf_do_usuario(user, cpf: str):
         if Profile.objects.filter(cpf=cpf_norm).exclude(user=user).exists():
             raise ValueError("Este CPF já está cadastrado em outra conta.")
         profile.cpf = cpf_norm
-        profile.save(update_fields=["cpf"])
+        profile.mfa_cpf_ok_ate = timezone.now() + timedelta(seconds=CACHE_CPF_MFA_TTL)
+        profile.save(update_fields=["cpf", "mfa_cpf_ok_ate"])
     elif cpf_atual != cpf_norm:
         raise ValueError("CPF não confere com o cadastrado nesta conta.")
-    marcar_cpf_verificado_mfa(user.id)
+    else:
+        profile.mfa_cpf_ok_ate = timezone.now() + timedelta(seconds=CACHE_CPF_MFA_TTL)
+        profile.save(update_fields=["mfa_cpf_ok_ate"])
     return True
 
 
@@ -95,8 +101,8 @@ def confirmar_enroll_totp(user, codigo: str):
         raise ValueError("Código inválido. Confira o app autenticador.")
     profile = user.profile
     profile.totp_confirmado = True
-    profile.save(update_fields=["totp_confirmado"])
-    limpar_cpf_verificado_mfa(user.id)
+    profile.mfa_cpf_ok_ate = None
+    profile.save(update_fields=["totp_confirmado", "mfa_cpf_ok_ate"])
     return True
 
 

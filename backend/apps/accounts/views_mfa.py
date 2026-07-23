@@ -47,13 +47,20 @@ class MfaVerificarCpfView(APIView):
             verificar_cpf_do_usuario(request.user, request.data.get("cpf") or "")
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        # Recarrega após save do CPF / mfa_cpf_ok_ate
         profile = request.user.profile
-        return Response(
-            {
-                "cpf_ok": True,
-                "totp_confirmado": bool(profile.totp_confirmado),
-            }
-        )
+        profile.refresh_from_db()
+        payload = {
+            "cpf_ok": True,
+            "totp_confirmado": bool(profile.totp_confirmado),
+        }
+        # QR na mesma resposta: evita 2ª requisição falhando em outro worker
+        if not profile.totp_confirmado:
+            garantir_secret_totp(request.user)
+            uri = otpauth_uri(request.user)
+            payload["otpauth_uri"] = uri
+            payload["qr_base64"] = qr_base64_png(uri)
+        return Response(payload)
 
 
 class MfaEnrollView(APIView):

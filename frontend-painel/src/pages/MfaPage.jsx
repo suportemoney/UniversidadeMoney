@@ -58,8 +58,13 @@ export default function MfaPage() {
       const data = await mfaVerificarCpf(cpf);
       setTotpConfirmado(!!data.totp_confirmado);
       if (!data.totp_confirmado) {
-        const enroll = await mfaEnroll();
-        setQrBase64(enroll.qr_base64 || "");
+        // Preferir QR já retornado na verificação (mesmo request)
+        if (data.qr_base64) {
+          setQrBase64(data.qr_base64);
+        } else {
+          const enroll = await mfaEnroll();
+          setQrBase64(enroll.qr_base64 || "");
+        }
       }
       setEtapa("totp");
     } catch (err) {

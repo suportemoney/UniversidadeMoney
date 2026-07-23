@@ -72,6 +72,12 @@ class Profile(models.Model):
         default=False,
         verbose_name="TOTP confirmado",
     )
+    # Validade da confirmação de CPF no fluxo MFA (evita cache local por worker)
+    mfa_cpf_ok_ate = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="CPF verificado no MFA até",
+    )
 
     class Meta:
         verbose_name = "Perfil"
