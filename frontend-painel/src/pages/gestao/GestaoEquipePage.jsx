@@ -20,6 +20,7 @@ const FORM_CRIAR_VAZIO = {
   nome: "",
   email: "",
   cpf: "",
+  cargo: "",
   password: "",
   nivel_acesso: "gestor",
   setor: "",
@@ -71,6 +72,7 @@ export default function GestaoEquipePage() {
         nome: modal.item.first_name || "",
         email: modal.item.email || "",
         cpf: modal.item.cpf || "",
+        cargo: modal.item.cargo || "",
         password: "",
         nivel_acesso: modal.item.nivel_acesso || "gestor",
         setor: modal.item.setor || "",
@@ -104,11 +106,18 @@ export default function GestaoEquipePage() {
     setErro("");
     try {
       if (modal.item) {
-        await gestaoApi.atualizarUsuarioEquipe(modal.item.id, {
+        const payload = {
           first_name: form.nome,
+          email: form.email,
+          cpf: form.cpf,
+          cargo: form.cargo,
           nivel_acesso: form.nivel_acesso,
           setor: form.setor ? Number(form.setor) : null,
-        });
+        };
+        if (form.password.trim()) {
+          payload.password = form.password;
+        }
+        await gestaoApi.atualizarUsuarioEquipe(modal.item.id, payload);
       } else {
         await gestaoApi.criarUsuarioEquipe({
           nome: form.nome,
@@ -222,19 +231,17 @@ export default function GestaoEquipePage() {
                 />
               </td>
               <td className="gestao-td-acoes">
-                {!u.is_superuser ? (
-                  <GestaoTableActions
-                    center
-                    onView={() => setVisualizar(u)}
-                    onInativar={() => setInativar(u)}
-                    onDelete={() => setExcluir(u)}
-                    viewLabel="Visualizar"
-                    inativarLabel="Inativar"
-                    deleteLabel="Excluir permanente"
-                  />
-                ) : (
-                  <span className="gestao-muted">—</span>
-                )}
+                <GestaoTableActions
+                  center
+                  onView={() => setVisualizar(u)}
+                  onEdit={() => abrirEdicao(u)}
+                  onInativar={!u.is_superuser ? () => setInativar(u) : undefined}
+                  onDelete={!u.is_superuser ? () => setExcluir(u) : undefined}
+                  viewLabel="Visualizar"
+                  editLabel="Editar"
+                  inativarLabel="Inativar"
+                  deleteLabel="Excluir permanente"
+                />
               </td>
             </GestaoTableRow>
           ))}
@@ -304,44 +311,52 @@ export default function GestaoEquipePage() {
               autoFocus
             />
           </label>
-          {!modal.item && (
-            <>
-              <label className="gestao-field">
-                E-mail
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
-              </label>
-              <label className="gestao-field">
-                CPF
-                <input
-                  value={form.cpf}
-                  onChange={(e) => setForm({ ...form, cpf: e.target.value })}
-                  required
-                  placeholder="000.000.000-00"
-                />
-              </label>
-              <label className="gestao-field">
-                Senha inicial
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required
-                  minLength={8}
-                />
-              </label>
-            </>
+          <label className="gestao-field">
+            E-mail
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          </label>
+          <label className="gestao-field">
+            CPF
+            <input
+              value={form.cpf}
+              onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+              required={!modal.item}
+              placeholder="000.000.000-00"
+            />
+          </label>
+          {modal.item && (
+            <label className="gestao-field">
+              Cargo
+              <input
+                value={form.cargo}
+                onChange={(e) => setForm({ ...form, cargo: e.target.value })}
+                placeholder="Ex.: Analista de TI"
+              />
+            </label>
           )}
+          <label className="gestao-field">
+            {modal.item ? "Nova senha (opcional)" : "Senha inicial"}
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required={!modal.item}
+              minLength={modal.item && !form.password ? undefined : 8}
+              placeholder={modal.item ? "Deixe em branco para manter" : ""}
+            />
+          </label>
           <label className="gestao-field">
             Nível de acesso
             <select
               value={form.nivel_acesso}
               onChange={(e) => setForm({ ...form, nivel_acesso: e.target.value })}
               required
+              disabled={Boolean(modal.item?.is_superuser)}
             >
               {NIVEIS_EQUIPE.map((n) => (
                 <option key={n.value} value={n.value}>{n.label}</option>

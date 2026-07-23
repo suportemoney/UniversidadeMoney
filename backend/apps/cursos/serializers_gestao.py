@@ -322,6 +322,10 @@ class UsuarioEquipeCreateSerializer(serializers.Serializer):
 
 class UsuarioEquipeUpdateSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150, required=False)
+    email = serializers.EmailField(required=False)
+    cpf = serializers.CharField(max_length=14, required=False, allow_blank=True)
+    cargo = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    password = serializers.CharField(min_length=8, required=False, allow_blank=True, write_only=True)
     nivel_acesso = serializers.ChoiceField(
         choices=[
             Profile.NIVEL_INSTRUTOR,
@@ -338,6 +342,26 @@ class UsuarioEquipeUpdateSerializer(serializers.Serializer):
                 "Para nível padrão, use a área de Convidados."
             )
         return value
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        qs = User.objects.filter(username=email).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Este e-mail já está cadastrado.")
+        return email
+
+    def validate_cpf(self, value):
+        from apps.accounts.validators import cpf_valido, normalizar_cpf
+
+        if not value or not str(value).strip():
+            return ""
+        cpf = normalizar_cpf(value)
+        if not cpf_valido(cpf):
+            raise serializers.ValidationError("CPF inválido.")
+        qs = Profile.objects.filter(cpf=cpf).exclude(user_id=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Este CPF já está cadastrado.")
+        return cpf
 
     def validate_setor(self, value):
         if value is None:
@@ -357,16 +381,37 @@ class UsuarioEquipeUpdateSerializer(serializers.Serializer):
                 "Não é possível rebaixar o nível de um administrador por este formulário."
             )
 
+        user_fields = []
         if "first_name" in validated_data:
             instance.first_name = validated_data["first_name"].strip()
-            instance.save(update_fields=["first_name"])
+            user_fields.append("first_name")
+        if "email" in validated_data:
+            email = validated_data["email"]
+            instance.email = email
+            instance.username = email
+            user_fields.extend(["email", "username"])
+        if user_fields:
+            instance.save(update_fields=list(dict.fromkeys(user_fields)))
+
+        if validated_data.get("password"):
+            instance.set_password(validated_data["password"])
+            instance.save(update_fields=["password"])
 
         profile = instance.profile
+        profile_fields = []
+        if "cpf" in validated_data:
+            profile.cpf = validated_data["cpf"] or None
+            profile_fields.append("cpf")
+        if "cargo" in validated_data:
+            profile.cargo = (validated_data["cargo"] or "").strip()
+            profile_fields.append("cargo")
         if "setor" in validated_data:
             profile.setor_id = validated_data["setor"]
-            profile.save(update_fields=["setor"])
+            profile_fields.append("setor")
+        if profile_fields:
+            profile.save(update_fields=profile_fields)
 
-        if "nivel_acesso" in validated_data:
+        if "nivel_acesso" in validated_data and not instance.is_superuser:
             aplicar_nivel_acesso(instance, validated_data["nivel_acesso"])
 
         return User.objects.select_related("profile", "profile__setor").get(pk=instance.pk)
