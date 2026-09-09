@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import QuestaoEditor from "../QuestaoEditor";
 import VideoUploadField from "../VideoUploadField";
 import GestaoIcon from "../GestaoIcons";
+import ModuloModal from "../ModuloModal";
+import AulaModal from "../AulaModal";
+import ConfirmDialog from "../../ui/ConfirmDialog";
 import CursoMateriaisModal from "./CursoMateriaisModal";
 import CursoProvaModal from "./CursoProvaModal";
 import { gestaoApi } from "../../../services/gestaoApi";
 
 /**
- * Painel expandido do curso: descrição + resumos; material e prova em modais.
+ * Painel expandido do curso: CRUD de módulos/aulas em modal; material e prova em modais.
  */
 export default function CursoExpandPanel({ cursoId, onChanged }) {
   const [curso, setCurso] = useState(null);
@@ -16,11 +19,12 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
   const [descricao, setDescricao] = useState("");
   const [salvandoDesc, setSalvandoDesc] = useState(false);
   const [moduloAberto, setModuloAberto] = useState(null);
-  const [novoModulo, setNovoModulo] = useState("");
   const [prova, setProva] = useState(null);
-  const [novaAula, setNovaAula] = useState({});
   const [modalMateriais, setModalMateriais] = useState(false);
   const [modalProva, setModalProva] = useState(false);
+  const [moduloModal, setModuloModal] = useState({ open: false, modulo: null });
+  const [aulaModal, setAulaModal] = useState({ open: false, aula: null, moduloId: null });
+  const [confirmar, setConfirmar] = useState(null);
 
   const carregar = async () => {
     setLoading(true);
@@ -59,42 +63,40 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
     }
   };
 
-  const criarModulo = async (e) => {
-    e.preventDefault();
-    if (!novoModulo.trim()) return;
+  const salvarModulo = async (payload) => {
+    if (moduloModal.modulo) {
+      await gestaoApi.atualizarModulo(moduloModal.modulo.id, { titulo: payload.titulo });
+    } else {
+      await gestaoApi.criarModulo(cursoId, { titulo: payload.titulo });
+    }
+    await carregar();
+    avisar();
+  };
+
+  const salvarAula = async (payload) => {
+    if (aulaModal.aula) {
+      await gestaoApi.atualizarAula(aulaModal.aula.id, payload);
+    } else {
+      await gestaoApi.criarAula(aulaModal.moduloId, payload);
+    }
+    await carregar();
+    avisar();
+  };
+
+  const confirmarExclusao = async () => {
+    if (!confirmar) return;
     try {
-      await gestaoApi.criarModulo(cursoId, { titulo: novoModulo.trim() });
-      setNovoModulo("");
+      if (confirmar.tipo === "modulo") {
+        await gestaoApi.excluirModulo(confirmar.id);
+        if (moduloAberto === confirmar.id) setModuloAberto(null);
+      } else {
+        await gestaoApi.excluirAula(confirmar.id);
+      }
       await carregar();
       avisar();
     } catch (err) {
       setErro(err.message);
     }
-  };
-
-  const excluirModulo = async (id) => {
-    if (!window.confirm("Excluir este módulo?")) return;
-    await gestaoApi.excluirModulo(id);
-    if (moduloAberto === id) setModuloAberto(null);
-    await carregar();
-    avisar();
-  };
-
-  const criarAula = async (moduloId) => {
-    const titulo = (novaAula[moduloId] || "").trim();
-    if (!titulo) return;
-    try {
-      await gestaoApi.criarAula(moduloId, { titulo });
-      setNovaAula((prev) => ({ ...prev, [moduloId]: "" }));
-      await carregar();
-    } catch (err) {
-      setErro(err.message);
-    }
-  };
-
-  const excluirAula = async (id) => {
-    await gestaoApi.excluirAula(id);
-    await carregar();
   };
 
   const garantirAtividade = async (modulo) => {
@@ -164,17 +166,16 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
       </section>
 
       <section className="curso-expand-section">
-        <h4>3. Módulos</h4>
-        <form className="curso-expand-inline-form" onSubmit={criarModulo}>
-          <input
-            placeholder="Título do módulo"
-            value={novoModulo}
-            onChange={(e) => setNovoModulo(e.target.value)}
-          />
-          <button type="submit" className="btn btn-outline btn-sm">
-            <GestaoIcon name="mais" /> Módulo
+        <div className="curso-expand-resumo-head">
+          <h4>3. Módulos</h4>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={() => setModuloModal({ open: true, modulo: null })}
+          >
+            <GestaoIcon name="mais" /> Novo módulo
           </button>
-        </form>
+        </div>
 
         <div className="curso-expand-modulos">
           {(curso.modulos || []).map((mod) => {
@@ -194,18 +195,69 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
                   </span>
                 </button>
                 <div className="curso-expand-modulo-actions">
-                  <button type="button" className="gestao-icon-btn gestao-icon-btn--danger" title="Excluir módulo" onClick={() => excluirModulo(mod.id)}>
+                  <button
+                    type="button"
+                    className="gestao-icon-btn"
+                    title="Editar módulo"
+                    aria-label="Editar módulo"
+                    onClick={() => setModuloModal({ open: true, modulo: mod })}
+                  >
+                    <GestaoIcon name="editar" />
+                  </button>
+                  <button
+                    type="button"
+                    className="gestao-icon-btn gestao-icon-btn--danger"
+                    title="Excluir módulo"
+                    aria-label="Excluir módulo"
+                    onClick={() => setConfirmar({ tipo: "modulo", id: mod.id, titulo: mod.titulo })}
+                  >
                     <GestaoIcon name="excluir" />
                   </button>
                 </div>
 
                 {aberto && (
                   <div className="curso-expand-modulo-body">
-                    <h5>Videoaulas</h5>
+                    <div className="curso-expand-resumo-head">
+                      <h5>Videoaulas</h5>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setAulaModal({ open: true, aula: null, moduloId: mod.id })}
+                      >
+                        <GestaoIcon name="mais" /> Nova aula
+                      </button>
+                    </div>
                     <ul className="curso-expand-list">
                       {(mod.aulas || []).map((aula) => (
                         <li key={aula.id} className="curso-expand-aula">
-                          <strong>{aula.titulo}</strong>
+                          <div className="curso-expand-aula-head">
+                            <div>
+                              <strong>{aula.titulo}</strong>
+                              {aula.descricao ? (
+                                <p className="curso-expand-aula-desc">{aula.descricao}</p>
+                              ) : null}
+                            </div>
+                            <div className="curso-expand-aula-actions">
+                              <button
+                                type="button"
+                                className="gestao-icon-btn"
+                                title="Editar aula"
+                                aria-label="Editar aula"
+                                onClick={() => setAulaModal({ open: true, aula, moduloId: mod.id })}
+                              >
+                                <GestaoIcon name="editar" />
+                              </button>
+                              <button
+                                type="button"
+                                className="gestao-icon-btn gestao-icon-btn--danger"
+                                title="Excluir aula"
+                                aria-label="Excluir aula"
+                                onClick={() => setConfirmar({ tipo: "aula", id: aula.id, titulo: aula.titulo })}
+                              >
+                                <GestaoIcon name="excluir" />
+                              </button>
+                            </div>
+                          </div>
                           <VideoUploadField
                             aula={aula}
                             onUploaded={async () => {
@@ -213,22 +265,12 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
                               avisar();
                             }}
                           />
-                          <button type="button" className="btn btn-outline btn-sm" onClick={() => excluirAula(aula.id)}>
-                            Excluir aula
-                          </button>
                         </li>
                       ))}
                     </ul>
-                    <div className="curso-expand-inline-form">
-                      <input
-                        placeholder="Título da videoaula"
-                        value={novaAula[mod.id] || ""}
-                        onChange={(e) => setNovaAula((prev) => ({ ...prev, [mod.id]: e.target.value }))}
-                      />
-                      <button type="button" className="btn btn-outline btn-sm" onClick={() => criarAula(mod.id)}>
-                        Adicionar vídeo
-                      </button>
-                    </div>
+                    {!(mod.aulas || []).length && (
+                      <p className="gestao-muted">Nenhuma aula neste módulo.</p>
+                    )}
 
                     <h5>Atividade avaliativa (final do módulo)</h5>
                     {!ativ ? (
@@ -313,6 +355,34 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
           await carregar();
           avisar();
         }}
+      />
+
+      <ModuloModal
+        open={moduloModal.open}
+        modulo={moduloModal.modulo}
+        onClose={() => setModuloModal({ open: false, modulo: null })}
+        onSave={salvarModulo}
+      />
+
+      <AulaModal
+        open={aulaModal.open}
+        aula={aulaModal.aula}
+        onClose={() => setAulaModal({ open: false, aula: null, moduloId: null })}
+        onSave={salvarAula}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmar)}
+        onClose={() => setConfirmar(null)}
+        onConfirm={confirmarExclusao}
+        danger
+        title={confirmar?.tipo === "modulo" ? "Excluir módulo" : "Excluir aula"}
+        message={
+          confirmar?.tipo === "modulo"
+            ? `Excluir o módulo "${confirmar?.titulo}" e todas as aulas dele?`
+            : `Excluir a aula "${confirmar?.titulo}"?`
+        }
+        confirmLabel="Excluir"
       />
     </div>
   );

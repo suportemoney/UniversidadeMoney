@@ -3006,7 +3006,7 @@
   text-align: left;
   background: transparent;
   border: 0;
-  padding: 0.75rem 2.5rem 0.75rem 0.9rem;
+  padding: 0.75rem 5.2rem 0.75rem 0.9rem;
   cursor: pointer;
   font: inherit;
   color: var(--color-text);
@@ -3014,8 +3014,31 @@
 
 .curso-expand-modulo-actions {
   position: absolute;
-  top: 0.55rem;
+  top: 0.45rem;
   right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.curso-expand-aula-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.curso-expand-aula-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.curso-expand-aula-desc {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--gestao-muted);
 }
 
 .curso-expand-modulo-body {
