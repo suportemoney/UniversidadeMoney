@@ -36,11 +36,22 @@ jobs:
 
             if [ ! -d "$REPO/.git" ]; then
               echo "==> Clone inicial em $REPO"
+              if [ -f "$REPO/.env" ]; then
+                cp -a "$REPO/.env" /var/www/universidade/.env
+              fi
+              mkdir -p /tmp/um-clone
+              git clone --branch main "$CLONE_URL" /tmp/um-clone
               rm -rf "$REPO"
-              git clone --branch main "$CLONE_URL" "$REPO"
+              mv /tmp/um-clone "$REPO"
+              if [ -f /var/www/universidade/.env ]; then
+                cp -a /var/www/universidade/.env "$REPO/.env"
+              fi
             fi
 
             cd "$REPO"
+            if [ ! -f "$REPO/.env" ] && [ -f /var/www/universidade/.env ]; then
+              cp -a /var/www/universidade/.env "$REPO/.env"
+            fi
             git remote set-url origin "$CLONE_URL"
             git fetch origin main
             git checkout main
