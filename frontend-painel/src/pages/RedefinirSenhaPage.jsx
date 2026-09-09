@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { getMe, isAuthenticated, redefinirSenhaObrigatoria } from "../services/api";
 import { formatarCpf } from "../utils/cpf";
+import { destinoAposAuthPainel } from "../utils/posLogin";
 
 /** Troca obrigatória de senha (após reset admin ou convite). */
 export default function RedefinirSenhaPage() {
@@ -11,6 +12,17 @@ export default function RedefinirSenhaPage() {
   const [confirma, setConfirma] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+    getMe()
+      .then((me) => {
+        if (me?.precisa_mfa_painel && !me?.mfa_ok) {
+          navigate("/mfa", { replace: true });
+        }
+      })
+      .catch(() => {});
+  }, [navigate]);
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
@@ -31,11 +43,7 @@ export default function RedefinirSenhaPage() {
     try {
       await redefinirSenhaObrigatoria(cpf, novaSenha);
       const me = await getMe();
-      if (me.precisa_mfa_painel && !me.mfa_ok) {
-        navigate("/mfa", { replace: true });
-      } else {
-        navigate("/gestao", { replace: true });
-      }
+      navigate(destinoAposAuthPainel(me), { replace: true });
     } catch (err) {
       setErro(err.message || "Não foi possível atualizar a senha.");
     } finally {

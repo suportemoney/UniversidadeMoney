@@ -1,11 +1,13 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getMe, isAuthenticated } from "../services/api";
+import { precisaMfaPainelPendente, urlMfaPainel } from "../utils/posLogin";
 
 export default function ProtectedRoute({ children }) {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [precisaSenha, setPrecisaSenha] = useState(false);
+  const [precisaMfa, setPrecisaMfa] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -14,6 +16,10 @@ export default function ProtectedRoute({ children }) {
     }
     getMe()
       .then((me) => {
+        if (precisaMfaPainelPendente(me)) {
+          setPrecisaMfa(true);
+          return;
+        }
         if (me?.precisa_redefinir_senha) setPrecisaSenha(true);
       })
       .catch(() => {})
@@ -25,6 +31,11 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (loading) return null;
+
+  if (precisaMfa) {
+    window.location.replace(urlMfaPainel());
+    return null;
+  }
 
   if (precisaSenha && location.pathname !== "/redefinir-senha") {
     return <Navigate to="/redefinir-senha" replace />;

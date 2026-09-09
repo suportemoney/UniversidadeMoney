@@ -25,12 +25,12 @@ export default function GestaoRoute({ children }) {
           setSemAcesso(true);
           return;
         }
-        if (me.precisa_redefinir_senha) {
-          setPrecisaSenha(true);
-          return;
-        }
         if (me.precisa_mfa_painel && !me.mfa_ok) {
           setPrecisaMfa(true);
+          return;
+        }
+        if (me.precisa_redefinir_senha) {
+          setPrecisaSenha(true);
           return;
         }
         setUser(me);
@@ -63,12 +63,12 @@ export default function GestaoRoute({ children }) {
     );
   }
 
-  if (precisaSenha) {
-    return <Navigate to="/redefinir-senha" replace />;
-  }
-
   if (precisaMfa) {
     return <Navigate to="/mfa" replace />;
+  }
+
+  if (precisaSenha) {
+    return <Navigate to="/redefinir-senha" replace />;
   }
 
   if (rotaNegada) {

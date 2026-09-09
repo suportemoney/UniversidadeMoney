@@ -9,6 +9,7 @@ import {
   mfaVerificarCpf,
 } from "../services/api";
 import { formatarCpf } from "../utils/cpf";
+import { destinoAposAuthPainel } from "../utils/posLogin";
 
 /**
  * 2FA do painel (gestor/admin): CPF → QR (1ª vez) ou só código TOTP.
@@ -31,7 +32,7 @@ export default function MfaPage() {
     getMe()
       .then((me) => {
         if (!me.precisa_mfa_painel || me.mfa_ok) {
-          navigate("/gestao", { replace: true });
+          navigate(destinoAposAuthPainel(me), { replace: true });
           return;
         }
         setPrecisaCadastrarCpf(!me.cpf);
@@ -45,9 +46,7 @@ export default function MfaPage() {
 
   const aposSucesso = async () => {
     const me = await getMe();
-    if (me.mfa_ok) {
-      navigate("/gestao", { replace: true });
-    }
+    navigate(destinoAposAuthPainel(me), { replace: true });
   };
 
   const confirmarCpf = async (e) => {

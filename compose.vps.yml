@@ -34,6 +34,9 @@ services:
       DB_NAME: ${DB_NAME:-universidade_money}
       STATIC_ROOT: /data/static
       MEDIA_ROOT: /data/media
+      SUPERUSER_USERNAME: ${SUPERUSER_USERNAME:-admin}
+      SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-admin@moneypromotora.com.br}
+      SUPERUSER_PASSWORD: ${SUPERUSER_PASSWORD:-admin123}
     volumes:
       - /var/www/universidade/static:/data/static
       - /var/www/universidade/media:/data/media

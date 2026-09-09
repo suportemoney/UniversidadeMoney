@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { isAuthenticated, redefinirSenhaObrigatoria } from "../services/api";
+import { getMe, isAuthenticated, redefinirSenhaObrigatoria } from "../services/api";
 import { formatarCpf } from "../utils/cpf";
+import { precisaMfaPainelPendente, urlMfaPainel } from "../utils/posLogin";
 
 export default function RedefinirSenhaPage() {
   const navigate = useNavigate();
@@ -10,6 +11,17 @@ export default function RedefinirSenhaPage() {
   const [confirma, setConfirma] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+    getMe()
+      .then((me) => {
+        if (precisaMfaPainelPendente(me)) {
+          window.location.replace(urlMfaPainel());
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;

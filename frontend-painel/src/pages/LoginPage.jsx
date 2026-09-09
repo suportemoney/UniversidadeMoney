@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { clearTokens, getMe, login } from "../services/api";
+import { clearTokens, getMe, isAuthenticated, login } from "../services/api";
+import { destinoAposAuthPainel } from "../utils/posLogin";
 
-/** Login do painel: CPF ou username + senha. */
+/** Login do painel: CPF ou username + senha. Reusa JWT da plataforma no mesmo domínio. */
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -13,12 +14,34 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checandoSessao, setChecandoSessao] = useState(true);
 
   useEffect(() => {
-    clearTokens();
-    if (location.state?.sessaoExpirada || location.state?.semAcessoPainel) {
-      navigate(location.pathname, { replace: true, state: {} });
+    let cancelado = false;
+    async function reusarSessao() {
+      if (location.state?.sessaoExpirada || location.state?.semAcessoPainel) {
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+      if (!isAuthenticated()) {
+        if (!cancelado) setChecandoSessao(false);
+        return;
+      }
+      try {
+        const me = await getMe();
+        if (cancelado) return;
+        if (me?.pode_gestao) {
+          navigate(destinoAposAuthPainel(me), { replace: true });
+          return;
+        }
+      } catch {
+        /* token inválido: mostra o formulário sem apagar à toa */
+      }
+      if (!cancelado) setChecandoSessao(false);
     }
+    reusarSessao();
+    return () => {
+      cancelado = true;
+    };
   }, [location.pathname, location.state, navigate]);
 
   const handleSubmit = async (e) => {
@@ -28,7 +51,6 @@ export default function LoginPage() {
     setAvisoAcesso(false);
     setLoading(true);
     try {
-      clearTokens();
       await login(identificador, password);
       const me = await getMe();
       if (!me.pode_gestao) {
@@ -36,21 +58,17 @@ export default function LoginPage() {
         setErro("Esta conta não tem acesso ao painel.");
         return;
       }
-      if (me.precisa_redefinir_senha) {
-        navigate("/redefinir-senha", { replace: true });
-        return;
-      }
-      if (me.precisa_mfa_painel && !me.mfa_ok) {
-        navigate("/mfa", { replace: true });
-        return;
-      }
-      navigate("/gestao", { replace: true });
+      navigate(destinoAposAuthPainel(me), { replace: true });
     } catch (err) {
       setErro(err.message || "Credenciais inválidas.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (checandoSessao) {
+    return <p className="auth-subtitle">Verificando sessão...</p>;
+  }
 
   return (
     <>

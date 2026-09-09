@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getMe, login } from "../services/api";
+import { precisaMfaPainelPendente, urlMfaPainel } from "../utils/posLogin";
 
 export default function LoginCpfPage() {
   const navigate = useNavigate();
@@ -26,6 +27,10 @@ export default function LoginCpfPage() {
     try {
       await login(identificador, password);
       const me = await getMe();
+      if (precisaMfaPainelPendente(me)) {
+        window.location.assign(urlMfaPainel());
+        return;
+      }
       if (me.precisa_redefinir_senha) {
         navigate("/redefinir-senha", { replace: true });
         return;

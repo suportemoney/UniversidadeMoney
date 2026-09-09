@@ -1,4 +1,4 @@
-"""Garante um superuser a partir de variáveis de ambiente (idempotente)."""
+"""Garante um superuser pioneiro a partir de SUPERUSER_* (só cria senha na primeira vez)."""
 import os
 
 from django.contrib.auth.models import User
@@ -8,7 +8,7 @@ from apps.accounts.models import Profile
 
 
 class Command(BaseCommand):
-    help = "Cria ou atualiza superuser se SUPERUSER_USERNAME e SUPERUSER_PASSWORD estiverem definidos."
+    help = "Cria o superuser pioneiro se SUPERUSER_USERNAME e SUPERUSER_PASSWORD estiverem definidos."
 
     def handle(self, *args, **options):
         username = (os.getenv("SUPERUSER_USERNAME") or "").strip()
@@ -27,26 +27,40 @@ class Command(BaseCommand):
                 "is_superuser": True,
             },
         )
-        user.email = email
-        user.is_staff = True
-        user.is_superuser = True
-        user.set_password(password)
-        user.save()
 
-        Profile.objects.get_or_create(
+        if created:
+            user.set_password(password)
+            user.email = email
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+        else:
+            # Não sobrescreve senha já trocada pelo pioneiro
+            if email and user.email != email:
+                user.email = email
+            user.is_staff = True
+            user.is_superuser = True
+            user.save(update_fields=["email", "is_staff", "is_superuser"])
+
+        profile, profile_created = Profile.objects.get_or_create(
             user=user,
             defaults={
                 "cargo": "Administrador",
                 "is_membro_equipe": True,
-                "precisa_redefinir_senha": False,
+                "precisa_redefinir_senha": True,
+                "totp_confirmado": False,
                 "nivel_acesso": Profile.NIVEL_ADMINISTRADOR,
             },
         )
+        if created or profile_created:
+            profile.precisa_redefinir_senha = True
+            profile.totp_confirmado = False
+            profile.save(update_fields=["precisa_redefinir_senha", "totp_confirmado"])
+
         from apps.cursos.permissions import aplicar_nivel_acesso
 
         aplicar_nivel_acesso(user, Profile.NIVEL_ADMINISTRADOR)
 
-        # CPF opcional via env (superuser não passa por convite)
         cpf_env = (os.getenv("SUPERUSER_CPF") or "").strip()
         if cpf_env:
             from apps.accounts.validators import cpf_valido, normalizar_cpf
@@ -59,5 +73,5 @@ class Command(BaseCommand):
                         profile.cpf = cpf_norm
                         profile.save(update_fields=["cpf"])
 
-        acao = "criado" if created else "atualizado"
+        acao = "criado" if created else "já existia (senha preservada)"
         self.stdout.write(self.style.SUCCESS(f"Superuser '{username}' {acao}."))
