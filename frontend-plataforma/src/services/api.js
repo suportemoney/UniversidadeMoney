@@ -90,6 +90,7 @@ export async function apiFetch(path, options = {}, jaRenovou = false) {
     path.startsWith("/auth/login/") ||
     path.startsWith("/auth/register/") ||
     path.startsWith("/auth/token-acesso/") ||
+    path.startsWith("/auth/recuperar-senha/") ||
     path.startsWith("/auth/api-tokens/trocar/");
 
   if (rotaAuth) {
@@ -176,6 +177,24 @@ export async function redefinirSenhaObrigatoria(cpf, novaSenha) {
   });
   if (data.access) setTokens(data.access, data.refresh);
   return data;
+}
+
+export async function solicitarRecuperarSenha(identificador) {
+  return apiFetch("/auth/recuperar-senha/", {
+    method: "POST",
+    body: JSON.stringify({ identificador }),
+  });
+}
+
+export async function confirmarRecuperarSenha(identificador, codigo, novaSenha) {
+  return apiFetch("/auth/recuperar-senha/confirmar/", {
+    method: "POST",
+    body: JSON.stringify({
+      identificador,
+      codigo,
+      nova_senha: novaSenha,
+    }),
+  });
 }
 
 export async function updateMe(data) {

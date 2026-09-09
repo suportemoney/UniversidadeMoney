@@ -27,6 +27,16 @@ urlpatterns = [
         name="auth-token-acesso-ativar",
     ),
     path(
+        "recuperar-senha/",
+        views.RecuperarSenhaView.as_view(),
+        name="auth-recuperar-senha",
+    ),
+    path(
+        "recuperar-senha/confirmar/",
+        views.RecuperarSenhaConfirmarView.as_view(),
+        name="auth-recuperar-senha-confirmar",
+    ),
+    path(
         "api-tokens/trocar/",
         views_api.ApiTokenTrocarView.as_view(),
         name="auth-api-tokens-trocar",

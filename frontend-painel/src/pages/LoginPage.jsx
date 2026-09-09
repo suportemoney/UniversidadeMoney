@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { clearTokens, getMe, login } from "../services/api";
 
 /** Login do painel: CPF ou username + senha. */
@@ -91,6 +91,9 @@ export default function LoginPage() {
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
+      <p className="auth-footer">
+        <Link to="/recuperar-senha">Esqueci a senha</Link>
+      </p>
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { getMe, login } from "../services/api";
 
 export default function LoginCpfPage() {
@@ -81,6 +81,9 @@ export default function LoginCpfPage() {
         </button>
       </form>
 
+      <p className="auth-footer">
+        <Link to="/recuperar-senha">Esqueci a senha</Link>
+      </p>
       <p className="auth-footer">
         Primeiro acesso?{" "}
         <a href={internoUrl}>Ative com seu token-key</a>

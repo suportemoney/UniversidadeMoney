@@ -12,8 +12,10 @@ from .services import (
     ativar_token_acesso,
     autenticar_por_cpf,
     buscar_token_valido,
+    confirmar_recuperacao_senha,
     normalizar_chave_token,
     redefinir_senha_obrigatoria,
+    solicitar_recuperacao_senha,
 )
 from .tokens import claim_mfa_ok_do_request, tokens_para_usuario
 from apps.cursos.permissions import precisa_mfa_painel
@@ -179,3 +181,33 @@ class TokenAcessoAtivarView(APIView):
                 "username": user.get_username(),
             }
         )
+
+
+class RecuperarSenhaView(APIView):
+    """Solicita código OTP por e-mail (resposta genérica)."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        identificador = request.data.get("identificador") or request.data.get("email") or ""
+        mensagem = solicitar_recuperacao_senha(identificador)
+        return Response({"message": mensagem})
+
+
+class RecuperarSenhaConfirmarView(APIView):
+    """Confirma código OTP e grava a nova senha."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        try:
+            confirmar_recuperacao_senha(
+                request.data.get("identificador") or "",
+                request.data.get("codigo") or "",
+                request.data.get("nova_senha") or "",
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": "Senha atualizada. Faça login com a nova senha."})

@@ -78,6 +78,17 @@ class Profile(models.Model):
         blank=True,
         verbose_name="CPF verificado no MFA até",
     )
+    senha_codigo_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name="Hash do código de recuperação",
+    )
+    senha_codigo_ate = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Código de recuperação válido até",
+    )
 
     class Meta:
         verbose_name = "Perfil"

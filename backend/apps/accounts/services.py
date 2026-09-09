@@ -1,9 +1,15 @@
 """Serviços de TokenAcesso (somente ORM — sem SQL raw)."""
+import hashlib
 import re
+import secrets
+from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
+
+from apps.core.mail import MENSAGEM_GENERICA_RECUPERACAO, enviar_email, url_site
 
 from .models import Profile, TokenAcesso
 from .validators import cpf_valido, normalizar_cpf
@@ -178,4 +184,108 @@ def criar_colaborador_com_token(
             criado_por=criado_por,
             valido_ate=valido_ate,
         )
+    _enviar_email_convite(user, token)
     return user, token
+
+
+TTL_CODIGO_SENHA_MINUTOS = 15
+
+
+def _hash_codigo_senha(codigo: str) -> str:
+    bruto = f"{settings.SECRET_KEY}:{codigo}"
+    return hashlib.sha256(bruto.encode("utf-8")).hexdigest()
+
+
+def _enviar_email_convite(user, token):
+    email = (user.email or "").strip()
+    if not email:
+        return
+    url_interno = url_site("/interno/")
+    nome = user.first_name or user.get_username()
+    enviar_email(
+        "Seu acesso à Universidade Money",
+        (
+            f"Olá, {nome}.\n\n"
+            f"Você foi convidado(a) para a Universidade Money.\n"
+            f"Token-key: {token.chave}\n"
+            f"Ative em: {url_interno}\n\n"
+            f"No primeiro acesso, confirme seu CPF e defina uma senha.\n"
+        ),
+        [email],
+    )
+
+
+def localizar_usuario_recuperacao(identificador: str):
+    """Encontra usuário ativo por e-mail, CPF ou username."""
+    ident = (identificador or "").strip()
+    if not ident:
+        return None
+    if "@" in ident:
+        return User.objects.filter(email__iexact=ident.lower(), is_active=True).first()
+    cpf_norm = normalizar_cpf(ident)
+    if cpf_valido(cpf_norm):
+        profile = (
+            Profile.objects.select_related("user")
+            .filter(cpf=cpf_norm, user__is_active=True)
+            .first()
+        )
+        return profile.user if profile else None
+    return User.objects.filter(username__iexact=ident.lower(), is_active=True).first()
+
+
+def solicitar_recuperacao_senha(identificador: str) -> str:
+    """Gera OTP e envia se a conta tiver e-mail. Resposta sempre genérica."""
+    user = localizar_usuario_recuperacao(identificador)
+    email = (getattr(user, "email", None) or "").strip() if user else ""
+    if user and email:
+        codigo = f"{secrets.randbelow(1_000_000):06d}"
+        profile, _ = Profile.objects.get_or_create(user=user)
+        profile.senha_codigo_hash = _hash_codigo_senha(codigo)
+        profile.senha_codigo_ate = timezone.now() + timedelta(
+            minutes=TTL_CODIGO_SENHA_MINUTOS
+        )
+        profile.save(update_fields=["senha_codigo_hash", "senha_codigo_ate"])
+        enviar_email(
+            "Código para redefinir senha — Universidade Money",
+            (
+                "Olá.\n\n"
+                f"Seu código de recuperação é: {codigo}\n"
+                f"Válido por {TTL_CODIGO_SENHA_MINUTOS} minutos.\n\n"
+                "Se você não pediu isso, ignore este e-mail.\n"
+            ),
+            [email],
+        )
+    return MENSAGEM_GENERICA_RECUPERACAO
+
+
+def confirmar_recuperacao_senha(identificador: str, codigo: str, nova_senha: str):
+    """Valida o código e define a nova senha."""
+    if not nova_senha or len(nova_senha) < 6:
+        raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
+    user = localizar_usuario_recuperacao(identificador)
+    if not user:
+        raise ValueError("Código inválido ou expirado.")
+    profile = getattr(user, "profile", None)
+    if (
+        not profile
+        or not profile.senha_codigo_hash
+        or not profile.senha_codigo_ate
+    ):
+        raise ValueError("Código inválido ou expirado.")
+    if timezone.now() > profile.senha_codigo_ate:
+        raise ValueError("Código inválido ou expirado.")
+    if _hash_codigo_senha(str(codigo or "").strip()) != profile.senha_codigo_hash:
+        raise ValueError("Código inválido ou expirado.")
+    user.set_password(nova_senha)
+    user.save(update_fields=["password"])
+    profile.senha_codigo_hash = ""
+    profile.senha_codigo_ate = None
+    profile.precisa_redefinir_senha = False
+    profile.save(
+        update_fields=[
+            "senha_codigo_hash",
+            "senha_codigo_ate",
+            "precisa_redefinir_senha",
+        ]
+    )
+    return user

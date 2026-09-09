@@ -13,6 +13,7 @@ import CursoPlayerPage from "./pages/CursoPlayerPage";
 import DashboardPage from "./pages/DashboardPage";
 import ExplorarCursosPage from "./pages/ExplorarCursosPage";
 import LoginCpfPage from "./pages/LoginCpfPage";
+import RecuperarSenhaPage from "./pages/RecuperarSenhaPage";
 import RedefinirSenhaPage from "./pages/RedefinirSenhaPage";
 import MeusCursosPage from "./pages/MeusCursosPage";
 import ProgressoPage from "./pages/ProgressoPage";
@@ -38,6 +39,7 @@ export default function AppPlataforma() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginCpfPage />} />
+          <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
           <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
         </Route>
 

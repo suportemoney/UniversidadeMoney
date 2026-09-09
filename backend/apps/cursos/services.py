@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from django.utils import timezone
 
+from apps.core.mail import enviar_email, url_site
+
 from .models import (
     Atividade,
     AulaVideo,
@@ -407,6 +409,7 @@ def avaliar_e_emitir_certificado(matricula):
         emitir_conquista(matricula.usuario, "primeiro-curso", "Primeiro Curso")
         emitir_conquista(matricula.usuario, "especialista", "Especialista")
         emitir_conquista(matricula.usuario, "prova-aprovada", "Prova Aprovada")
+        _enviar_email_certificado(matricula.usuario, matricula.curso)
         return True
 
     matricula.certificado_liberado = False
@@ -425,6 +428,23 @@ def concluir_curso(matricula):
 def emitir_conquista(usuario, slug, titulo):
     """Emite conquista se ainda não existir."""
     Conquista.objects.get_or_create(usuario=usuario, slug=slug, defaults={"titulo": titulo})
+
+
+def _enviar_email_certificado(usuario, curso):
+    email = (getattr(usuario, "email", None) or "").strip()
+    if not email:
+        return
+    nome = usuario.first_name or usuario.get_username()
+    link = url_site("/dashboard/certificados")
+    enviar_email(
+        "Certificado liberado — Universidade Money",
+        (
+            f"Olá, {nome}.\n\n"
+            f"Seu certificado do curso \"{curso.titulo}\" está disponível.\n"
+            f"Acesse: {link}\n"
+        ),
+        [email],
+    )
 
 
 def calcular_horas_usuario(usuario):

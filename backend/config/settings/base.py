@@ -139,6 +139,25 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# SMTP Hostinger (envios transacionais)
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.hostinger.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "notification@moneypromotora.com.br")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip().strip('"').strip("'")
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "1").lower() in ("1", "true", "yes")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "0").lower() in ("1", "true", "yes")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "30"))
+DEFAULT_FROM_EMAIL = os.getenv(
+    "EMAIL_FROM",
+    "Universidade Money <notification@moneypromotora.com.br>",
+)
+SERVER_EMAIL = os.getenv("EMAIL_ADMIN", "admin@moneypromotora.com.br")
+ADMINS = [("Universidade Money", SERVER_EMAIL)]
+VPS_DOMAIN = os.getenv("VPS_DOMAIN", "universidade.moneypromotora.com.br")
+
 # Origins dos nossos frontends (JWT permitido). Default = CORS.
 _frontend_env = os.getenv("FRONTEND_ORIGINS", "").strip()
 FRONTEND_ORIGINS = [

@@ -3,6 +3,7 @@ import AuthLayout from "./components/AuthLayout";
 import GestaoLayout from "./components/GestaoLayout";
 import GestaoRoute from "./components/GestaoRoute";
 import LoginPage from "./pages/LoginPage";
+import RecuperarSenhaPage from "./pages/RecuperarSenhaPage";
 import MfaPage from "./pages/MfaPage";
 import RedefinirSenhaPage from "./pages/RedefinirSenhaPage";
 import GestaoAoVivoPage from "./pages/gestao/GestaoAoVivoPage";
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/gestao" replace />} />
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
           <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
           <Route path="/mfa" element={<MfaPage />} />
         </Route>
