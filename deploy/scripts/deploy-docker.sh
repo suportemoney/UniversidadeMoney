@@ -8,7 +8,7 @@ BASE="${DEPLOY_BASE:-/var/www/universidade}"
 REPO="${DEPLOY_REPO:-$BASE/repo}"
 ENV_FILE=".env"
 DOMAIN="${VPS_DOMAIN:-universidade.moneypromotora.com.br}"
-SERVICES="backend-prod frontend-interno-prod frontend-plataforma-prod frontend-painel-prod"
+SERVICES="backend-prod media-prod frontend-interno-prod frontend-plataforma-prod frontend-painel-prod"
 
 cd "$REPO"
 

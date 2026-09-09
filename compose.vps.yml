@@ -49,6 +49,17 @@ services:
       - universidade
     restart: unless-stopped
 
+  media-prod:
+    image: nginx:1.27-alpine
+    volumes:
+      - /var/www/universidade/media:/data/media:ro
+      - ./docker/nginx/media.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:7113:80"
+    networks:
+      - universidade
+    restart: unless-stopped
+
   frontend-interno-prod:
     build:
       context: .
