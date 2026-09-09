@@ -18,6 +18,5 @@ urlpatterns = [
     path("api/", include("apps.core.urls")),
 ]
 
-# Em desenvolvimento, serve uploads (vídeos, thumbs) em /media/
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Uploads (vídeos, thumbs) em /media/ — também em produção (proxy do nginx de borda)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -2,24 +2,29 @@
 
 ### Edge (importante)
 
-**nginx do HOST** escuta 80/443 e serve **todos** os sites da VPS.  
-Docker **não** ocupa 80/443 — só `127.0.0.1` (faixa 7101+).
+**nginx Docker do EducaMoney** escuta 80/443 (`educamoney_nginx`).  
+O UniversidadeMoney **não** ocupa 80/443 — só `127.0.0.1` (faixa 7101+) e um `server_name` extra injetado em `conf.d/universidade.conf` (sem editar o `default.conf` do EducaMoney).
 
 | Porta local | Serviço |
 |-------------|---------|
 | 7101 | backend-prod |
-| 7102 | backend-hml |
 | 7110 | frontend-interno-prod |
 | 7111 | frontend-plataforma-prod |
 | 7112 | frontend-painel-prod |
 
-### Subdomínios
+### Domínio único
 
-| Host | Upstream |
-|------|----------|
-| `interno.moneypromotora.com.br` | 127.0.0.1:7110 |
-| `plataforma.moneypromotora.com.br` | 127.0.0.1:7111 + API 7101 |
-| `painel-interno.moneypromotora.com.br` | 127.0.0.1:7112 + API 7101 |
+`universidade.moneypromotora.com.br`
+
+| Caminho | Upstream |
+|---------|----------|
+| `/` | 127.0.0.1:7111 (plataforma) |
+| `/interno/` | 127.0.0.1:7110 (interno) |
+| `/painel/` | 127.0.0.1:7112 (painel) |
+| `/api/` `/admin/` | 127.0.0.1:7101 (Django) |
+| `/static/` `/media/` | arquivos em `/var/www/universidade/` |
+
+Produção: branch **`main`** apenas. Sem homolog.
 
 ### Modo LMS interno
 

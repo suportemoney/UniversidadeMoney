@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    base: process.env.VITE_BASE || "/",
     plugins: [react()],
     resolve: {
       alias: {

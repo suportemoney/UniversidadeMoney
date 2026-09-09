@@ -2,41 +2,44 @@
 
 ## Regra da VPS
 
-O **nginx do host** continua na frente (80/443) para **todos** os sites.  
-Containers Docker só escutam em `127.0.0.1` — **nunca** `systemctl stop nginx`.
+O **nginx Docker do EducaMoney** (`educamoney_nginx`) continua na frente (80/443).  
+Containers do UniversidadeMoney só escutam em `127.0.0.1`. O deploy injeta `conf.d/universidade.conf` nesse nginx — **nunca** edita o `default.conf` do EducaMoney.
 
 ## Portas (localhost)
 
 | Porta | Serviço |
 |-------|---------|
 | 7101 | API prod |
-| 7110 | interno |
-| 7111 | plataforma |
-| 7112 | painel |
+| 7110 | interno (`/interno/`) |
+| 7111 | plataforma (`/`) |
+| 7112 | painel (`/painel/`) |
+
+Domínio: `universidade.moneypromotora.com.br`
 
 ## Dev local
 
 ```bash
-cp .env.development.example .env.development
-docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up --build
+cp .env.exemple .env
+# Preencher DJANGO_SECRET_KEY e demais campos
+docker compose -f compose.yml -f compose.dev.yml --env-file .env up --build
 ```
 
-## VPS — recuperar nginx (se foi parado por engano)
+## VPS — recarregar o nginx de borda (EducaMoney)
 
 ```bash
-sudo systemctl start nginx
-sudo systemctl status nginx
+docker exec educamoney_nginx nginx -t
+docker exec educamoney_nginx nginx -s reload
 ```
 
-## VPS — Docker + sites
+## VPS — Docker + site
 
 ```bash
 cd /var/www/universidade/repo
 git pull origin main
 sed -i 's/\r$//' deploy/scripts/*.sh
 bash deploy/scripts/install-docker-vps.sh   # se ainda não tiver Docker
-bash deploy/scripts/deploy-docker.sh prod
-bash deploy/scripts/issue-ssl-certs.sh prod
+bash deploy/scripts/deploy-docker.sh
+bash deploy/scripts/issue-ssl-certs.sh
 ```
 
-SSL usa **certbot do host** (`certbot --nginx`), sem parar o nginx.
+SSL usa **certbot webroot** em `/var/www/certbot` (já montado no `educamoney_nginx`), sem parar 80/443.

@@ -4,23 +4,59 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy produção via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT }}
+          protocol: tcp
+          command_timeout: 40m
+          script_stop: true
+          envs: GH_TOKEN,GITHUB_REPOSITORY
           script: |
-            cd /var/www/universidade/repo
+            set -euo pipefail
+            BASE=/var/www/universidade
+            REPO=$BASE/repo
+            mkdir -p "$BASE/static" "$BASE/media"
+
+            CLONE_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            PUBLIC_URL="https://github.com/${GITHUB_REPOSITORY}.git"
+
+            if [ ! -d "$REPO/.git" ]; then
+              echo "==> Clone inicial em $REPO"
+              rm -rf "$REPO"
+              git clone --branch main "$CLONE_URL" "$REPO"
+            fi
+
+            cd "$REPO"
+            git remote set-url origin "$CLONE_URL"
             git fetch origin main
             git checkout main
             git reset --hard origin/main
-            sed -i 's/\r$//' deploy/scripts/deploy-docker.sh 2>/dev/null || true
-            bash deploy/scripts/deploy-docker.sh prod
+            git remote set-url origin "$PUBLIC_URL"
 
-# Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY
-# Na VPS: .env.production e .env.homolog em /var/www/universidade/repo/
+            find deploy docker -type f -name "*.sh" -exec sed -i 's/\r$//' {} + 2>/dev/null || true
+            chmod +x deploy/scripts/*.sh 2>/dev/null || true
+
+            if [ ! -f "$REPO/.env" ]; then
+              echo "ERRO: $REPO/.env não existe na VPS. Criar a partir de .env.exemple antes do deploy."
+              exit 1
+            fi
+
+            export DEPLOY_SKIP_GIT=1
+            bash deploy/scripts/deploy-docker.sh
+
+# Secrets: VPS_HOST, VPS_USER, VPS_PORT, VPS_PASSWORD
+# Na VPS: .env em /var/www/universidade/repo/ (não versionado)

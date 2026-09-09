@@ -1,16 +1,15 @@
 # GitHub Actions — deploy Docker na VPS
 
-Deploy automático via SSH:
+Push na **`main`** dispara SSH na VPS, clone/fetch do repo e `deploy/scripts/deploy-docker.sh`.
 
-- branch **`main`** → produção (`deploy-docker.sh prod`)
-- branch **`homolog`** → homologação (`deploy-docker.sh hml`)
+Domínio: `universidade.moneypromotora.com.br` (`/` plataforma, `/interno`, `/painel`, `/api`).
 
 ## Pré-requisitos na VPS
 
-- Docker + Compose v2 instalados
-- Clone em `/var/www/universidade/repo`
-- Arquivos `.env.production` e `.env.homolog` (a partir dos exemplos)
-- Stack inicial já sobe (ver [docker.md](docker.md))
+- Docker + Compose v2
+- Diretórios `/var/www/universidade/{repo,static,media}`
+- Arquivo `.env` na raiz do clone (a partir de `.env.exemple`) — **não** versionado
+- 80/443 = container `educamoney_nginx` (EducaMoney); UniversidadeMoney só injeta `universidade.conf`
 
 ```bash
 chmod +x /var/www/universidade/repo/deploy/scripts/deploy-docker.sh
@@ -18,71 +17,56 @@ chmod +x /var/www/universidade/repo/deploy/scripts/deploy-docker.sh
 
 ---
 
-## 1. Chave SSH para o GitHub Actions
-
-```bash
-ssh-keygen -t ed25519 -C "github-actions-universidade" -f ~/.ssh/universidade_deploy -N ""
-```
-
-- Privada → secret `VPS_SSH_KEY`
-- Pública → `~/.ssh/authorized_keys` na VPS
-
-Teste:
-
-```bash
-ssh -i ~/.ssh/universidade_deploy USUARIO@HOST "echo ok"
-```
-
----
-
-## 2. Secrets no GitHub
+## Secrets no GitHub
 
 | Secret | Valor |
 |--------|-------|
-| `VPS_HOST` | IP ou hostname da VPS |
-| `VPS_USER` | usuário SSH |
-| `VPS_SSH_KEY` | chave privada completa |
+| `VPS_HOST` | IP da VPS |
+| `VPS_USER` | usuário SSH (ex.: root) |
+| `VPS_PORT` | porta SSH (ex.: 22) |
+| `VPS_PASSWORD` | senha SSH |
+
+Os valores saem do `.env` local (`PASSWORD_VPS` → secret `VPS_PASSWORD`). Não commitar `.env`.
+
+O clone na VPS usa o `GITHUB_TOKEN` do job (repo privado).
 
 ---
 
-## 3. Workflows
+## Workflow
 
 | Arquivo | Branch | Alvo |
 |---------|--------|------|
-| [deploy-main.yml](../.github/workflows/deploy-main.yml) | `main` | prod |
-| [deploy-homolog.yml](../.github/workflows/deploy-homolog.yml) | `homolog` | hml |
-
-Fluxo:
+| [deploy-main.yml](../.github/workflows/deploy-main.yml) | `main` | produção |
 
 ```
-push main|homolog → Actions → SSH → deploy/scripts/deploy-docker.sh prod|hml
+push main → Actions → SSH (senha) → git clone/fetch → deploy-docker.sh
 ```
+
+O Action **não** sobrescreve o `.env` da VPS.
 
 ---
 
-## 4. Testar
-
-1. Push na `main` ou `homolog`
-2. GitHub → **Actions**
-3. Conferir:
+## Testar
 
 ```bash
 curl -I https://universidade.moneypromotora.com.br/
-curl -I https://universidade-hml.moneypromotora.com.br/
+curl -I https://universidade.moneypromotora.com.br/interno/
+curl -I https://universidade.moneypromotora.com.br/painel/
+curl -I https://universidade.moneypromotora.com.br/api/
 ```
 
 ---
 
-## 5. Troubleshooting
+## Troubleshooting
 
 | Problema | Solução |
 |----------|---------|
-| `Permission denied (publickey)` | Conferir `VPS_SSH_KEY` e `authorized_keys` |
-| Falta `.env.production` | Copiar do `.example` na VPS |
-| Gateway sem HTTPS | Rodar `certbot-init` e recrear gateway |
-| Branch `homolog` inexistente | Criar e dar push: `git checkout -b homolog && git push -u origin homolog` |
+| `Permission denied` | Conferir `VPS_PASSWORD` e usuário |
+| Falta `.env` | Copiar do `.env.exemple` na VPS (DEBUG=0, DB_HOST=db) |
+| 502 | Containers em 7101/7110/7111/7112? `docker compose ps` |
+| Certificado | DNS A no domínio e `issue-ssl-certs.sh` |
 
 ## Segurança
 
-- Chave dedicada só para CI/CD
-- Não commitar `.env.production` / `.env.homolog` / chaves privadas
+- `.env` só na VPS e na máquina local
+- Não commitar senhas, `DJANGO_SECRET_KEY` nem chave privada

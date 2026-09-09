@@ -20,10 +20,20 @@ import TrilhaDetalhePage from "./pages/TrilhaDetalhePage";
 import TrilhasPage from "./pages/TrilhasPage";
 import "./App.css";
 
+/** Basename do Vite (produção em / ; local sem prefixo). */
+function routerBasename() {
+  const raw = import.meta.env.BASE_URL || "/";
+  if (raw === "/") return undefined;
+  return raw.replace(/\/$/, "");
+}
+
 /** Rotas da plataforma interna (cursos + login CPF) — sem planos. */
 export default function AppPlataforma() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter
+      basename={routerBasename()}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route element={<AuthLayout />}>

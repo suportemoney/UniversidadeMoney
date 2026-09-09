@@ -19,9 +19,19 @@ import GestaoTrilhaEditorPage from "./pages/gestao/GestaoTrilhaEditorPage";
 import GestaoTrilhasPage from "./pages/gestao/GestaoTrilhasPage";
 import "./App.css";
 
+/** Basename do Vite (produção em /painel/ ; local sem prefixo). */
+function routerBasename() {
+  const raw = import.meta.env.BASE_URL || "/";
+  if (raw === "/") return undefined;
+  return raw.replace(/\/$/, "");
+}
+
 export default function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter
+      basename={routerBasename()}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <Routes>
         <Route path="/" element={<Navigate to="/gestao" replace />} />
         <Route element={<AuthLayout />}>

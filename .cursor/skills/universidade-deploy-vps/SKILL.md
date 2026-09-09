@@ -1,47 +1,43 @@
 ---
 name: universidade-deploy-vps
-description: Padroniza o deploy Docker do UniversidadeMoney (compose VPS, gateway nginx, certbot, Actions main/homolog). Use ao criar/ajustar compose, docker/, deploy/scripts e workflows.
+description: Padroniza o deploy Docker do UniversidadeMoney (compose VPS, nginx do host, certbot, Action na main). Use ao criar/ajustar compose, docker/, deploy/scripts e workflows.
 disable-model-invocation: true
 ---
 
 # UniversidadeMoney — Deploy Docker na VPS
 
-## Alvos
+## Alvo
 
 | Ambiente | Domínio | Branch | Script |
 |----------|---------|--------|--------|
-| production | `universidade.moneypromotora.com.br` | `main` | `deploy-docker.sh prod` |
-| homologation | `universidade-hml.moneypromotora.com.br` | `homolog` | `deploy-docker.sh hml` |
+| production | `universidade.moneypromotora.com.br` | `main` | `deploy-docker.sh` |
 
-Gateway nginx (container) termina TLS e roteia por `server_name` para `backend-prod` / `backend-hml` e frontends estáticos.
+Caminhos: `/` plataforma, `/interno` interno, `/painel` painel, `/api` Django.
+
+nginx Docker do **EducaMoney** termina TLS. Docker do Universidade só em `127.0.0.1:7101+`. Não editar `default.conf` do EducaMoney.
 
 ## Compose
 
 ```bash
-docker compose -f compose.yml -f compose.vps.yml --env-file .env.production up -d --build
+docker compose -f compose.yml -f compose.vps.yml --env-file .env up -d --build
 ```
 
-Env files na VPS (fora do Git): `.env.production`, `.env.homolog`.
+Env na VPS (fora do Git): `/var/www/universidade/repo/.env`
 
-## Bancos
+## Banco
 
-Um Postgres Docker; databases `universidade_money` (prod) e `universidade_money_hml` (hml).
+Um Postgres Docker; database `universidade_money`.
 
 ## SSL
 
-Primeira vez: profile `init` + `certbot-init`, depois recrear `gateway`. Renovação via serviço `certbot`.
+`bash deploy/scripts/issue-ssl-certs.sh` (certbot do host, um domínio).
 
 ## Actions
 
-- `deploy-main.yml` → prod
-- `deploy-homolog.yml` → hml
-
-## Legado
-
-`deploy.sh` + systemd + nginx host (porta 7101) só para rollback. Preferir Docker.
+- `deploy-main.yml` → prod (push `main`)
+- Secrets: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_PASSWORD`
 
 ## Docs
 
 - `docs/docker.md`
-- `docs/docker-migrate.md`
 - `docs/github-actions-vps.md`

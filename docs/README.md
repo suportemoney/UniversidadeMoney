@@ -6,9 +6,9 @@ Documentação prática do stack **Docker** (caminho padrão) e referências leg
 
 | Guia | Conteúdo |
 |------|----------|
-| [docker.md](docker.md) | Dev local, VPS, SSL, 3 subdomínios |
+| [docker.md](docker.md) | Dev local, VPS, SSL, domínio único |
 | [docker-migrate.md](docker-migrate.md) | Migrar Postgres/media |
-| [github-actions-vps.md](github-actions-vps.md) | Actions main/homolog |
+| [github-actions-vps.md](github-actions-vps.md) | Action na `main` |
 
 ## Legado
 

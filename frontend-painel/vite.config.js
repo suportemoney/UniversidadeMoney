@@ -23,6 +23,7 @@ function backendProxy() {
 }
 
 export default defineConfig({
+  base: process.env.VITE_BASE || "/",
   plugins: [react()],
   resolve: {
     alias: {

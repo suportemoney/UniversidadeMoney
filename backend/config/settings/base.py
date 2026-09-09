@@ -6,20 +6,29 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Carrega .env: backend local, container (/app/.env) e legado VPS systemd
+# Carrega .env na raiz do repo, no container e na VPS
+load_dotenv(BASE_DIR.parent / ".env")
 load_dotenv(BASE_DIR / ".env")
 load_dotenv("/app/.env", override=False)
+load_dotenv("/var/www/universidade/repo/.env", override=False)
 load_dotenv("/var/www/universidade/.env", override=False)
 
 APP_ENV = os.getenv("APP_ENV", "production")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-inseguro-trocar-na-vps")
+SECRET_KEY = (
+    os.getenv("DJANGO_SECRET_KEY")
+    or os.getenv("SECRET_KEY")
+    or "dev-inseguro-trocar-na-vps"
+)
 
 DEBUG = False
 
+_hosts_raw = os.getenv("DJANGO_ALLOWED_HOSTS") or os.getenv(
+    "ALLOWED_HOSTS", "localhost"
+)
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+    for host in _hosts_raw.split(",")
     if host.strip()
 ]
 

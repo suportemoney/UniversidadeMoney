@@ -12,5 +12,3 @@ volumes:
   pgdata_vps:
   static_prod:
   media_prod:
-  static_hml:
-  media_hml:

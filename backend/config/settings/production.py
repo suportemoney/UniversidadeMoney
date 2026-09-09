@@ -17,3 +17,18 @@ DATABASES = {
 }
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Static via WhiteNoise (nginx do EducaMoney faz proxy /static/ para este backend)
+_mw = list(MIDDLEWARE)
+if "whitenoise.middleware.WhiteNoiseMiddleware" not in _mw:
+    _mw.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+MIDDLEWARE = _mw
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}

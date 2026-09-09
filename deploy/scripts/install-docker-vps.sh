@@ -45,4 +45,4 @@ docker compose version
 echo ""
 echo "Próximo passo:"
 echo "  cd /var/www/universidade/repo"
-echo "  bash deploy/scripts/issue-ssl-certs.sh prod"
+echo "  bash deploy/scripts/issue-ssl-certs.sh"

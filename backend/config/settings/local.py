@@ -4,7 +4,10 @@ import os
 from .base import *  # noqa: F403
 
 APP_ENV = os.getenv("APP_ENV", "development")
-DEBUG = APP_ENV == "development" or os.getenv("DEBUG", "1") == "1"
+DEBUG = (
+    os.getenv("DJANGO_DEBUG", os.getenv("DEBUG", "1")).lower()
+    in ("1", "true", "yes")
+)
 
 DATABASES = {
     "default": {

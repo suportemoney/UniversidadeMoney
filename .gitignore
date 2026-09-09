@@ -33,9 +33,6 @@ yarn-error.log*
 .env.development
 .env.homolog
 .env.production
-!.env.development.example
-!.env.homolog.example
-!.env.production.example
 
 # IDE / OS
 .idea/

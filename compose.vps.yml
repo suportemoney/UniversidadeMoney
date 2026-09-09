@@ -1,5 +1,6 @@
-# VPS: Docker NÃO ocupa 80/443 — nginx do HOST faz o edge (outros sites compartilham).
+# VPS: Docker NÃO ocupa 80/443 — nginx do HOST faz o edge (EducaMoney e outros sites).
 # Containers só em 127.0.0.1 (faixa 7101+).
+# Um domínio: ${VPS_DOMAIN} — / plataforma, /interno, /painel, /api.
 
 services:
   db:
@@ -8,10 +9,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-${DB_USER:-universidade_user}}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD:?definir POSTGRES_PASSWORD ou DB_PASSWORD}}
       POSTGRES_DB: ${POSTGRES_DB:-${DB_NAME:-universidade_money}}
-      POSTGRES_MULTIPLE_DATABASES: universidade_money_hml
     volumes:
       - pgdata_vps:/var/lib/postgresql/data
-      - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
     networks:
       - universidade
     healthcheck:
@@ -26,13 +25,13 @@ services:
       context: .
       dockerfile: docker/backend.Dockerfile
     env_file:
-      - .env.production
+      - .env
     environment:
       APP_ENV: production
       DJANGO_SETTINGS_MODULE: config.settings.production
       DB_HOST: db
       DB_PORT: "5432"
-      DB_NAME: ${DB_NAME_PROD:-universidade_money}
+      DB_NAME: ${DB_NAME:-universidade_money}
       STATIC_ROOT: /data/static
       MEDIA_ROOT: /data/media
     volumes:
@@ -40,32 +39,6 @@ services:
       - /var/www/universidade/media:/data/media
     ports:
       - "127.0.0.1:7101:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - universidade
-    restart: unless-stopped
-
-  backend-hml:
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-    env_file:
-      - .env.homolog
-    environment:
-      APP_ENV: homologation
-      DJANGO_SETTINGS_MODULE: config.settings.production
-      DB_HOST: db
-      DB_PORT: "5432"
-      DB_NAME: ${DB_NAME_HML:-universidade_money_hml}
-      STATIC_ROOT: /data/static
-      MEDIA_ROOT: /data/media
-    volumes:
-      - /var/www/universidade/static-hml:/data/static
-      - /var/www/universidade/media-hml:/data/media
-    ports:
-      - "127.0.0.1:7102:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -81,8 +54,11 @@ services:
         FRONTEND_DIR: frontend-plataforma
         BUILD_COMMAND: npm run build:interno
         VITE_SURFACE: interno
-        VITE_API_URL: https://${DOMAIN_INTERNO:-interno.moneypromotora.com.br}/api
-        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}/login
+        VITE_BASE: /interno/
+        VITE_API_URL: /api
+        VITE_PLATAFORMA_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}/login
+        VITE_INTERNO_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}/interno
+        VITE_PAINEL_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}/painel
     ports:
       - "127.0.0.1:7110:80"
     networks:
@@ -97,9 +73,11 @@ services:
         FRONTEND_DIR: frontend-plataforma
         BUILD_COMMAND: npm run build
         VITE_SURFACE: plataforma
-        VITE_API_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}/api
-        VITE_INTERNO_URL: https://${DOMAIN_INTERNO:-interno.moneypromotora.com.br}
-        VITE_PAINEL_URL: https://${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}
+        VITE_BASE: /
+        VITE_API_URL: /api
+        VITE_PLATAFORMA_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}
+        VITE_INTERNO_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}/interno
+        VITE_PAINEL_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}/painel
     ports:
       - "127.0.0.1:7111:80"
     networks:
@@ -113,58 +91,13 @@ services:
       args:
         FRONTEND_DIR: frontend-painel
         BUILD_COMMAND: npm run build
-        VITE_API_URL: https://${DOMAIN_PAINEL:-painel-interno.moneypromotora.com.br}/api
-        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA:-plataforma.moneypromotora.com.br}
+        VITE_BASE: /painel/
+        VITE_API_URL: /api
+        VITE_PLATAFORMA_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}
+        VITE_INTERNO_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}/interno
+        VITE_PAINEL_URL: https://${VPS_DOMAIN:-universidade.moneypromotora.com.br}/painel
     ports:
       - "127.0.0.1:7112:80"
-    networks:
-      - universidade
-    restart: unless-stopped
-
-  frontend-interno-hml:
-    build:
-      context: .
-      dockerfile: docker/frontend.Dockerfile
-      args:
-        FRONTEND_DIR: frontend-plataforma
-        BUILD_COMMAND: npm run build:interno
-        VITE_SURFACE: interno
-        VITE_API_URL: https://${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}/api
-        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}/login
-    ports:
-      - "127.0.0.1:7120:80"
-    networks:
-      - universidade
-    restart: unless-stopped
-
-  frontend-plataforma-hml:
-    build:
-      context: .
-      dockerfile: docker/frontend.Dockerfile
-      args:
-        FRONTEND_DIR: frontend-plataforma
-        BUILD_COMMAND: npm run build
-        VITE_SURFACE: plataforma
-        VITE_API_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}/api
-        VITE_INTERNO_URL: https://${DOMAIN_INTERNO_HML:-interno-hml.moneypromotora.com.br}
-        VITE_PAINEL_URL: https://${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}
-    ports:
-      - "127.0.0.1:7121:80"
-    networks:
-      - universidade
-    restart: unless-stopped
-
-  frontend-painel-hml:
-    build:
-      context: .
-      dockerfile: docker/frontend.Dockerfile
-      args:
-        FRONTEND_DIR: frontend-painel
-        BUILD_COMMAND: npm run build
-        VITE_API_URL: https://${DOMAIN_PAINEL_HML:-painel-interno-hml.moneypromotora.com.br}/api
-        VITE_PLATAFORMA_URL: https://${DOMAIN_PLATAFORMA_HML:-plataforma-hml.moneypromotora.com.br}
-    ports:
-      - "127.0.0.1:7122:80"
     networks:
       - universidade
     restart: unless-stopped

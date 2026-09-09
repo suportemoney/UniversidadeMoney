@@ -8,15 +8,15 @@ LMS **interno** de colaboradores (sem planos comerciais no fluxo). Integração 
 
 | App | Porta local | Produção |
 |-----|-------------|----------|
-| `frontend-plataforma` | 5173 | `plataforma.moneypromotora.com.br` |
-| `frontend-painel` | 5174 | `painel-interno.moneypromotora.com.br` |
-| plataforma modo `interno` | 5175 | `interno.moneypromotora.com.br` |
+| `frontend-plataforma` | 5173 | `https://universidade.moneypromotora.com.br/` |
+| plataforma modo `interno` | 5175 | `https://universidade.moneypromotora.com.br/interno/` |
+| `frontend-painel` | 5174 | `https://universidade.moneypromotora.com.br/painel/` |
 
 ## Dev local
 
 ```bash
-cp .env.development.example .env.development
-docker compose -f compose.yml -f compose.dev.yml --env-file .env.development up --build
+cp .env.exemple .env
+docker compose -f compose.yml -f compose.dev.yml --env-file .env up --build
 ```
 
 Ou sem Docker nos fronts:
@@ -39,7 +39,7 @@ No painel: **API** → gera `token_temp` → outro sistema troca por `token_perm
 Variáveis sugeridas no sistema externo:
 
 ```env
-UNIVERSIDADE_API_URL=https://plataforma.moneypromotora.com.br/api
+UNIVERSIDADE_API_URL=https://universidade.moneypromotora.com.br/api
 UNIVERSIDADE_API_TOKEN=um_...
 ```
 
