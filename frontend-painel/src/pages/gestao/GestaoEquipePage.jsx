@@ -72,10 +72,10 @@ export default function GestaoEquipePage() {
         nome: modal.item.first_name || "",
         email: modal.item.email || "",
         cpf: modal.item.cpf || "",
-        cargo: modal.item.cargo || "",
+        cargo: modal.item.cargo || NIVEL_LABELS[modal.item.nivel_acesso] || "",
         password: "",
         nivel_acesso: modal.item.nivel_acesso || "gestor",
-        setor: modal.item.setor || "",
+        setor: modal.item.setor != null && modal.item.setor !== "" ? String(modal.item.setor) : "",
       });
     } else {
       setForm(FORM_CRIAR_VAZIO);
@@ -332,11 +332,29 @@ export default function GestaoEquipePage() {
           {modal.item && (
             <label className="gestao-field">
               Cargo
-              <input
-                value={form.cargo}
-                onChange={(e) => setForm({ ...form, cargo: e.target.value })}
-                placeholder="Ex.: Analista de TI"
-              />
+              <span className="gestao-select-wrap">
+                <select
+                  value={form.cargo}
+                  onChange={(e) => {
+                    const cargo = e.target.value;
+                    const nivel = NIVEIS_EQUIPE.find((n) => n.label === cargo)?.value;
+                    setForm({
+                      ...form,
+                      cargo,
+                      ...(nivel ? { nivel_acesso: nivel } : {}),
+                    });
+                  }}
+                  disabled={Boolean(modal.item?.is_superuser)}
+                >
+                  <option value="">Selecione o cargo</option>
+                  {NIVEIS_EQUIPE.map((n) => (
+                    <option key={n.value} value={n.label}>{n.label}</option>
+                  ))}
+                  {form.cargo && !NIVEIS_EQUIPE.some((n) => n.label === form.cargo) ? (
+                    <option value={form.cargo}>{form.cargo}</option>
+                  ) : null}
+                </select>
+              </span>
             </label>
           )}
           <label className="gestao-field">
@@ -352,25 +370,36 @@ export default function GestaoEquipePage() {
           </label>
           <label className="gestao-field">
             Nível de acesso
-            <select
-              value={form.nivel_acesso}
-              onChange={(e) => setForm({ ...form, nivel_acesso: e.target.value })}
-              required
-              disabled={Boolean(modal.item?.is_superuser)}
-            >
-              {NIVEIS_EQUIPE.map((n) => (
-                <option key={n.value} value={n.value}>{n.label}</option>
-              ))}
-            </select>
+            <span className="gestao-select-wrap">
+              <select
+                value={form.nivel_acesso}
+                onChange={(e) => {
+                  const nivel_acesso = e.target.value;
+                  setForm({
+                    ...form,
+                    nivel_acesso,
+                    cargo: NIVEL_LABELS[nivel_acesso] || form.cargo,
+                  });
+                }}
+                required
+                disabled={Boolean(modal.item?.is_superuser)}
+              >
+                {NIVEIS_EQUIPE.map((n) => (
+                  <option key={n.value} value={n.value}>{n.label}</option>
+                ))}
+              </select>
+            </span>
           </label>
           <label className="gestao-field">
             Setor
-            <select value={form.setor} onChange={(e) => setForm({ ...form, setor: e.target.value })}>
-              <option value="">Geral</option>
-              {setores.map((s) => (
-                <option key={s.id} value={s.id}>{s.nome}</option>
-              ))}
-            </select>
+            <span className="gestao-select-wrap">
+              <select value={form.setor} onChange={(e) => setForm({ ...form, setor: e.target.value })}>
+                <option value="">Geral</option>
+                {setores.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </span>
           </label>
         </form>
       </Modal>

@@ -2236,6 +2236,43 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+/* Seta no wrapper — não depende do background do <select>. */
+.gestao-select-wrap {
+  position: relative;
+  display: block;
+}
+
+.gestao-select-wrap select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 2.5rem;
+}
+
+.gestao-select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--color-accent, #0bd5f0);
+  border-bottom: 2px solid var(--color-accent, #0bd5f0);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+
+.gestao-field select,
+.gestao-form select,
+.gestao-form--modal select,
+.gestao-questao select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 2.4rem;
+}
+
 .gestao-field input:focus,
 .gestao-field textarea:focus,
 .gestao-field select:focus,
@@ -3346,14 +3383,19 @@
 
 .gestao-form input,
 .gestao-form textarea,
-.gestao-form select,
 .gestao-form--modal input,
 .gestao-form--modal textarea,
-.gestao-form--modal select,
 .gestao-field input,
-.gestao-field textarea,
-.gestao-field select {
+.gestao-field textarea {
   background: var(--color-bg-elevated) !important;
+  color: var(--color-text) !important;
+  border-color: var(--gestao-border) !important;
+}
+
+.gestao-form select,
+.gestao-form--modal select,
+.gestao-field select {
+  background-color: var(--color-bg-elevated) !important;
   color: var(--color-text) !important;
   border-color: var(--gestao-border) !important;
 }
@@ -3459,14 +3501,33 @@ html[data-theme="dark"] .gestao-form input,
 html:not([data-theme="light"]) .gestao-form input,
 html[data-theme="dark"] .gestao-form textarea,
 html:not([data-theme="light"]) .gestao-form textarea,
-html[data-theme="dark"] .gestao-form select,
-html:not([data-theme="light"]) .gestao-form select,
 html[data-theme="dark"] .convites-token-cell code,
 html:not([data-theme="light"]) .convites-token-cell code {
   appearance: none;
   -webkit-appearance: none;
   background: #0c1528 !important;
   background-color: #0c1528 !important;
+  color: #f2f6ff !important;
+  border-color: rgba(11, 213, 240, 0.18) !important;
+}
+
+html[data-theme="dark"] .gestao-form select,
+html:not([data-theme="light"]) .gestao-form select,
+html[data-theme="dark"] .gestao-form--modal select,
+html:not([data-theme="light"]) .gestao-form--modal select,
+html[data-theme="dark"] .gestao-field select,
+html:not([data-theme="light"]) .gestao-field select,
+html[data-theme="dark"] .gestao-questao select,
+html:not([data-theme="light"]) .gestao-questao select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 2.4rem;
+  background-color: #0c1528 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230bd5f0' d='M1.2.6 6 5.4 10.8.6 12 1.8 6 7.8 0 1.8z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.85rem center !important;
+  background-size: 12px 8px !important;
   color: #f2f6ff !important;
   border-color: rgba(11, 213, 240, 0.18) !important;
 }
@@ -3748,8 +3809,6 @@ html:not([data-theme="light"]) .gestao-opcoes > span {
 
 html[data-theme="dark"] .gestao-questao textarea,
 html:not([data-theme="light"]) .gestao-questao textarea,
-html[data-theme="dark"] .gestao-questao select,
-html:not([data-theme="light"]) .gestao-questao select,
 html[data-theme="dark"] .gestao-opcao-row input:not([type="radio"]),
 html:not([data-theme="light"]) .gestao-opcao-row input:not([type="radio"]) {
   appearance: none;
