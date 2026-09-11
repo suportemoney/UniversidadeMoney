@@ -11,6 +11,23 @@ MENSAGEM_GENERICA_RECUPERACAO = (
 )
 
 
+def mascarar_email(email):
+    """Ex.: suporte.moneypromotora@gmail.com → supo**********ora@gmail.com."""
+    bruto = (email or "").strip()
+    if "@" not in bruto:
+        return ""
+    local, _, dominio = bruto.partition("@")
+    if not local or not dominio:
+        return ""
+    if len(local) >= 7:
+        visivel = f"{local[:4]}**********{local[-3:]}"
+    elif len(local) >= 2:
+        visivel = f"{local[0]}**********{local[-1]}"
+    else:
+        visivel = f"{local}**********"
+    return f"{visivel}@{dominio}"
+
+
 def url_site(caminho="/"):
     """URL pública da plataforma (dev = localhost, senão HTTPS do domínio)."""
     caminho = caminho if caminho.startswith("/") else f"/{caminho}"

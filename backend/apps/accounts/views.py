@@ -184,15 +184,14 @@ class TokenAcessoAtivarView(APIView):
 
 
 class RecuperarSenhaView(APIView):
-    """Solicita código OTP por e-mail (resposta genérica)."""
+    """Solicita código OTP por e-mail (e-mail mascarado se enviou)."""
 
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
 
     def post(self, request):
         identificador = request.data.get("identificador") or request.data.get("email") or ""
-        mensagem = solicitar_recuperacao_senha(identificador)
-        return Response({"message": mensagem})
+        return Response(solicitar_recuperacao_senha(identificador))
 
 
 class RecuperarSenhaConfirmarView(APIView):

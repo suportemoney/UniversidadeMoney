@@ -11,6 +11,7 @@ export default function RecuperarSenhaPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [confirma, setConfirma] = useState("");
   const [aviso, setAviso] = useState("");
+  const [emailMascarado, setEmailMascarado] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,13 @@ export default function RecuperarSenhaPage() {
     setLoading(true);
     try {
       const data = await solicitarRecuperarSenha(identificador);
-      setAviso(data.message || "Se houver uma conta com e-mail cadastrado, enviaremos um código.");
+      const mascarado = data.email_mascarado || "";
+      setEmailMascarado(mascarado);
+      setAviso(
+        mascarado
+          ? `Enviamos um código para ${mascarado}.`
+          : (data.message || "Se houver uma conta com e-mail cadastrado, enviaremos um código.")
+      );
       setPasso(2);
     } catch (err) {
       setErro(err.message || "Não foi possível enviar o código.");
@@ -58,7 +65,9 @@ export default function RecuperarSenhaPage() {
       <p className="auth-subtitle">
         {passo === 1
           ? "Informe CPF, usuário ou e-mail. Enviaremos um código se houver conta com e-mail."
-          : "Digite o código recebido e a nova senha."}
+          : (emailMascarado
+            ? `Digite o código enviado para ${emailMascarado} e a nova senha.`
+            : "Digite o código recebido e a nova senha.")}
       </p>
       {aviso && <div className="alert alert-success">{aviso}</div>}
       {erro && <div className="alert alert-error">{erro}</div>}

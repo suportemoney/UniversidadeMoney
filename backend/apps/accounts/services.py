@@ -9,7 +9,12 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
 
-from apps.core.mail import MENSAGEM_GENERICA_RECUPERACAO, enviar_email, url_site
+from apps.core.mail import (
+    MENSAGEM_GENERICA_RECUPERACAO,
+    enviar_email,
+    mascarar_email,
+    url_site,
+)
 
 from .models import Profile, TokenAcesso
 from .validators import cpf_valido, normalizar_cpf
@@ -233,8 +238,8 @@ def localizar_usuario_recuperacao(identificador: str):
     return User.objects.filter(username__iexact=ident.lower(), is_active=True).first()
 
 
-def solicitar_recuperacao_senha(identificador: str) -> str:
-    """Gera OTP e envia se a conta tiver e-mail. Resposta sempre genérica."""
+def solicitar_recuperacao_senha(identificador: str) -> dict:
+    """Gera OTP e envia se a conta tiver e-mail. Inclui e-mail mascarado quando enviou."""
     user = localizar_usuario_recuperacao(identificador)
     email = (getattr(user, "email", None) or "").strip() if user else ""
     if user and email:
@@ -255,7 +260,15 @@ def solicitar_recuperacao_senha(identificador: str) -> str:
             ),
             [email],
         )
-    return MENSAGEM_GENERICA_RECUPERACAO
+        mascarado = mascarar_email(email)
+        return {
+            "message": f"Enviamos um código para {mascarado}.",
+            "email_mascarado": mascarado,
+        }
+    return {
+        "message": MENSAGEM_GENERICA_RECUPERACAO,
+        "email_mascarado": None,
+    }
 
 
 def confirmar_recuperacao_senha(identificador: str, codigo: str, nova_senha: str):
