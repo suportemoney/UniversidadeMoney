@@ -229,6 +229,21 @@ export async function mfaVerificar(codigo, confiarDispositivo = false) {
   return data;
 }
 
+export async function mfaEmailEnviar() {
+  return apiFetch("/auth/mfa/email/enviar/", { method: "POST", body: JSON.stringify({}) });
+}
+
+export async function mfaEmailVerificar(codigo, confiarDispositivo = false) {
+  const { setDispositivoToken } = await import("../utils/dispositivoMfa");
+  const data = await apiFetch("/auth/mfa/email/verificar/", {
+    method: "POST",
+    body: JSON.stringify({ codigo, confiar_dispositivo: confiarDispositivo }),
+  });
+  if (data.access) setTokens(data.access, data.refresh);
+  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
+  return data;
+}
+
 export async function logout() {
   clearTokens();
 }

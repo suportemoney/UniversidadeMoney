@@ -61,17 +61,11 @@ class Command(BaseCommand):
 
         aplicar_nivel_acesso(user, Profile.NIVEL_ADMINISTRADOR)
 
-        cpf_env = (os.getenv("SUPERUSER_CPF") or "").strip()
-        if cpf_env:
-            from apps.accounts.validators import cpf_valido, normalizar_cpf
-
-            cpf_norm = normalizar_cpf(cpf_env)
-            if cpf_valido(cpf_norm):
-                profile = user.profile
-                if not profile.cpf:
-                    if not Profile.objects.filter(cpf=cpf_norm).exclude(user=user).exists():
-                        profile.cpf = cpf_norm
-                        profile.save(update_fields=["cpf"])
+        # Superuser pioneiro não usa CPF — login só pelo username (ex.: admin)
+        profile = user.profile
+        if profile.cpf:
+            profile.cpf = None
+            profile.save(update_fields=["cpf"])
 
         acao = "criado" if created else "já existia (senha preservada)"
         self.stdout.write(self.style.SUCCESS(f"Superuser '{username}' {acao}."))

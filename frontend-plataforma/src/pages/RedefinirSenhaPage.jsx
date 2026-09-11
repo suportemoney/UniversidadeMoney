@@ -7,6 +7,7 @@ import { precisaMfaPainelPendente, urlMfaPainel } from "../utils/posLogin";
 export default function RedefinirSenhaPage() {
   const navigate = useNavigate();
   const [cpf, setCpf] = useState("");
+  const [temCpf, setTemCpf] = useState(true);
   const [novaSenha, setNovaSenha] = useState("");
   const [confirma, setConfirma] = useState("");
   const [erro, setErro] = useState("");
@@ -18,7 +19,9 @@ export default function RedefinirSenhaPage() {
       .then((me) => {
         if (precisaMfaPainelPendente(me)) {
           window.location.replace(urlMfaPainel());
+          return;
         }
+        setTemCpf(Boolean(me?.cpf));
       })
       .catch(() => {});
   }, []);
@@ -53,22 +56,26 @@ export default function RedefinirSenhaPage() {
     <>
       <h2>Redefinir senha</h2>
       <p className="auth-subtitle">
-        Confirme seu CPF e escolha uma nova senha para continuar na plataforma.
+        {temCpf
+          ? "Confirme seu CPF e escolha uma nova senha para continuar na plataforma."
+          : "Escolha uma nova senha para continuar na plataforma."}
       </p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <form onSubmit={handleSubmit} className="auth-form">
-        <label>
-          CPF
-          <input
-            type="text"
-            value={cpf}
-            onChange={(e) => setCpf(formatarCpf(e.target.value))}
-            required
-            inputMode="numeric"
-            placeholder="000.000.000-00"
-            autoComplete="off"
-          />
-        </label>
+        {temCpf && (
+          <label>
+            CPF
+            <input
+              type="text"
+              value={cpf}
+              onChange={(e) => setCpf(formatarCpf(e.target.value))}
+              required
+              inputMode="numeric"
+              placeholder="000.000.000-00"
+              autoComplete="off"
+            />
+          </label>
+        )}
         <label>
           Nova senha
           <input

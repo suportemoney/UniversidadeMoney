@@ -61,4 +61,14 @@ urlpatterns = [
         views_mfa.MfaVerificarView.as_view(),
         name="auth-mfa-verificar",
     ),
+    path(
+        "mfa/email/enviar/",
+        views_mfa.MfaEmailEnviarView.as_view(),
+        name="auth-mfa-email-enviar",
+    ),
+    path(
+        "mfa/email/verificar/",
+        views_mfa.MfaEmailVerificarView.as_view(),
+        name="auth-mfa-email-verificar",
+    ),
 ]

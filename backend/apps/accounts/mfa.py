@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from apps.accounts.models import DispositivoConfiavelMfa, Profile
 from apps.accounts.validators import cpf_valido, normalizar_cpf
+from apps.core.mail import enviar_email, mascarar_email
 
 CACHE_CPF_MFA_TTL = 900  # 15 min
 DIAS_DISPOSITIVO_CONFIAVEL = 30
@@ -37,12 +38,28 @@ def limpar_cpf_verificado_mfa(user_id: int):
     Profile.objects.filter(user_id=user_id).update(mfa_cpf_ok_ate=None)
 
 
+def usuario_dispensa_cpf_mfa(user) -> bool:
+    """Superuser e contas sem CPF (admin pioneiro) não usam CPF no 2FA."""
+    if getattr(user, "is_superuser", False):
+        return True
+    profile = getattr(user, "profile", None)
+    return not bool((getattr(profile, "cpf", None) or "").strip())
+
+
+def mfa_identidade_ok(user) -> bool:
+    """CPF conferido, ou conta que não exige CPF."""
+    if usuario_dispensa_cpf_mfa(user):
+        return True
+    return cpf_foi_verificado_mfa(user.id)
+
+
 def verificar_cpf_do_usuario(user, cpf: str):
     """
     Confere CPF com o Profile.
-    Se a conta ainda não tem CPF (ex.: superuser do ensure_superuser),
-    vincula o CPF informado na primeira passagem pelo MFA.
+    Superuser nunca vincula CPF. Outras contas sem CPF vinculam na 1ª vez.
     """
+    if getattr(user, "is_superuser", False):
+        raise ValueError("Esta conta não usa CPF. Entre com o usuário admin.")
     cpf_norm = normalizar_cpf(cpf)
     if not cpf_valido(cpf_norm):
         raise ValueError("CPF inválido.")
@@ -95,7 +112,7 @@ def verificar_codigo_totp(user, codigo: str) -> bool:
 
 
 def confirmar_enroll_totp(user, codigo: str):
-    if not cpf_foi_verificado_mfa(user.id):
+    if not mfa_identidade_ok(user):
         raise ValueError("Confirme o CPF antes de ativar o autenticador.")
     if not verificar_codigo_totp(user, codigo):
         raise ValueError("Código inválido. Confira o app autenticador.")
@@ -107,7 +124,7 @@ def confirmar_enroll_totp(user, codigo: str):
 
 
 def verificar_login_totp(user, codigo: str):
-    if not cpf_foi_verificado_mfa(user.id):
+    if not mfa_identidade_ok(user):
         raise ValueError("Confirme o CPF antes de informar o código.")
     profile = getattr(user, "profile", None)
     if not profile or not profile.totp_confirmado:
@@ -115,6 +132,52 @@ def verificar_login_totp(user, codigo: str):
     if not verificar_codigo_totp(user, codigo):
         raise ValueError("Código inválido.")
     limpar_cpf_verificado_mfa(user.id)
+    return True
+
+
+def enviar_codigo_mfa_email(user) -> str:
+    """Envia OTP de 6 dígitos para o e-mail da conta e devolve o endereço mascarado."""
+    email = (getattr(user, "email", None) or "").strip()
+    if not email:
+        raise ValueError("Esta conta não tem e-mail cadastrado.")
+    from apps.accounts.services import TTL_CODIGO_SENHA_MINUTOS, _hash_codigo_senha
+
+    codigo = f"{secrets.randbelow(1_000_000):06d}"
+    profile, _ = Profile.objects.get_or_create(user=user)
+    profile.senha_codigo_hash = _hash_codigo_senha(f"mfa:{codigo}")
+    profile.senha_codigo_ate = timezone.now() + timedelta(minutes=TTL_CODIGO_SENHA_MINUTOS)
+    profile.save(update_fields=["senha_codigo_hash", "senha_codigo_ate"])
+    enviar_email(
+        "Código de login — Universidade Money",
+        (
+            "Olá.\n\n"
+            f"Seu código de autenticação é: {codigo}\n"
+            f"Válido por {TTL_CODIGO_SENHA_MINUTOS} minutos.\n\n"
+            "Se você não tentou entrar, ignore este e-mail.\n"
+        ),
+        [email],
+    )
+    return mascarar_email(email)
+
+
+def verificar_codigo_mfa_email(user, codigo: str):
+    """Valida o OTP enviado por e-mail e libera o MFA."""
+    from apps.accounts.services import _hash_codigo_senha
+
+    profile = getattr(user, "profile", None)
+    if (
+        not profile
+        or not profile.senha_codigo_hash
+        or not profile.senha_codigo_ate
+    ):
+        raise ValueError("Código inválido ou expirado.")
+    if timezone.now() > profile.senha_codigo_ate:
+        raise ValueError("Código inválido ou expirado.")
+    if _hash_codigo_senha(f"mfa:{str(codigo or '').strip()}") != profile.senha_codigo_hash:
+        raise ValueError("Código inválido.")
+    profile.senha_codigo_hash = ""
+    profile.senha_codigo_ate = None
+    profile.save(update_fields=["senha_codigo_hash", "senha_codigo_ate"])
     return True
 
 

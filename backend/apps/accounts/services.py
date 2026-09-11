@@ -93,16 +93,18 @@ def ativar_token_acesso(chave: str, nova_senha: str, cpf: str):
 
 @transaction.atomic
 def redefinir_senha_obrigatoria(user, cpf: str, nova_senha: str):
-    """Troca senha forçada: confere CPF e limpa precisa_redefinir_senha."""
-    cpf_norm = normalizar_cpf(cpf)
-    if not cpf_valido(cpf_norm):
-        raise ValueError("CPF inválido.")
+    """Troca senha forçada. Superuser / conta sem CPF não exige CPF."""
     if not nova_senha or len(nova_senha) < 6:
         raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
 
     profile, _ = Profile.objects.get_or_create(user=user)
-    if not profile.cpf or profile.cpf != cpf_norm:
-        raise ValueError("CPF não confere com o cadastrado.")
+    sem_cpf = getattr(user, "is_superuser", False) or not (profile.cpf or "").strip()
+    if not sem_cpf:
+        cpf_norm = normalizar_cpf(cpf)
+        if not cpf_valido(cpf_norm):
+            raise ValueError("CPF inválido.")
+        if profile.cpf != cpf_norm:
+            raise ValueError("CPF não confere com o cadastrado.")
 
     user.set_password(nova_senha)
     user.save(update_fields=["password"])

@@ -129,7 +129,10 @@ class RedefinirSenhaObrigatoriaView(APIView):
         return Response(
             {
                 "message": "Senha atualizada.",
-                **tokens_para_usuario(request.user),
+                **tokens_para_usuario(
+                    request.user,
+                    mfa_ok=claim_mfa_ok_do_request(request),
+                ),
             }
         )
 

@@ -8,11 +8,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.cursos.permissions import precisa_mfa_painel
 from .mfa import (
     confirmar_enroll_totp,
-    cpf_foi_verificado_mfa,
     criar_dispositivo_confiavel,
+    enviar_codigo_mfa_email,
     garantir_secret_totp,
+    mfa_identidade_ok,
     otpauth_uri,
     qr_base64_png,
+    verificar_codigo_mfa_email,
     verificar_cpf_do_usuario,
     verificar_login_totp,
     DIAS_DISPOSITIVO_CONFIAVEL,
@@ -69,7 +71,7 @@ class MfaEnrollView(APIView):
     permission_classes = [IsFrontendJwtOrApiKey, MfaSomenteGestorAdmin]
 
     def get(self, request):
-        if not cpf_foi_verificado_mfa(request.user.id):
+        if not mfa_identidade_ok(request.user):
             return Response(
                 {"detail": "Confirme o CPF antes de gerar o QR Code."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -139,3 +141,34 @@ class TokenRefreshComMfaView(APIView):
             return Response({"detail": "Usuário não encontrado."}, status=401)
 
         return Response(tokens_para_usuario(user, mfa_ok=mfa_ok))
+
+
+class MfaEmailEnviarView(APIView):
+    """Envia código de 6 dígitos para o e-mail da conta."""
+
+    permission_classes = [IsFrontendJwtOrApiKey, MfaSomenteGestorAdmin]
+
+    def post(self, request):
+        try:
+            mascarado = enviar_codigo_mfa_email(request.user)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "message": f"Enviamos um código para {mascarado}.",
+                "email_mascarado": mascarado,
+            }
+        )
+
+
+class MfaEmailVerificarView(APIView):
+    """Código do e-mail → JWT com mfa_ok."""
+
+    permission_classes = [IsFrontendJwtOrApiKey, MfaSomenteGestorAdmin]
+
+    def post(self, request):
+        try:
+            verificar_codigo_mfa_email(request.user, request.data.get("codigo") or "")
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return _resposta_mfa_ok(request, request.user)
