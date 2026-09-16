@@ -76,6 +76,11 @@ export const gestaoApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  reordenarAulas: (moduloId, ordem) =>
+    apiFetch(`/gestao/modulos/${moduloId}/aulas/reordenar/`, {
+      method: "POST",
+      body: JSON.stringify({ ordem }),
+    }),
   atualizarAula: (id, data) =>
     apiFetch(`/gestao/aulas/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
   excluirAula: (id) => apiFetch(`/gestao/aulas/${id}/`, { method: "DELETE" }),

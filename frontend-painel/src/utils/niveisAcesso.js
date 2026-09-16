@@ -39,6 +39,13 @@ export function podeExcluir(user) {
   return Boolean(user?.pode_excluir || user?.nivel_acesso === NIVEL.ADMINISTRADOR);
 }
 
+/** Gestor, administrador ou superuser — reordenar aulas e ações equivalentes. */
+export function podeGestorOuAdmin(user) {
+  if (user?.is_superuser) return true;
+  const n = user?.nivel_acesso;
+  return n === NIVEL.GESTOR || n === NIVEL.ADMINISTRADOR;
+}
+
 export function niveisDisponiveisParaConvite() {
   // Convidados = apenas padrão
   return [{ value: NIVEL.PADRAO, label: NIVEL_LABELS.padrao }];

@@ -41,6 +41,7 @@ from .permissions import (
     IsGestor,
     PodeEquipe,
     PodeExcluir,
+    PodeGestorOuAdmin,
 )
 from .serializers_gestao import (
     AtividadeSerializer,
@@ -521,6 +522,22 @@ class GestaoAulasListCreateView(generics.ListCreateAPIView):
         ordem = AulaVideo.objects.filter(modulo_id=modulo_id).count()
         aula = serializer.save(modulo_id=modulo_id, ordem=ordem)
         recalcular_curso(aula.modulo.curso)
+
+
+class GestaoAulasReordenarView(APIView):
+    permission_classes = [IsFrontendJwtOrApiKey, PodeGestorOuAdmin]
+
+    def post(self, request, modulo_id):
+        ids = request.data.get("ordem", [])
+        if not isinstance(ids, list):
+            return Response({"detail": "Informe lista ordem."}, status=400)
+        if not Modulo.objects.filter(pk=modulo_id).exists():
+            return Response({"detail": "Módulo não encontrado."}, status=404)
+        with transaction.atomic():
+            for idx, aid in enumerate(ids):
+                AulaVideo.objects.filter(pk=aid, modulo_id=modulo_id).update(ordem=idx)
+        aulas = AulaVideo.objects.filter(modulo_id=modulo_id)
+        return Response(AulaVideoSerializer(aulas, many=True).data)
 
 
 class GestaoAulaDetailView(generics.RetrieveUpdateDestroyAPIView):

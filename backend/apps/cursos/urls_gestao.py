@@ -39,6 +39,11 @@ urlpatterns = [
     path("gestao/modulos/<int:modulo_id>/arquivos/", views_gestao.GestaoModuloArquivosListCreateView.as_view(), name="gestao-modulo-arquivos"),
     path("gestao/modulos/arquivos/<int:pk>/", views_gestao.GestaoModuloArquivoDetailView.as_view(), name="gestao-modulo-arquivo-detail"),
     path("gestao/modulos/<int:modulo_id>/aulas/", views_gestao.GestaoAulasListCreateView.as_view(), name="gestao-aulas"),
+    path(
+        "gestao/modulos/<int:modulo_id>/aulas/reordenar/",
+        views_gestao.GestaoAulasReordenarView.as_view(),
+        name="gestao-aulas-reordenar",
+    ),
     path("gestao/aulas/<int:pk>/", views_gestao.GestaoAulaDetailView.as_view(), name="gestao-aula-detail"),
     path("gestao/aulas/<int:pk>/upload-video/", views_gestao.GestaoAulaUploadVideoView.as_view(), name="gestao-aula-upload"),
     path("gestao/aulas/<int:pk>/video/", views_gestao.GestaoAulaRemoverVideoView.as_view(), name="gestao-aula-remover-video"),

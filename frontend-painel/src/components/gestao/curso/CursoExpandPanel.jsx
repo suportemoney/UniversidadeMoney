@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import QuestaoEditor from "../QuestaoEditor";
 import VideoUploadField from "../VideoUploadField";
 import GestaoIcon from "../GestaoIcons";
@@ -8,16 +9,20 @@ import ConfirmDialog from "../../ui/ConfirmDialog";
 import CursoMateriaisModal from "./CursoMateriaisModal";
 import CursoProvaModal from "./CursoProvaModal";
 import { gestaoApi } from "../../../services/gestaoApi";
+import { podeGestorOuAdmin } from "../../../utils/niveisAcesso";
 
 /**
  * Painel expandido do curso: CRUD de módulos/aulas em modal; material e prova em modais.
  */
 export default function CursoExpandPanel({ cursoId, onChanged }) {
+  const { user } = useOutletContext() || {};
+  const podeReordenar = podeGestorOuAdmin(user);
   const [curso, setCurso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [descricao, setDescricao] = useState("");
   const [salvandoDesc, setSalvandoDesc] = useState(false);
+  const [reordenando, setReordenando] = useState(false);
   const [moduloAberto, setModuloAberto] = useState(null);
   const [prova, setProva] = useState(null);
   const [modalMateriais, setModalMateriais] = useState(false);
@@ -26,8 +31,8 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
   const [aulaModal, setAulaModal] = useState({ open: false, aula: null, moduloId: null });
   const [confirmar, setConfirmar] = useState(null);
 
-  const carregar = async () => {
-    setLoading(true);
+  const carregar = async ({ silencioso } = {}) => {
+    if (!silencioso) setLoading(true);
     setErro("");
     try {
       const [c, p] = await Promise.all([
@@ -40,7 +45,7 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
     } catch (err) {
       setErro(err.message);
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
   };
 
@@ -81,6 +86,24 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
     }
     await carregar();
     avisar();
+  };
+
+  const reordenarAula = async (modulo, idx, dir) => {
+    const ids = (modulo.aulas || []).map((a) => a.id);
+    const j = idx + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[idx], ids[j]] = [ids[j], ids[idx]];
+    setReordenando(true);
+    setErro("");
+    try {
+      await gestaoApi.reordenarAulas(modulo.id, ids);
+      await carregar({ silencioso: true });
+      avisar();
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setReordenando(false);
+    }
   };
 
   const confirmarExclusao = async () => {
@@ -228,7 +251,7 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
                       </button>
                     </div>
                     <ul className="curso-expand-list">
-                      {(mod.aulas || []).map((aula) => (
+                      {(mod.aulas || []).map((aula, aulaIdx) => (
                         <li key={aula.id} className="curso-expand-aula">
                           <div className="curso-expand-aula-head">
                             <div>
@@ -238,6 +261,30 @@ export default function CursoExpandPanel({ cursoId, onChanged }) {
                               ) : null}
                             </div>
                             <div className="curso-expand-aula-actions">
+                              {podeReordenar && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="gestao-icon-btn"
+                                    title="Subir aula"
+                                    aria-label="Subir aula"
+                                    disabled={reordenando || aulaIdx === 0}
+                                    onClick={() => reordenarAula(mod, aulaIdx, -1)}
+                                  >
+                                    <GestaoIcon name="subir" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="gestao-icon-btn"
+                                    title="Descer aula"
+                                    aria-label="Descer aula"
+                                    disabled={reordenando || aulaIdx === (mod.aulas?.length || 0) - 1}
+                                    onClick={() => reordenarAula(mod, aulaIdx, 1)}
+                                  >
+                                    <GestaoIcon name="descer" />
+                                  </button>
+                                </>
+                              )}
                               <button
                                 type="button"
                                 className="gestao-icon-btn"

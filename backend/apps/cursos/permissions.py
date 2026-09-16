@@ -11,6 +11,7 @@ NIVEL_ADMINISTRADOR = Profile.NIVEL_ADMINISTRADOR
 NIVEIS_PAINEL = {NIVEL_INSTRUTOR, NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
 NIVEIS_EQUIPE = {NIVEL_INSTRUTOR, NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
 NIVEIS_CONVITES = {NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
+NIVEIS_GESTOR_MAIS = {NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
 NIVEIS_MFA = {NIVEL_GESTOR, NIVEL_ADMINISTRADOR}
 LABELS_NIVEL = dict(Profile.NIVEL_CHOICES)
 
@@ -69,6 +70,11 @@ def pode_api(user) -> bool:
 
 def pode_convites(user) -> bool:
     return nivel_do_usuario(user) in NIVEIS_CONVITES
+
+
+def pode_gestor_ou_admin(user) -> bool:
+    """Gestor, administrador ou superuser (via nivel_do_usuario)."""
+    return nivel_do_usuario(user) in NIVEIS_GESTOR_MAIS
 
 
 def pode_equipe(user) -> bool:
@@ -148,6 +154,13 @@ class PodeConvites(BasePermission):
 
     def has_permission(self, request, view):
         return pode_convites(request.user) and gestao_com_mfa_ok(request)
+
+
+class PodeGestorOuAdmin(BasePermission):
+    message = "Apenas gestores e administradores podem alterar a ordem das aulas."
+
+    def has_permission(self, request, view):
+        return pode_gestor_ou_admin(request.user) and gestao_com_mfa_ok(request)
 
 
 class PodeApiDocs(BasePermission):

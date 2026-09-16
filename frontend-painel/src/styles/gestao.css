@@ -982,6 +982,20 @@
   box-shadow: var(--glow-cyan);
 }
 
+.gestao-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.gestao-icon-btn:disabled:hover {
+  background: var(--color-bg-elevated);
+  color: var(--color-accent);
+  border-color: var(--gestao-border);
+  transform: none;
+  box-shadow: none;
+}
+
 .gestao-icon-btn--danger:hover {
   background: #fef2f2;
   color: #dc2626;
