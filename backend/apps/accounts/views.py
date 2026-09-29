@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .authentication import ApiKeyAuthentication
 from .permissions_api import IsFrontendJwtOrApiKey, LoginFrontendOuApiKey
@@ -17,9 +19,7 @@ from .services import (
     redefinir_senha_obrigatoria,
     solicitar_recuperacao_senha,
 )
-from .tokens import claim_mfa_ok_do_request, tokens_para_usuario
-from apps.cursos.permissions import precisa_mfa_painel
-from .mfa import validar_dispositivo_confiavel
+from .tokens import tokens_para_usuario
 
 
 class RegisterView(generics.CreateAPIView):
@@ -45,11 +45,6 @@ class MeView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsFrontendJwtOrApiKey]
 
-    def get_serializer_context(self):
-        ctx = super().get_serializer_context()
-        ctx["mfa_ok"] = claim_mfa_ok_do_request(self.request)
-        return ctx
-
     def get_object(self):
         return self.request.user
 
@@ -72,7 +67,6 @@ class LoginView(APIView):
     Login JWT.
     - Nossos fronts (Origin confiável): username/senha ou CPF sem API Key.
     - Parceiros: exigem Bearer um_... (token_perm) + credenciais no body.
-    - Gestor/admin: mfa_ok=false até concluir 2FA no painel.
     """
 
     permission_classes = [LoginFrontendOuApiKey]
@@ -103,13 +97,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Gestor/admin: dispositivo confiável dispensa TOTP nesta máquina
-        mfa_ok = None
-        if precisa_mfa_painel(user):
-            device_token = request.data.get("dispositivo_token") or ""
-            mfa_ok = validar_dispositivo_confiavel(user, device_token)
-
-        return Response(tokens_para_usuario(user, mfa_ok=mfa_ok))
+        return Response(tokens_para_usuario(user))
 
 
 class RedefinirSenhaObrigatoriaView(APIView):
@@ -129,12 +117,31 @@ class RedefinirSenhaObrigatoriaView(APIView):
         return Response(
             {
                 "message": "Senha atualizada.",
-                **tokens_para_usuario(
-                    request.user,
-                    mfa_ok=claim_mfa_ok_do_request(request),
-                ),
+                **tokens_para_usuario(request.user),
             }
         )
+
+
+class TokenRefreshView(APIView):
+    """Reemite access e refresh a partir de um refresh válido."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        raw = request.data.get("refresh") or ""
+        try:
+            old = RefreshToken(raw)
+            user_id = old["user_id"]
+        except TokenError:
+            return Response({"detail": "Token inválido ou expirado."}, status=401)
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Usuário não encontrado."}, status=401)
+
+        return Response(tokens_para_usuario(user))
 
 
 class TokenAcessoValidarView(APIView):

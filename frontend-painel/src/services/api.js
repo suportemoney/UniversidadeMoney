@@ -148,17 +148,11 @@ export async function apiFetch(path, options = {}, jaRenovou = false) {
 export async function login(identificador, password) {
   clearTokens();
   const { payloadLogin } = await import("../utils/loginIdentificador");
-  const { getDispositivoToken, setDispositivoToken } = await import("../utils/dispositivoMfa");
-  const body = {
-    ...payloadLogin(identificador, password),
-    dispositivo_token: getDispositivoToken() || undefined,
-  };
   const data = await apiFetch("/auth/login/", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(payloadLogin(identificador, password)),
   });
   setTokens(data.access, data.refresh);
-  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
   return data;
 }
 
@@ -194,54 +188,6 @@ export async function confirmarRecuperarSenha(identificador, codigo, novaSenha) 
       nova_senha: novaSenha,
     }),
   });
-}
-
-export async function mfaVerificarCpf(cpf) {
-  return apiFetch("/auth/mfa/verificar-cpf/", {
-    method: "POST",
-    body: JSON.stringify({ cpf: String(cpf || "").replace(/\D/g, "") }),
-  });
-}
-
-export async function mfaEnroll() {
-  return apiFetch("/auth/mfa/enroll/");
-}
-
-export async function mfaConfirmar(codigo, confiarDispositivo = false) {
-  const { setDispositivoToken } = await import("../utils/dispositivoMfa");
-  const data = await apiFetch("/auth/mfa/confirmar/", {
-    method: "POST",
-    body: JSON.stringify({ codigo, confiar_dispositivo: confiarDispositivo }),
-  });
-  if (data.access) setTokens(data.access, data.refresh);
-  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
-  return data;
-}
-
-export async function mfaVerificar(codigo, confiarDispositivo = false) {
-  const { setDispositivoToken } = await import("../utils/dispositivoMfa");
-  const data = await apiFetch("/auth/mfa/verificar/", {
-    method: "POST",
-    body: JSON.stringify({ codigo, confiar_dispositivo: confiarDispositivo }),
-  });
-  if (data.access) setTokens(data.access, data.refresh);
-  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
-  return data;
-}
-
-export async function mfaEmailEnviar() {
-  return apiFetch("/auth/mfa/email/enviar/", { method: "POST", body: JSON.stringify({}) });
-}
-
-export async function mfaEmailVerificar(codigo, confiarDispositivo = false) {
-  const { setDispositivoToken } = await import("../utils/dispositivoMfa");
-  const data = await apiFetch("/auth/mfa/email/verificar/", {
-    method: "POST",
-    body: JSON.stringify({ codigo, confiar_dispositivo: confiarDispositivo }),
-  });
-  if (data.access) setTokens(data.access, data.refresh);
-  if (data.dispositivo_token) setDispositivoToken(data.dispositivo_token);
-  return data;
 }
 
 export async function logout() {

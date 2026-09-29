@@ -35,7 +35,6 @@ def _perfil_usuario_convite(user):
         "is_superuser": user.is_superuser,
         "is_membro_equipe": bool(profile.is_membro_equipe) if profile else False,
         "precisa_redefinir_senha": bool(profile.precisa_redefinir_senha) if profile else False,
-        "totp_confirmado": bool(getattr(profile, "totp_confirmado", False)) if profile else False,
         "date_joined": user.date_joined,
         "last_login": user.last_login,
     }

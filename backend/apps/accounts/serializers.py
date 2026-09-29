@@ -9,7 +9,6 @@ from apps.cursos.permissions import (
     pode_convites,
     pode_equipe,
     pode_excluir,
-    precisa_mfa_painel,
     usuario_pode_gestao,
 )
 from apps.planos.services import features_efetivas
@@ -75,9 +74,6 @@ class UserSerializer(serializers.ModelSerializer):
     assinatura = serializers.SerializerMethodField()
     features = serializers.SerializerMethodField()
     precisa_redefinir_senha = serializers.SerializerMethodField()
-    totp_confirmado = serializers.SerializerMethodField()
-    precisa_mfa_painel = serializers.SerializerMethodField()
-    mfa_ok = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -87,7 +83,6 @@ class UserSerializer(serializers.ModelSerializer):
             "pode_gestao", "pode_api", "pode_convites", "pode_equipe",
             "pode_excluir", "escopo_cursos_apenas",
             "tem_plano", "assinatura", "features", "precisa_redefinir_senha",
-            "totp_confirmado", "precisa_mfa_painel", "mfa_ok",
         ]
 
     def get_cpf(self, obj):
@@ -99,18 +94,6 @@ class UserSerializer(serializers.ModelSerializer):
         if hasattr(obj, "profile"):
             return obj.profile.precisa_redefinir_senha
         return False
-
-    def get_totp_confirmado(self, obj):
-        if hasattr(obj, "profile"):
-            return bool(obj.profile.totp_confirmado)
-        return False
-
-    def get_precisa_mfa_painel(self, obj):
-        return precisa_mfa_painel(obj)
-
-    def get_mfa_ok(self, obj):
-        # Claim do JWT atual (via context da MeView)
-        return bool(self.context.get("mfa_ok"))
 
     def get_cargo(self, obj):
         if hasattr(obj, "profile"):

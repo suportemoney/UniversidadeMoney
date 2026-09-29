@@ -11,7 +11,6 @@ export default function GestaoRoute({ children }) {
   const [semAcesso, setSemAcesso] = useState(false);
   const [rotaNegada, setRotaNegada] = useState(false);
   const [precisaSenha, setPrecisaSenha] = useState(false);
-  const [precisaMfa, setPrecisaMfa] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -23,10 +22,6 @@ export default function GestaoRoute({ children }) {
         if (!me?.pode_gestao) {
           clearTokens();
           setSemAcesso(true);
-          return;
-        }
-        if (me.precisa_mfa_painel && !me.mfa_ok) {
-          setPrecisaMfa(true);
           return;
         }
         if (me.precisa_redefinir_senha) {
@@ -61,10 +56,6 @@ export default function GestaoRoute({ children }) {
         replace
       />
     );
-  }
-
-  if (precisaMfa) {
-    return <Navigate to="/mfa" replace />;
   }
 
   if (precisaSenha) {

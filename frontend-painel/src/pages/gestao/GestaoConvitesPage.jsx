@@ -518,7 +518,6 @@ export default function GestaoConvitesPage() {
             <div><dt>Membro da equipe</dt><dd>{perfil.is_membro_equipe ? "Sim" : "Não"}</dd></div>
             <div><dt>Administrador</dt><dd>{perfil.is_superuser ? "Sim" : "Não"}</dd></div>
             <div><dt>Precisa redefinir senha</dt><dd>{perfil.precisa_redefinir_senha ? "Sim" : "Não"}</dd></div>
-            <div><dt>2FA configurado</dt><dd>{perfil.totp_confirmado ? "Sim" : "Não"}</dd></div>
             <div>
               <dt>Cadastro em</dt>
               <dd>{perfil.date_joined ? new Date(perfil.date_joined).toLocaleString("pt-BR") : "—"}</dd>

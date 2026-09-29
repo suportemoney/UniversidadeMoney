@@ -18,14 +18,10 @@ export default function RedefinirSenhaPage() {
     if (!isAuthenticated()) return;
     getMe()
       .then((me) => {
-        if (me?.precisa_mfa_painel && !me?.mfa_ok) {
-          navigate("/mfa", { replace: true });
-          return;
-        }
         setTemCpf(Boolean(me?.cpf));
       })
       .catch(() => {});
-  }, [navigate]);
+  }, []);
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;

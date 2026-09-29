@@ -48,14 +48,12 @@ class Command(BaseCommand):
                 "cargo": "Administrador",
                 "is_membro_equipe": True,
                 "precisa_redefinir_senha": True,
-                "totp_confirmado": False,
                 "nivel_acesso": Profile.NIVEL_ADMINISTRADOR,
             },
         )
         if created or profile_created:
             profile.precisa_redefinir_senha = True
-            profile.totp_confirmado = False
-            profile.save(update_fields=["precisa_redefinir_senha", "totp_confirmado"])
+            profile.save(update_fields=["precisa_redefinir_senha"])
 
         from apps.cursos.permissions import aplicar_nivel_acesso
 

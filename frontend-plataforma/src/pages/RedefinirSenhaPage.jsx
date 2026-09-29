@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { getMe, isAuthenticated, redefinirSenhaObrigatoria } from "../services/api";
 import { formatarCpf } from "../utils/cpf";
-import { precisaMfaPainelPendente, urlMfaPainel } from "../utils/posLogin";
 
 export default function RedefinirSenhaPage() {
   const navigate = useNavigate();
@@ -17,10 +16,6 @@ export default function RedefinirSenhaPage() {
     if (!isAuthenticated()) return;
     getMe()
       .then((me) => {
-        if (precisaMfaPainelPendente(me)) {
-          window.location.replace(urlMfaPainel());
-          return;
-        }
         setTemCpf(Boolean(me?.cpf));
       })
       .catch(() => {});

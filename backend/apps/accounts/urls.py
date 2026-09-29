@@ -1,15 +1,11 @@
 from django.urls import path
 
-from . import views, views_api, views_mfa
+from . import views, views_api
 
 urlpatterns = [
     path("register/", views.RegisterView.as_view(), name="auth-register"),
     path("login/", views.LoginView.as_view(), name="auth-login"),
-    path(
-        "refresh/",
-        views_mfa.TokenRefreshComMfaView.as_view(),
-        name="auth-refresh",
-    ),
+    path("refresh/", views.TokenRefreshView.as_view(), name="auth-refresh"),
     path("me/", views.MeView.as_view(), name="auth-me"),
     path(
         "redefinir-senha-obrigatoria/",
@@ -40,35 +36,5 @@ urlpatterns = [
         "api-tokens/trocar/",
         views_api.ApiTokenTrocarView.as_view(),
         name="auth-api-tokens-trocar",
-    ),
-    path(
-        "mfa/verificar-cpf/",
-        views_mfa.MfaVerificarCpfView.as_view(),
-        name="auth-mfa-verificar-cpf",
-    ),
-    path(
-        "mfa/enroll/",
-        views_mfa.MfaEnrollView.as_view(),
-        name="auth-mfa-enroll",
-    ),
-    path(
-        "mfa/confirmar/",
-        views_mfa.MfaConfirmarView.as_view(),
-        name="auth-mfa-confirmar",
-    ),
-    path(
-        "mfa/verificar/",
-        views_mfa.MfaVerificarView.as_view(),
-        name="auth-mfa-verificar",
-    ),
-    path(
-        "mfa/email/enviar/",
-        views_mfa.MfaEmailEnviarView.as_view(),
-        name="auth-mfa-email-enviar",
-    ),
-    path(
-        "mfa/email/verificar/",
-        views_mfa.MfaEmailVerificarView.as_view(),
-        name="auth-mfa-email-verificar",
     ),
 ]

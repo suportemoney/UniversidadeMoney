@@ -62,22 +62,6 @@ class Profile(models.Model):
         default=False,
         verbose_name="Precisa redefinir senha",
     )
-    totp_secret = models.CharField(
-        max_length=64,
-        blank=True,
-        default="",
-        verbose_name="Segredo TOTP",
-    )
-    totp_confirmado = models.BooleanField(
-        default=False,
-        verbose_name="TOTP confirmado",
-    )
-    # Validade da confirmação de CPF no fluxo MFA (evita cache local por worker)
-    mfa_cpf_ok_ate = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="CPF verificado no MFA até",
-    )
     senha_codigo_hash = models.CharField(
         max_length=64,
         blank=True,
@@ -96,34 +80,6 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"Perfil de {self.user.get_username()}"
-
-
-class DispositivoConfiavelMfa(models.Model):
-    """Dispositivo em que o usuário optou por não repetir o TOTP no painel."""
-
-    usuario = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="dispositivos_mfa",
-    )
-    token_hash = models.CharField(max_length=64, unique=True, db_index=True)
-    user_agent = models.CharField(max_length=255, blank=True, default="")
-    valido_ate = models.DateTimeField()
-    ultimo_uso = models.DateTimeField(null=True, blank=True)
-    ativo = models.BooleanField(default=True)
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-criado_em"]
-        verbose_name = "Dispositivo confiável MFA"
-        verbose_name_plural = "Dispositivos confiáveis MFA"
-
-    def esta_valido(self):
-        if not self.ativo:
-            return False
-        if timezone.now() > self.valido_ate:
-            return False
-        return True
 
 
 class TokenAcesso(models.Model):
